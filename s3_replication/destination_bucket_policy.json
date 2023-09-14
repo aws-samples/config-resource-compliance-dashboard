@@ -1,0 +1,39 @@
+{
+    "Version":"2012-10-17",
+    "Id":"",
+    "Statement":[
+      {
+         "Sid": "HTTPSOnly",
+         "Effect": "Deny",
+         "Principal": "*",
+         "Action": "s3:*",
+         "Resource": [
+             "DESTINATION_BUCKET_ARN/*",
+             "DESTINATION_BUCKET_ARN"
+         ],
+         "Condition": {
+             "Bool": {
+                 "aws:SecureTransport": "false"
+             }
+         }
+      },
+      {
+         "Sid":"Set permissions for objects",
+         "Effect":"Allow",
+         "Principal":{
+            "AWS":"SOURCE_ACCOUNT_REPLICATION_ROLE_ARN"
+         },
+         "Action":["s3:ReplicateObject", "s3:ReplicateDelete"],
+         "Resource":"DESTINATION_BUCKET_ARN/*"
+      },
+      {
+         "Sid":"Set permissions on bucket",
+         "Effect":"Allow",
+         "Principal":{
+            "AWS":"SOURCE_ACCOUNT_REPLICATION_ROLE_ARN"
+         },
+         "Action":["s3:List*", "s3:GetBucketVersioning", "s3:PutBucketVersioning"],
+         "Resource":"DESTINATION_BUCKET_ARN"
+      }
+    ]
+ }

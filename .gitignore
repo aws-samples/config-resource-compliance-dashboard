@@ -1,0 +1,10 @@
+.semgrepignore
+.DS_Store
+**.terraform
+**.terraform.lock.hcl
+**.data_collection_lambda_compliance.zip
+terraform.tfplan
+data_collection_lambda_compliance.zip
+terraform.tfstate
+terraform.tfstate.backup
+.scannerwork/
