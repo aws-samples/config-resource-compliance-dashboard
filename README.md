@@ -9,15 +9,15 @@
 The Config Resource Compliance Dashboard (CRCD) shows the inventory of resources, along with their compliance status, running across multiple AWS accounts. The dashboard provides:
 
 - Month-by-month evolution of the compliance status of your resources
-- Month-by-month evolution of the incurred costs due to AWS Config Rules evaluations
+- Month-by-month evolution of the estimated incurred costs due to AWS Config Rules evaluations
 - Breakdown of compliance per service, account and region
-- Breakdown of incurred costs per evaluated AWS Config Rule
+- Breakdown of estimated incurred costs per evaluated AWS Config Rule
 - Compliance of AWS Config Rules and Conformance Packs
 
 The dashboard uses two sources to get these insights:
 
 - AWS Config Configuration Snapshots: to get the inventory of resources and their compliance with AWS Config Rules and Conformance Packs using Configuration Snapshots
-- AWS CloudTrail Events: to calculate incurred costs due to AWS Config Rules evaluations based on the number of CloudTrail events
+- AWS CloudTrail Events: to calculate estimated incurred costs due to AWS Config Rules evaluations based on the number of CloudTrail events. **We estimate incurred costs by computing $0.001 per rule evaluation per region as per the current [AWS Config pricing](https://aws.amazon.com/config/pricing/). Your total number of evaluations may put you in a different pricing tier.** 
 
 The infrastructure needed to collect and process the data is defined in Terraform. 
 
