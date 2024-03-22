@@ -15,6 +15,7 @@ athena = boto3.client('athena')
 class AthenaException(Exception):
     pass
 
+# This will be changed
 def lambda_handler(event, context):
     global ACCOUNT_ID
 
