@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: "Testing the deployment of a Lambda function supporting AWS Config Resource Compliance Dashboard (CRCD) v2"
 
 Metadata:
-  # defines how parameters are grouped and sorted in the AWS CloudFormation console
   AWS::CloudFormation::Interface:
     ParameterGroups:
       -
@@ -21,8 +20,6 @@ Metadata:
           - ConfigLoggingBucketArn
           - ConfigLoggingAccountID
 
-    # A mapping of parameters and their friendly names that the CloudFormation
-    # console shows when a stack is created or updated
     ParameterLabels:
       AthenaRegion:
         default: "Athena Region"
@@ -53,32 +50,32 @@ Parameters:
 
   AthenaDatabaseName:
     Type: "String"
-    Default: "cid_config_athena_database" # TODO: match with the default value from CID-CMD tool
+    Default: "cid_config_athena_database" 
     Description: "The Athena database for the CID-CRCD dashboard"
 
   AthenaQueryResultBucketName:
     Type: "String"
-    Default: "configathenaresults767398150443" # TODO: match with the default value from CID-CMD tool
+    Default: "configathenaresults767398150443" 
     Description: "The Athena Query Result bucket for the workgroup"
 
   AthenaWorkgroup:
     Type: "String"
     Default: "cid-config-athena-workgroup"
-    Description: "The Athena workgroup for the CID-CRCD dashboard" # TODO: match with the default value from CID-CMD tool
+    Description: "The Athena workgroup for the CID-CRCD dashboard" 
 
   AthenaRegion:
     Type: "String"
-    Default: !Ref "AWS::Region" # TODO: match with the default value from CID-CMD tool - Actually this can be the region where the user runs the template, so there is no need for a parameter here and in the lambda function.
+    Default: ""
     Description: "The region of the Athena Workgroup (and of the corresponding Glue database)"
 
   AthenaConfigSnapshotsTableName:
     Type: "String"
-    Default: "aws_config_configuration_snapshots" # TODO: match with the default value from CID-CMD tool
+    Default: "aws_config_configuration_snapshots"
     Description: "The Athena table that contains the AWS Config data for the dashboard"
 
 
 Resources:
-  IAMManagedPolicy-Lambda-CID-CRCD-Glue:
+  IAMManagedPolicyLambdaCIDCRCDGlue:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -114,7 +111,7 @@ Resources:
       - "lambda-cid-crcd-config-execution-role"
       Users: []
 
-  IAMManagedPolicy-Lambda-CID-CRCD-S3:
+  IAMManagedPolicyLambdaCIDCRCDS3:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -143,7 +140,7 @@ Resources:
       - "lambda-cid-crcd-config-execution-role"
       Users: []
 
-  IAMManagedPolicy-Lambda-CID-CRCD-CloudWatchLogs:
+  IAMManagedPolicyLambdaCIDCRCDCloudWatchLogs:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -167,7 +164,7 @@ Resources:
       - "lambda-cid-crcd-config-execution-role"
       Users: []
 
-  IAMManagedPolicy-Lambda-CID-CRCD-Athena:
+  IAMManagedPolicyLambdaCIDCRCDAthena:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -190,7 +187,7 @@ Resources:
       - "lambda-cid-crcd-config-execution-role"
       Users: []
 
-  LambdaFunctionCID-CRCDConfig:
+  LambdaFunctionCIDCRCDConfig:
     Type: "AWS::Lambda::Function"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -216,7 +213,7 @@ Resources:
       ReservedConcurrentExecutions: 1
       Role:
         Fn::GetAtt:
-        - "IAMRole-Lambda-CID-CRCD-Config"
+        - "IAMRoleLambdaCIDCRCDConfig"
         - "Arn"
       FileSystemConfigs: []
       LoggingConfig:
@@ -236,9 +233,7 @@ Resources:
             print("Hello Lambda!")
             return "Lambda is done"
         
-
-
-  IAMRole-Lambda-CID-CRCD-Config:
+  IAMRoleLambdaCIDCRCDConfig:
     # Lambda execution role for function LambdaFunctionCID-CRCDConfig
     # Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access S3 to read objects, defined in separate policies
     Type: "AWS::IAM::Role"
@@ -247,10 +242,10 @@ Resources:
     Properties:
       Path: "/"
       ManagedPolicyArns:
-      - Ref: "IAMManagedPolicy-Lambda-CID-CRCD-Athena"
-      - Ref: "IAMManagedPolicy-Lambda-CID-CRCD-Glue"
-      - Ref: "IAMManagedPolicy-Lambda-CID-CRCD-S3"
-      - Ref: "IAMManagedPolicy-Lambda-CID-CRCD-CloudWatchLogs"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDAthena"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDGlue"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDCloudWatchLogs"
       MaxSessionDuration: 3600
       RoleName: "lambda-cid-crcd-config-execution-role"
       AssumeRolePolicyDocument:
@@ -264,14 +259,14 @@ Resources:
 
   # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
   # The S3 bucket must be manually configured, too
-  LambdaPermission-Lambda-CID-CRCD-InvocationPermission:
+  LambdaPermissionLambdaCIDCRCDInvocationPermission:
     Type: "AWS::Lambda::Permission"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName:
         Fn::GetAtt:
-        - "LambdaFunctionCID-CRCDConfig"
+        - "LambdaFunctionCIDCRCDConfig"
         - "Arn"
       Action: "lambda:InvokeFunction"
       SourceArn: !Ref ConfigLoggingBucketArn
@@ -283,5 +278,5 @@ Outputs:
     Description: "ARN of the Lambda function supporting CID-CRCD Dashboard"
     Value:
       Fn::GetAtt:
-        - "LambdaFunctionCID-CRCDConfig"
+        - "LambdaFunctionCIDCRCDConfig"
         - "Arn"

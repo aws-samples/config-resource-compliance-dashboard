@@ -68,9 +68,10 @@ Parameters:
     Default: "cid-config-athena-workgroup"
     Description: "The Athena workgroup for the CID-CRCD dashboard" # TODO: match with the default value from CID-CMD tool
 
+  # TODO looks like region cannot be a supported parameter at all!!!
   AthenaRegion:
     Type: "String"
-    Default: !Ref "AWS::Region" # TODO: match with the default value from CID-CMD tool - Actually this can be the region where the user runs the template, so there is no need for a parameter here and in the lambda function.
+    Default: Ref "AWS::Region" # TODO: match with the default value from CID-CMD tool - Actually this can be the region where the user runs the template, so there is no need for a parameter here and in the lambda function.
     Description: "The region of the Athena Workgroup (and of the corresponding Glue database)"
 
   AthenaConfigSnapshotsTableName:
