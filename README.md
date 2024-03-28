@@ -1,4 +1,73 @@
-# Cloud Intelligence Dashboards - Config Resource Compliance Dashboard (CRCD)
+# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
+
+## Description
+
+The AWS Config Resource Compliance Dashboard (CRCD) shows the inventory of resources, along with their compliance status, running across multiple AWS accounts. The dashboard provides:
+
+- Month-by-month evolution of the compliance status of your resources
+- Breakdown of compliance per service, account and region
+- Compliance of AWS Config Rules and Conformance Packs
+- Inventory of EC2, S3 resources with filtering on account, region, tags
+
+The dashboard uses these sources to get these insights:
+
+- AWS Config Configuration Snapshots: to get the inventory of resources and their compliance with AWS Config Rules and Conformance Packs using Configuration Snapshots
+
+The infrastructure needed to collect and process the data is defined in CloudFormation. 
+
+## Architecture
+
+The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to an S3 bucket. Whenever there's a new object in the bucket, a Lambda function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If object is not a Configuration Snapshot, the function ignores it. 
+
+In Athena, there is a table used to extract data from Configuration Snapshots. The solution provides Athena views, which are SQL queries that extract data from S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these Athena views through QuickSight datasets.
+
+
+
+
+
+## Prerequisites
+ 
+1. AWS Account where you'll deploy the dashboard
+    1. 
+2. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation
+3. If you haven't, sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user
+    1. Select **Enterprise** edition
+    2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer
+    3. **Use IAM federated identities and QuickSight-managed users**
+    4. Select the region where you plan to deploy the dashboard. We recommend using the region of your S3 bucket collecting Configuration Snapshots. This will avoif cross+region data transfer costs
+    5. Add an username and an e-mail where you'll receive notifications on failed QuickSight datasets updates
+    6. Use the **QuickSight-managed role (default)**
+    7. Don't modify the **Allow access and autodiscovery for these resources** section and click on **Finish**
+4. Ensure you have SPICE capacity left in the region where you're deploying the dashboard
+5. Enable AWS Config in the accounts and regions you want to track, setup the delivery of Configuration Snapshots to a centralized S3 buckey.
+
+### AWS Config Prerequisites
+The solution supports AWS accounts and AWS accounts that are member of an AWS Organization. These two options have different ways of structuring the Configuration Snapshots in S3, the solution supports the following S3 prefixes. **Verify that your setup is compatible with the following.**
+
+In both cases below:
+* AWS-ORGANIZATION-ID is the identifier of your AWS Organization
+* ACCOUNT-ID is the 12-digit AWS Account number, e.g. 123412341234
+* REGION identifies an AWS region, e.g. us-east-1
+* YYYY/MM/DD represents a date
+* TIMESTAMP a full timestamp, e.g. 20180411T054711Z
+
+
+#### AWS Organizations
+Matches object keys like `AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
+
+
+#### Standalone Account
+Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
+
+
+## Deployment instructions
+
+1. Run cloudFormation
+2. Grant cross account access as per [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html)
+3. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
+
+
+# Cloud Intelligence Dashboards - Config Resource Compliance Dashboard (CRCD) -- ORIGINAL
 
 ![CRCD](images/01.png "CRCD")
 ![CRCD](images/02.png "CRCD")

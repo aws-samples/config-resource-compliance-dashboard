@@ -5,6 +5,11 @@ dashboards:
       - config_conformance_packs_compliance
       - config_inventory_compliance
       - config_inventory_compliance_per_rule
+      - config_inventory_all
+      - config_inventory_ec2
+      - config_inventory_iam
+      - config_inventory_s3
+      - config_inventory_vpc
     name: CID-Config
     dashboardId: cid-crcd
     templateId: cid-crcd
@@ -319,8 +324,8 @@ views:
         'transient_lastDdlTime'='1684922191')
     parameters:
       s3path:
-        default: s3://configdata{account_id}/AWSLogs
-        description: S3 Path for aws_config_configuration_snapshots table
+        default: s3://aws-controltower-logs-{account_id}-eu-north-1
+        description: S3 Path for aws_config_configuration_snapshots table compatible with AWS Organizations
   config_conformance_packs_compliance:
     dependsOn:
       views:

@@ -1,0 +1,315 @@
+---
+Metadata:
+  TemplateId: "arn:aws:cloudformation:eu-north-1:767398150443:generatedTemplate/ba3df8e6-faa9-4e71-b57d-edb56e94954c"
+Parameters:
+  LambdaFunction00lambdacidconfig00XXxDqCodeS3KeyOneOfZVvZ0:
+    NoEcho: "true"
+    Type: "String"
+    Description: "The Amazon S3 key of the deployment package.\nThis property can\
+      \ be replaced with other exclusive properties"
+  LambdaFunction00lambdacidconfig00XXxDqCodeS3BucketOneOfSwcph:
+    NoEcho: "true"
+    Type: "String"
+    Description: "An Amazon S3 bucket in the same AWS-Region as your function. The\
+      \ bucket can be in a different AWS-account.\nThis property can be replaced with\
+      \ other exclusive properties"
+Resources:
+  S3BucketPolicy00configdata767398150443002hY4g:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::S3::BucketPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      Bucket:
+        Ref: "S3Bucket00configdata76739815044300Nk0rX"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            Bool:
+              aws:SecureTransport: "false"
+          Resource:
+          - "arn:aws:s3:::configdata767398150443/*"
+          - "arn:aws:s3:::configdata767398150443"
+          Action: "s3:*"
+          Effect: "Deny"
+          Principal: "*"
+          Sid: "HTTPSOnly"
+        - Resource: "arn:aws:s3:::configdata767398150443/*"
+          Action:
+          - "s3:ReplicateObject"
+          - "s3:ReplicateDelete"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::730335449096:role/service-role/s3crr_role_for_aws-controltower-logs-730335449096-eu-north-1"
+          Sid: "Set-permissions-for-objects"
+        - Resource: "arn:aws:s3:::configdata767398150443"
+          Action:
+          - "s3:List*"
+          - "s3:GetBucketVersioning"
+          - "s3:PutBucketVersioning"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::730335449096:role/service-role/s3crr_role_for_aws-controltower-logs-730335449096-eu-north-1"
+          Sid: "Set permissions on bucket"
+  S3Bucket00configdata76739815044300Nk0rX:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "configdata767398150443"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: false
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: "S3Bucket00configlogging76739815044300gsiUV"
+        LogFilePrefix: "log/"
+      NotificationConfiguration:
+        QueueConfigurations: []
+        TopicConfigurations: []
+        LambdaConfigurations:
+        - Function:
+            Fn::GetAtt:
+            - "LambdaFunction00lambdacidconfig00XXxDq"
+            - "Arn"
+          Filter:
+            S3Key:
+              Rules:
+              - Value: ""
+                Name: "Prefix"
+          Event: "s3:ObjectCreated:*"
+      VersioningConfiguration:
+        Status: "Enabled"
+  IAMManagedPolicy00policygluelambdacidconfiggluepolicy2024030511085864850000000300RgKW6:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "glue-lambda-cid-config-glue-policy20240305110858648500000003"
+      Path: "/"
+      Description: "Policy that gives Glue permissisons to Lambda IAM role"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:glue:eu-north-1:767398150443:table/cid_config_athena_database/*"
+          - "arn:aws:glue:eu-north-1:767398150443:database/cid_config_athena_database"
+          - "arn:aws:glue:eu-north-1:767398150443:catalog"
+          Action:
+          - "glue:UpdatePartition"
+          - "glue:GetTables"
+          - "glue:GetTable"
+          - "glue:GetPartitions"
+          - "glue:GetPartition"
+          - "glue:DeletePartition"
+          - "glue:CreatePartition"
+          - "glue:BatchGetPartition"
+          - "glue:BatchDeletePartition"
+          - "glue:BatchCreatePartition"
+          Effect: "Allow"
+          Sid: "Glue"
+      Roles:
+      - "lambda-cid-config"
+      Users: []
+  IAMManagedPolicy00policys3lambdacidconfigs3policy2024030511085962540000000400RU92S:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "s3-lambda-cid-config-s3-policy20240305110859625400000004"
+      Path: "/"
+      Description: "Policy that gives S3 permissisons to Lambda IAM role"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:s3:::configathenaresults767398150443/*"
+          - "arn:aws:s3:::configathenaresults767398150443"
+          Action:
+          - "s3:PutObject"
+          - "s3:ListMultipartUploadParts"
+          - "s3:ListBucket"
+          - "s3:GetObject"
+          - "s3:GetBucketLocation"
+          Effect: "Allow"
+          Sid: "S3"
+      Roles:
+      - "lambda-cid-config"
+      Users: []
+  IAMManagedPolicy00policycloudwatchlogslambdacidconfigcloudwatchpolicy2024030511085864290000000200yj4L5:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "cloudwatch-logs-lambda-cid-config-cloudwatch-policy20240305110858642900000002"
+      Path: "/"
+      Description: "Policy that gives CloudWatch Logs permissisons to Lambda IAM role"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "arn:aws:logs:eu-north-1:767398150443:log-group:/aws/lambda/lambda-cid-config:*"
+          Action:
+          - "logs:PutLogEvents"
+          - "logs:CreateLogStream"
+          - "logs:CreateLogGroup"
+          Effect: "Allow"
+          Sid: "CloudWatchLogGroup"
+      Roles:
+      - "lambda-cid-config"
+      Users: []
+  IAMManagedPolicy00policyathenalambdacidconfigathenapolicy2024030511085863580000000100mo5J5:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "athena-lambda-cid-config-athena-policy20240305110858635800000001"
+      Path: "/"
+      Description: "Policy that gives Athena permissisons to Lambda IAM role"
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "arn:aws:athena:eu-north-1:767398150443:workgroup/cid-config-athena-workgroup"
+          Action:
+          - "athena:StartQueryExecution"
+          - "athena:GetQueryExecution"
+          Effect: "Allow"
+          Sid: "AthenaAccess"
+      Roles:
+      - "lambda-cid-config"
+      Users: []
+  LambdaFunction00lambdacidconfig00XXxDq:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::Lambda::Function"
+    DeletionPolicy: "Delete"
+    Properties:
+      MemorySize: 128
+      Description: "Lambda function that adds partitions when there are new Configuration\
+        \ Snapshots or CloudTrail events"
+      TracingConfig:
+        Mode: "Active"
+      VpcConfig:
+        SecurityGroupIds: []
+        SubnetIds: []
+        Ipv6AllowedForDualStack: false
+      Timeout: 300
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: "Auto"
+      Handler: "lambda_function.lambda_handler"
+      ReservedConcurrentExecutions: 1
+      Code:
+        S3Bucket:
+          Ref: "LambdaFunction00lambdacidconfig00XXxDqCodeS3BucketOneOfSwcph"
+        S3Key:
+          Ref: "LambdaFunction00lambdacidconfig00XXxDqCodeS3KeyOneOfZVvZ0"
+      Role:
+        Fn::GetAtt:
+        - "IAMRole00lambdacidconfig00RXeDZ"
+        - "Arn"
+      FileSystemConfigs: []
+      FunctionName: "lambda-cid-config"
+      Runtime: "python3.10"
+      PackageType: "Zip"
+      LoggingConfig:
+        LogFormat: "Text"
+        LogGroup: "/aws/lambda/lambda-cid-config"
+      Environment:
+        Variables:
+          CLOUDTRAIL_TABLE_NAME: "aws_cloudtrail_events"
+          DATABASE_NAME: "cid_config_athena_database"
+          ATHENA_QUERY_RESULTS_BUCKET_NAME: "configathenaresults767398150443"
+          WORKGROUP: "cid-config-athena-workgroup"
+          CONFIG_TABLE_NAME: "aws_config_configuration_snapshots"
+          REGION: "eu-north-1"
+      EphemeralStorage:
+        Size: 512
+      Tags:
+      - Value: "no"
+        Key: "auto-delete"
+      Architectures:
+      - "x86_64"
+  IAMRole00lambdacidconfig00RXeDZ:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Delete"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - Ref: "IAMManagedPolicy00policyathenalambdacidconfigathenapolicy2024030511085863580000000100mo5J5"
+      - Ref: "IAMManagedPolicy00policygluelambdacidconfiggluepolicy2024030511085864850000000300RgKW6"
+      - Ref: "IAMManagedPolicy00policys3lambdacidconfigs3policy2024030511085962540000000400RU92S"
+      - Ref: "IAMManagedPolicy00policycloudwatchlogslambdacidconfigcloudwatchpolicy2024030511085864290000000200yj4L5"
+      MaxSessionDuration: 3600
+      RoleName: "lambda-cid-config"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "lambda.amazonaws.com"
+          Sid: ""
+  LambdaPermission00functionlambdacidconfig00fD2vo:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::Lambda::Permission"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - "LambdaFunction00lambdacidconfig00XXxDq"
+        - "Arn"
+      Action: "lambda:InvokeFunction"
+      SourceArn:
+        Fn::GetAtt:
+        - "S3Bucket00configdata76739815044300Nk0rX"
+        - "Arn"
+      Principal: "s3.amazonaws.com"
+      SourceAccount: "767398150443"
+  LambdaPermission00functionlambdacidconfig003MyXo:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::Lambda::Permission"
+    DeletionPolicy: "Delete"
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - "LambdaFunction00lambdacidconfig00XXxDq"
+        - "Arn"
+      Action: "lambda:InvokeFunction"
+      SourceArn:
+        Fn::GetAtt:
+        - "S3Bucket00configdata76739815044300Nk0rX"
+        - "Arn"
+      Principal: "s3.amazonaws.com"
+      SourceAccount: "767398150443"
+  S3Bucket00configlogging76739815044300gsiUV:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "configlogging767398150443"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: false
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
