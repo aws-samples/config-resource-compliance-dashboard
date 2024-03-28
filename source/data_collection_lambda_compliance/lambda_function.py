@@ -3,13 +3,13 @@ import re
 import boto3
 import os
 
-TABLE_NAME = ""
-DATABASE_NAME = os.environ["DATABASE_NAME"]
+TABLE_NAME = ""  # TODO: this can only be the env variable "CONFIG_TABLE_NAME"
+ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
-REGION = os.environ['REGION']
-ACCOUNT_ID = None # Determined at runtime
-WORKGROUP = os.environ['WORKGROUP']
-LOGGING_ON = True # enables additional logging
+ATHENA_REGION = os.environ['ATHENA_REGION']
+ACCOUNT_ID = None  # Determined at runtime, it is the same AWS Account of the lambda function
+ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
+LOGGING_ON = True  # enables additional logging to CloudWatch
 
 # This regular expresions is compatible with how ControlTower stores Config logs in S3
 # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
@@ -144,18 +144,18 @@ def build_partition_string(accountid_partition_value, region_partition_value, dt
 def execute_query(query):
     print('Executing query:', query)
     query_output_location = 's3://{athena_query_results_bucket}'.format(
-        athena_query_results_bucket = ATHENA_QUERY_RESULTS_BUCKET_NAME,
+        athena_query_results_bucket=ATHENA_QUERY_RESULTS_BUCKET_NAME,
         account_id=ACCOUNT_ID,
-        region=REGION)
+        region=ATHENA_REGION)
     start_query_response = athena.start_query_execution(
         QueryString=query,
         QueryExecutionContext={
-            'Database': DATABASE_NAME
+            'Database': ATHENA_DATABASE_NAME
         },
         ResultConfiguration={
             'OutputLocation': query_output_location,
         },
-        WorkGroup=WORKGROUP
+        WorkGroup=ATHENA_WORKGROUP
     )
     print('Query started')
     
@@ -165,7 +165,7 @@ def execute_query(query):
             QueryExecutionId=start_query_response['QueryExecutionId']
         )
         query_state = get_query_execution_response['QueryExecution']['Status']['State']
-        is_query_running = query_state in ('RUNNING','QUEUED')
+        is_query_running = query_state in ('RUNNING', 'QUEUED')
         
         if not is_query_running and query_state != 'SUCCEEDED':
             raise AthenaException('Query failed')

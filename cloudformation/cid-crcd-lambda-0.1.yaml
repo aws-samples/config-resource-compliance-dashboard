@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deployment of a Lambda function used by AWS Config Resource Compliance Dashboard (CRCD) v2 to access Config Snapshots on S3
+
+# TODO: eventually delete, this was a first attempt at writing the cloud formation template
+
+CICRCDConfigLambda:
+  Type: AWS::Lambda::Function
+  Properties:
+    FunctionName:  'arn:aws:s3:::aws-controltower-logs-730335449096-eu-west-1'
+    Role: !GetAtt SpiceRefreshExecutionRole.Arn
+    Description: 'Import AWS Config snapshots into the Athen database'
+    Runtime: python3.12
+    Architectures: [ x86_64 ] #Compatible with arm64 but it is not supported in all regions
+    MemorySize: 128
+    Timeout: 300
+    Environment:
+      Variables:
+        #SUFFIX: !Ref Suffix
+        SUFFIX: '' # CID CMD does not support suffixes yet
+    Handler: index.lambda_handler
+    Code:
+      ZipFile: | # TODO: add the code here?
+
+Outputs:
+  AthenaWorkgroupName:
+    # todo, how to return CRDCAthenaWorkgroup.Name? it says this is not a read only property and fails the CF template
+    Description: 'Name of the Athena Workgroup'
+    Value: 'This is a sample output'

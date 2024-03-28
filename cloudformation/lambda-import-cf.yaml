@@ -1,9 +1,0 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Template for importing a lambda
-
-Resources:
-  LambdaImportTest2:
-    Type: "AWS::Lambda::Function"
-    DeletionPolicy: "Delete"
-    Properties:
-      Role: arn:aws:iam::767398150443:role/lambda-cid-config
