@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "Testing the deployment of a Lambda function supporting AWS Config Resource Compliance Dashboard (CRCD) v2"
+Description: "Deployment of a Lambda function supporting AWS Config Resource Compliance Dashboard (CRCD) v2"
 
 Metadata:
+  TemplateId: "arn:aws:cloudformation:eu-north-1:767398150443:generatedTemplate/ba3df8e6-faa9-4e71-b57d-edb56e94954c" # TODO: needed?
+
+  # defines how parameters are grouped and sorted in the AWS CloudFormation console
   AWS::CloudFormation::Interface:
     ParameterGroups:
       -
@@ -20,6 +23,8 @@ Metadata:
           - ConfigLoggingBucketArn
           - ConfigLoggingAccountID
 
+    # A mapping of parameters and their friendly names that the CloudFormation
+    # console shows when a stack is created or updated
     ParameterLabels:
       AthenaRegion:
         default: "Athena Region"
@@ -50,31 +55,128 @@ Parameters:
 
   AthenaDatabaseName:
     Type: "String"
-    Default: "cid_config_athena_database" 
+    Default: "cid_config_athena_database" # TODO: match with the default value from CID-CMD tool
     Description: "The Athena database for the CID-CRCD dashboard"
 
   AthenaQueryResultBucketName:
     Type: "String"
-    Default: "configathenaresults767398150443" 
+    Default: "configathenaresults767398150443" # TODO: match with the default value from CID-CMD tool
     Description: "The Athena Query Result bucket for the workgroup"
 
   AthenaWorkgroup:
     Type: "String"
     Default: "cid-config-athena-workgroup"
-    Description: "The Athena workgroup for the CID-CRCD dashboard" 
+    Description: "The Athena workgroup for the CID-CRCD dashboard" # TODO: match with the default value from CID-CMD tool
 
+  # TODO looks like region cannot be a supported parameter at all!!!
+  #  see https://repost.aws/questions/QUI7lPGMB5RqWNIXfCmkNXYQ/using-pseudo-parameters-as-defaults-in-cloudformation
   AthenaRegion:
     Type: "String"
-    Default: ""
+    Default: "" # TODO: match with the default value from CID-CMD tool - Actually this can be the region where the user runs the template, so there is no need for a parameter here and in the lambda function.
     Description: "The region of the Athena Workgroup (and of the corresponding Glue database)"
 
   AthenaConfigSnapshotsTableName:
     Type: "String"
-    Default: "aws_config_configuration_snapshots"
+    Default: "aws_config_configuration_snapshots" # TODO: match with the default value from CID-CMD tool
     Description: "The Athena table that contains the AWS Config data for the dashboard"
+
+  # TODO: probably not needed, where is the code for the lambda function going to be?
+  LambdaFunctionCID-CRCDConfigCodeS3KeyOneOfZVvZ0:
+    NoEcho: "true"
+    Type: "String"
+    Description: "The Amazon S3 key of the deployment package.\nThis property can\
+      \ be replaced with other exclusive properties"
+
+  # TODO: probably not needed, where is the code for the lambda function going to be?
+  LambdaFunctionCID-CRCDConfigCodeS3BucketOneOfSwcph:
+    NoEcho: "true"
+    Type: "String"
+    Description: "An Amazon S3 bucket in the same AWS-Region as your function. The\
+      \ bucket can be in a different AWS-account.\nThis property can be replaced with\
+      \ other exclusive properties"
 
 
 Resources:
+  # TODO: remove, the S3 bucket with AWS Config data is a prerequisite. This policy is probably not needed, it looks like allows Control Tower to add objects
+  S3BucketPolicy00configdata767398150443002hY4g:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::BucketPolicy"
+    DeletionPolicy: "Delete"
+    Properties:
+      Bucket:
+        Ref: "S3Bucket00configdata76739815044300Nk0rX"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Condition:
+            Bool:
+              aws:SecureTransport: "false"
+          Resource:
+          - "arn:aws:s3:::configdata767398150443/*"
+          - "arn:aws:s3:::configdata767398150443"
+          Action: "s3:*"
+          Effect: "Deny"
+          Principal: "*"
+          Sid: "HTTPSOnly"
+        - Resource: "arn:aws:s3:::configdata767398150443/*"
+          Action:
+          - "s3:ReplicateObject"
+          - "s3:ReplicateDelete"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::730335449096:role/service-role/s3crr_role_for_aws-controltower-logs-730335449096-eu-north-1"
+          Sid: "Set-permissions-for-objects"
+        - Resource: "arn:aws:s3:::configdata767398150443"
+          Action:
+          - "s3:List*"
+          - "s3:GetBucketVersioning"
+          - "s3:PutBucketVersioning"
+          Effect: "Allow"
+          Principal:
+            AWS: "arn:aws:iam::730335449096:role/service-role/s3crr_role_for_aws-controltower-logs-730335449096-eu-north-1"
+          Sid: "Set permissions on bucket"
+
+  # TODO: remove, the S3 bucket with AWS Config data is a prerequisite
+  S3Bucket00configdata76739815044300Nk0rX:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "configdata767398150443"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: false
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: "S3Bucket00configlogging76739815044300gsiUV"
+        LogFilePrefix: "log/"
+      NotificationConfiguration:
+        QueueConfigurations: []
+        TopicConfigurations: []
+        LambdaConfigurations:
+        - Function:
+            Fn::GetAtt:
+            - "LambdaFunctionCIDCRCDConfig"
+            - "Arn"
+          Filter:
+            S3Key:
+              Rules:
+              - Value: ""
+                Name: "Prefix"
+          Event: "s3:ObjectCreated:*"
+      VersioningConfiguration:
+        Status: "Enabled"
+
   IAMManagedPolicyLambdaCIDCRCDGlue:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
@@ -211,11 +313,19 @@ Resources:
         UpdateRuntimeOn: "Auto"
       Handler: "lambda_function.lambda_handler"
       ReservedConcurrentExecutions: 1
+      Code:
+        # refers to an S3 bucket containing the lambda code
+        # TODO: add code here or setup regional buckets everywhere?
+        S3Bucket:
+          Ref: "LambdaFunctionCID-CRCDConfigCodeS3BucketOneOfSwcph"
+        S3Key:
+          Ref: "LambdaFunctionCID-CRCDConfigCodeS3KeyOneOfZVvZ0"
       Role:
         Fn::GetAtt:
         - "IAMRoleLambdaCIDCRCDConfig"
         - "Arn"
       FileSystemConfigs: []
+      PackageType: "Zip" # TODO: this may be related to the code being on S3
       LoggingConfig:
         LogFormat: "Text"
         LogGroup: "/aws/lambda/lambda-cid-crcd-config"
@@ -227,14 +337,9 @@ Resources:
           CONFIG_TABLE_NAME: !Ref AthenaConfigSnapshotsTableName
           # TODO: looks like the region where the Athena query result bucket is. Which should be the same region as Athena... check the lambda code very well
           ATHENA_REGION: !Ref AthenaRegion
-      Code:
-        ZipFile: | 
-          def lambda_handler(event, context):
-            print("Hello Lambda!")
-            return "Lambda is done"
-        
+
   IAMRoleLambdaCIDCRCDConfig:
-    # Lambda execution role for function LambdaFunctionCID-CRCDConfig
+    # Lambda execution role for function LambdaFunctionCIDCRCDConfig
     # Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access S3 to read objects, defined in separate policies
     Type: "AWS::IAM::Role"
     DeletionPolicy: "Delete"
@@ -257,6 +362,24 @@ Resources:
             Service: "lambda.amazonaws.com"
           Sid: ""
 
+  # TODO: delete, seems a duplicate of LambdaPermissionLambdaCIDCRCDInvocationPermission... why do I have 2 then??
+  LambdaPermission00functionlambdacidconfig00fD2vo:
+    Type: "AWS::Lambda::Permission"
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      FunctionName:
+        Fn::GetAtt:
+        - "LambdaFunctionCIDCRCDConfig"
+        - "Arn"
+      Action: "lambda:InvokeFunction"
+      SourceArn:
+        Fn::GetAtt:
+        - "S3Bucket00configdata76739815044300Nk0rX"
+        - "Arn"
+      Principal: "s3.amazonaws.com"
+      SourceAccount: "767398150443"
+
   # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
   # The S3 bucket must be manually configured, too
   LambdaPermissionLambdaCIDCRCDInvocationPermission:
@@ -270,8 +393,34 @@ Resources:
         - "Arn"
       Action: "lambda:InvokeFunction"
       SourceArn: !Ref ConfigLoggingBucketArn
+        # TODO delete, this refers to the ARN of a bucket defined here, which will be removed
+        # Fn::GetAtt:
+        # - "S3Bucket00configdata76739815044300Nk0rX"
+        # - "Arn"
       Principal: "s3.amazonaws.com"
-      SourceAccount: !Ref ConfigLoggingAccountID
+      SourceAccount: !Ref ConfigLoggingAccountID # TODO delete "767398150443"
+
+  # TODO: delete
+  S3Bucket00configlogging76739815044300gsiUV:
+    UpdateReplacePolicy: "Delete"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Delete"
+    Properties:
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "configlogging767398150443"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: false
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+
 
 Outputs:
   LambdaARN:
