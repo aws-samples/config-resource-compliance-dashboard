@@ -8,7 +8,6 @@ Metadata:
         Label:
           default: "Athena Configuration"
         Parameters:
-          - AthenaRegion
           - AthenaWorkgroup
           - AthenaDatabaseName
           - AthenaQueryResultBucketName
@@ -21,8 +20,6 @@ Metadata:
           - ConfigLoggingAccountID
 
     ParameterLabels:
-      AthenaRegion:
-        default: "Athena Region"
       AthenaWorkgroup:
         default: "Athena Workgroup"
       AthenaDatabaseName:
@@ -61,12 +58,7 @@ Parameters:
   AthenaWorkgroup:
     Type: "String"
     Default: "cid-config-athena-workgroup"
-    Description: "The Athena workgroup for the CID-CRCD dashboard" 
-
-  AthenaRegion:
-    Type: "String"
-    Default: ""
-    Description: "The region of the Athena Workgroup (and of the corresponding Glue database)"
+    Description: "The Athena workgroup for the CID-CRCD dashboard"
 
   AthenaConfigSnapshotsTableName:
     Type: "String"
@@ -88,9 +80,9 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          - !Sub "arn:${AWS::Partition}:glue:${AthenaRegion}:${AWS::AccountId}:table/{AthenaDatabaseName}/*"
-          - !Sub "arn:${AWS::Partition}:glue:${AthenaRegion}:${AWS::AccountId}:table/{AthenaDatabaseName}"
-          - !Sub "arn:${AWS::Partition}:glue:${AthenaRegion}:${AWS::AccountId}:catalog"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/{AthenaDatabaseName}/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/{AthenaDatabaseName}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
           Action:
           - "glue:UpdatePartition"
           - "glue:GetTables"
@@ -170,7 +162,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        - Resource: !Sub "arn:${AWS::Partition}:athena:${AthenaRegion}:${AWS::AccountId}:workgroup/{AthenaWorkgroup}"
+        - Resource: !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/{AthenaWorkgroup}"
           Action:
           - "athena:StartQueryExecution"
           - "athena:GetQueryExecution"
@@ -218,8 +210,8 @@ Resources:
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucketName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroup
           CONFIG_TABLE_NAME: !Ref AthenaConfigSnapshotsTableName
-          # TODO: looks like the region where the Athena query result bucket is. Which should be the same region as Athena... check the lambda code very well
-          ATHENA_REGION: !Ref AthenaRegion
+          # TODO: Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
+          ATHENA_REGION: !Ref AWS::Region
       Code:
         # TODO: handle the code
         ZipFile: | 
