@@ -39,13 +39,15 @@ Parameters:
     Type: "String"
     Default: "arn:aws:s3:::your-config-bucket"
     Description: "ARN of the S3 bucket that collects AWS Config data"
-    # AllowedPattern: '^s3://[a-z0-9](.)+[a-zA-Z0-9/]$'
+    AllowedPattern: '/^arn:(aws|aws-cn|aws-us-gov):s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/gm'
 
   ConfigLoggingAccountID:
     Type: "String"
     Default: "123412341234"
     Description: "AWS Account ID that contains the bucket holding AWS Config snapshots"
     MaxLength: 12
+    MinLength: 12
+    AllowedPattern: '^\d{12}$'
 
   AthenaDatabaseName:
     Type: "String"
@@ -56,7 +58,7 @@ Parameters:
   AthenaQueryResultBucketName:
     Type: "String"
     Default: "cid-crcd-athenaresults" 
-    Description: "The Athena Query Result bucket for the workgroup"
+    Description: "The Athena query result bucket for the workgroup"
     MinLength: 1
 
   AthenaWorkgroup:
@@ -80,6 +82,41 @@ Rules:
           - !Ref ConfigLoggingBucketArn
           - ''
         AssertDescription: "Config bucket ARN is required"
+  MandatoryConfigLoggingAccountID:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref ConfigLoggingAccountID
+          - ''
+        AssertDescription: "Config bucket account is required"
+  MandatoryAthenaDatabaseName:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaDatabaseName
+          - ''
+        AssertDescription: "Athena database is required"
+  MandatoryAthenaQueryResultBucketName:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaQueryResultBucketName
+          - ''
+        AssertDescription: "Athena query result bucket is required"
+  MandatoryAthenaWorkgroup:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaWorkgroup
+          - ''
+        AssertDescription: "Athena workgroup is required"
+  MandatoryAthenaConfigSnapshotsTableName:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaConfigSnapshotsTableName
+          - ''
+        AssertDescription: "Athena table is required"
 
 Resources:
   IAMManagedPolicyLambdaCIDCRCDGlue:
@@ -219,10 +256,10 @@ Resources:
             return "Lambda is done"
         
   IAMRoleLambdaCIDCRCDConfig:
-    # Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access S3 to read objects, defined in separate policies
     Type: "AWS::IAM::Role"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
+    Description: "CID-CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket. Each defined in separate policies"
     Properties:
       Path: "/"
       ManagedPolicyArns:
