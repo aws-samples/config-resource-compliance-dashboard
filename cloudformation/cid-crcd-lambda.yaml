@@ -39,7 +39,8 @@ Parameters:
     Type: "String"
     Default: "arn:aws:s3:::your-config-bucket"
     Description: "ARN of the S3 bucket that collects AWS Config data"
-    AllowedPattern: '/^arn:(aws|aws-cn|aws-us-gov):s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/gm'
+    AllowedPattern: '^arn:(aws|aws-cn|aws-us-gov):s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    ConstraintDescription: "Required"
 
   ConfigLoggingAccountID:
     Type: "String"
@@ -48,32 +49,36 @@ Parameters:
     MaxLength: 12
     MinLength: 12
     AllowedPattern: '^\d{12}$'
+    ConstraintDescription: "Required"
 
   AthenaDatabaseName:
     Type: "String"
     Default: "cid-crcd-athena-database"
     Description: "The Athena database for the CID-CRCD dashboard"
     MinLength: 1
+    ConstraintDescription: "Required"
 
   AthenaQueryResultBucketName:
     Type: "String"
     Default: "cid-crcd-athenaresults" 
     Description: "The Athena query result bucket for the workgroup"
     MinLength: 1
+    ConstraintDescription: "Required"
 
   AthenaWorkgroup:
     Type: "String"
     Default: "cid-crcd-athena-workgroup"
     Description: "The Athena workgroup for the CID-CRCD dashboard"
     MinLength: 1
+    ConstraintDescription: "Required"
 
   AthenaConfigSnapshotsTableName:
     Type: "String"
-    Default: "aws_config_configuration_snapshots"
+    Default: "cid-crcd-configuration-snapshots"
     Description: "The Athena table that contains the AWS Config data for the dashboard"
     MinLength: 1
+    ConstraintDescription: "Required"
 
-# TODO why these are validated when I run the stack? and not when I speify the parameters?
 Rules:
   MandatoryConfigLoggingBucketArn:
     Assertions:
@@ -118,6 +123,7 @@ Rules:
           - ''
         AssertDescription: "Athena table is required"
 
+# TODO policy names must be globally unique, end them with the region
 Resources:
   IAMManagedPolicyLambdaCIDCRCDGlue:
     Type: "AWS::IAM::ManagedPolicy"
@@ -153,7 +159,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-s3-policy"
+      ManagedPolicyName: "cid-crcd-s3-athenaqueryresults-policy"
       Path: "/"
       Description: "CID-CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CID-CRCD Lambda execution role"
       PolicyDocument:
@@ -170,6 +176,29 @@ Resources:
           - "s3:GetBucketLocation"
           Effect: "Allow"
           Sid: "S3AthenaQueryResults"
+
+  IAMManagedPolicyLambdaCIDCRCDS3TriggerObject:
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "cid-crcd-s3-triggerobject-policy"
+      Path: "/"
+      Description: "CID-CRCD Dashboard - Policy that allows CID-CRCD Lambda to receive objects from the Config S3 bucket"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - !Ref ConfigLoggingBucketArn
+          Action:
+          - "s3:GetObject"
+          # TODO added those below manually on the policy
+          - "s3:ListBucket"
+          - "s3:ListBucketVersions"
+          - "s3:GetObjectVersion"
+          - "s3:GetLifecycleConfiguration"
+          Effect: "Allow"
+          Sid: "S3ConfigSnapshotObject"
 
   IAMManagedPolicyLambdaCIDCRCDCloudWatchLogs:
     Type: "AWS::IAM::ManagedPolicy"
@@ -230,7 +259,8 @@ Resources:
         Ipv6AllowedForDualStack: false
       RuntimeManagementConfig:
         UpdateRuntimeOn: "Auto"
-      Handler: "lambda_function.lambda_handler"
+      # TODO the file name from the code below will be called index.py once you open it in Lambda
+      Handler: "index.lambda_handler"
       ReservedConcurrentExecutions: 1
       Role:
         Fn::GetAtt:
@@ -239,7 +269,7 @@ Resources:
       FileSystemConfigs: []
       LoggingConfig:
         LogFormat: "Text"
-        LogGroup: "/aws/lambda/cid-crcd-lambda-partitioner"
+        # this is already by default LogGroup: "/aws/lambda/cid-crcd-config-snapshot-partitioner"
       Environment:
         Variables:
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
@@ -251,15 +281,36 @@ Resources:
       Code:
         # TODO: handle the code
         ZipFile: | 
+          import json
+          import urllib.parse
+          import boto3
+          
+          print('Loading function')
+          s3 = boto3.client('s3')
+
           def lambda_handler(event, context):
-            print("Hello Lambda!")
-            return "Lambda is done"
+            print("Received event: " + json.dumps(event, indent=2))
+            
+            # Get the object from the event and show its content type
+            bucket = event['Records'][0]['s3']['bucket']['name']
+
+            key = urllib.parse.unquote_plus(event['Records'][0]['s3']['object']['key'], encoding='utf-8')
+
+            try:
+              response = s3.get_object(Bucket=bucket, Key=key)
+              print("CONTENT TYPE: " + response['ContentType'])
+              return response['ContentType']
+            
+            except Exception as e:
+              print(e)
+              print('Error getting object {} from bucket {}. Make sure they exist and your bucket is in the same region as this function.'.format(key, bucket))
+              raise e
         
   IAMRoleLambdaCIDCRCDConfig:
     Type: "AWS::IAM::Role"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
-    Description: "CID-CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket. Each defined in separate policies"
+    Description: "CID-CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
     Properties:
       Path: "/"
       ManagedPolicyArns:
@@ -267,6 +318,7 @@ Resources:
       - Ref: "IAMManagedPolicyLambdaCIDCRCDGlue"
       - Ref: "IAMManagedPolicyLambdaCIDCRCDS3"
       - Ref: "IAMManagedPolicyLambdaCIDCRCDCloudWatchLogs"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3TriggerObject"
       MaxSessionDuration: 3600
       RoleName: "cid-crcd-lambda-execution-role"
       AssumeRolePolicyDocument:
@@ -279,7 +331,6 @@ Resources:
           Sid: ""
 
   # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
-  # The S3 bucket must be manually configured, too
   LambdaPermissionLambdaCIDCRCDInvocationPermission:
     Type: "AWS::Lambda::Permission"
     DeletionPolicy: "Delete"
