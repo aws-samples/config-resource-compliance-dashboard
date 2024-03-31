@@ -38,14 +38,14 @@ Parameters:
   ConfigLoggingBucketArn:
     Type: "String"
     Default: "arn:aws:s3:::your-config-bucket"
-    Description: "ARN of the S3 bucket that collects AWS Config data"
+    Description: "ARN of the S3 bucket that collects AWS Config data (Required)"
     AllowedPattern: '^arn:(aws|aws-cn|aws-us-gov):s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "Required"
 
   ConfigLoggingAccountID:
     Type: "String"
     Default: "123412341234"
-    Description: "AWS Account ID that contains the bucket holding AWS Config snapshots"
+    Description: "AWS Account ID that contains the bucket holding AWS Config snapshots (Required)"
     MaxLength: 12
     MinLength: 12
     AllowedPattern: '^\d{12}$'
@@ -54,28 +54,36 @@ Parameters:
   AthenaDatabaseName:
     Type: "String"
     Default: "cid-crcd-athena-database"
-    Description: "The Athena database for the CID-CRCD dashboard"
+    Description: "The Athena database for the CID-CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
+  # TODO must be full ARN, like the Config snapshot
   AthenaQueryResultBucketName:
     Type: "String"
     Default: "cid-crcd-athenaresults" 
-    Description: "The Athena query result bucket for the workgroup"
+    Description: "The Athena query result bucket for the workgroup (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
+
+  # TODO WIP, replaces the one above
+  AthenaQueryResultBucketArn:
+    Type: "String"
+    Default: "arn:aws:s3:::cid-crcd-athenaresults" 
+    Description: "ARN of the S3 Athena query result bucket for the workgroup (Required)"
+    AllowedPattern: '^arn:(aws|aws-cn|aws-us-gov):s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
 
   AthenaWorkgroup:
     Type: "String"
     Default: "cid-crcd-athena-workgroup"
-    Description: "The Athena workgroup for the CID-CRCD dashboard"
+    Description: "The Athena workgroup for the CID-CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
   AthenaConfigSnapshotsTableName:
     Type: "String"
     Default: "cid-crcd-configuration-snapshots"
-    Description: "The Athena table that contains the AWS Config data for the dashboard"
+    Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
@@ -154,7 +162,7 @@ Resources:
           Effect: "Allow"
           Sid: "GluePartitions"
 
-  IAMManagedPolicyLambdaCIDCRCDS3:
+  IAMManagedPolicyLambdaCIDCRCDS3AthenaQueryResults:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -177,12 +185,12 @@ Resources:
           Effect: "Allow"
           Sid: "S3AthenaQueryResults"
 
-  IAMManagedPolicyLambdaCIDCRCDS3TriggerObject:
+  IAMManagedPolicyLambdaCIDCRCDS3ConfigSnapshotObject:
     Type: "AWS::IAM::ManagedPolicy"
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-s3-triggerobject-policy"
+      ManagedPolicyName: "cid-crcd-s3-configsnapshotobject-policy"
       Path: "/"
       Description: "CID-CRCD Dashboard - Policy that allows CID-CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
@@ -190,9 +198,10 @@ Resources:
         Statement:
         - Resource:
           - !Ref ConfigLoggingBucketArn
+          - !Sub "{ConfigLoggingBucketArn}/*"
           Action:
           - "s3:GetObject"
-          # TODO added those below manually on the policy
+          # TODO check what's really needed
           - "s3:ListBucket"
           - "s3:ListBucketVersions"
           - "s3:GetObjectVersion"
@@ -211,7 +220,8 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        - Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cid-crcd-lambda-partitioner:*"
+        # TODO keep the log group name the same as the lambda function
+        - Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cid-crcd-config-snapshot-partitioner:*"
           Action:
           - "logs:PutLogEvents"
           - "logs:CreateLogStream"
@@ -316,9 +326,9 @@ Resources:
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyLambdaCIDCRCDAthena"
       - Ref: "IAMManagedPolicyLambdaCIDCRCDGlue"
-      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3AthenaQueryResults"
       - Ref: "IAMManagedPolicyLambdaCIDCRCDCloudWatchLogs"
-      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3TriggerObject"
+      - Ref: "IAMManagedPolicyLambdaCIDCRCDS3ConfigSnapshotObject"
       MaxSessionDuration: 3600
       RoleName: "cid-crcd-lambda-execution-role"
       AssumeRolePolicyDocument:
@@ -351,4 +361,11 @@ Outputs:
     Value:
       Fn::GetAtt:
         - "LambdaFunctionCIDCRCDConfig"
+        - "Arn"
+
+  LambdaRoleARN:
+    Description: "ARN of the execution role of the lambda function"
+    Value:
+      Fn::GetAtt:
+        - "IAMRoleLambdaCIDCRCDConfig"
         - "Arn"
