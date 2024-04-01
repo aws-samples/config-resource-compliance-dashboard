@@ -62,17 +62,26 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
 ## Deployment Instructions
 
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-    a. TODO
+   - TODO suggest or configure athea info that will be used as parameters to the CloudFormation below
 2. Note down the following from above
+   - 
 3. Run CloudFormation script
-    a. Note down the output values of the cloudformation script: `Lambda function ARN` and `Lambda Role ARN`
+   - Use the following input parameters:
+     - `ConfigLoggingBucketArn` = the S3 bucket where your Config snapshots are delivered
+     - `ConfigLoggingAccountID` = the account holding the Config S3 bucket
+     - `AthenaWorkgroup` = the Athena workgroup for CID-CRCD dashboard
+     - `AthenaDatabaseName` = the name of the Athena database created above
+     - `AthenaQueryResultBucketName` = the bucket holding Athena query results 
+     - `AthenaConfigSnapshotsTableName` = the name of the Athena table for the Config snapshots
+   - Note down the output values of the cloudformation script: `Lambda function ARN` and `Lambda Role ARN`
 4. Configure the Config S3 bucket in the Log Archive account to allow cross-account access to the lambda function created above
-    a. Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
-        i. Name = `cid-crcd-deliver-config-snapshot`
-        ii. Event types = `All object create events`
-        iii. Destination = `Lambda function`
-        iv. Enter Lambda function ARN = `_Lambda function ARN returned by the CloudFormation script_`
-    b. Add the following statement to the bucket policy:
+   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
+     - i. Name = `cid-crcd-deliver-config-snapshot`
+     - ii. Event types = `All object create events`
+     - iii. Destination = `Lambda function`
+     - Enter Lambda function ARN = `_Lambda function ARN returned by the CloudFormation script_`
+   
+   - Add the following statement to the bucket policy [documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html):
 
     ```
         {
@@ -88,8 +97,9 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
             ]
         }
     ```
-        i. Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `_Lambda Role ARN returned by the CloudFormation script_`
-        ii. Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
+
+     - i. Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `_Lambda Role ARN returned by the CloudFormation script_`
+     - ii. Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
 
 
 

@@ -58,7 +58,7 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
 
-  # TODO must be full ARN, like the Config snapshot
+  # TODO must be full ARN, like the Config snapshot, or use just he bucke name in the parameter above
   AthenaQueryResultBucketName:
     Type: "String"
     Default: "cid-crcd-athenaresults" 
@@ -87,6 +87,7 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
 
+# TODO verify all parameters are checked
 Rules:
   MandatoryConfigLoggingBucketArn:
     Assertions:
