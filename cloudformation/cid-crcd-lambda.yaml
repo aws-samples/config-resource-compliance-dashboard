@@ -131,7 +131,7 @@ Rules:
           - ''
         AssertDescription: "Athena table is required"
 
-# TODO policy names must be globally unique, end them with the region
+# TODO policy names must be globally unique, end them with the region+account ID
 Resources:
   IAMManagedPolicyLambdaCIDCRCDGlue:
     Type: "AWS::IAM::ManagedPolicy"

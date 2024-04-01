@@ -45,11 +45,11 @@ In Athena, there is a table used to extract data from Configuration Snapshots. T
 The solution supports AWS accounts and AWS accounts that are member of an AWS Organization. These two options have different ways of structuring the Configuration Snapshots in S3, the solution supports the following S3 prefixes. **Verify that your setup is compatible with the following.**
 
 In both cases below:
-* AWS-ORGANIZATION-ID is the identifier of your AWS Organization
-* ACCOUNT-ID is the 12-digit AWS Account number, e.g. 123412341234
-* REGION identifies an AWS region, e.g. us-east-1
-* YYYY/MM/DD represents a date
-* TIMESTAMP a full timestamp, e.g. 20180411T054711Z
+* `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
+* `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234
+* `REGION` identifies an AWS region, e.g. us-east-1
+* `YYYY/MM/DD` represents a date
+* `TIMESTAMP` a full timestamp, e.g. 20180411T054711Z
 
 
 #### AWS Organizations
@@ -59,8 +59,41 @@ Matches object keys like `AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/Y
 #### Standalone Account
 Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
 
+## Deployment Instructions
 
-## Deployment instructions
+1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
+    a. TODO
+2. Note down the following from above
+3. Run CloudFormation script
+    a. Note down the output values of the cloudformation script: `Lambda function ARN` and `Lambda Role ARN`
+4. Configure the Config S3 bucket in the Log Archive account to allow cross-account access to the lambda function created above
+    a. Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
+        i. Name = `cid-crcd-deliver-config-snapshot`
+        ii. Event types = `All object create events`
+        iii. Destination = `Lambda function`
+        iv. Enter Lambda function ARN = `_Lambda function ARN returned by the CloudFormation script_`
+    b. Add the following statement to the bucket policy:
+
+    ```
+        {
+            "Sid": "Cross account access for CID-CRCD dashboard",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "LAMBDA-PARTITIONER-RULE-ARN"
+            },
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
+            ]
+        }
+    ```
+        i. Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `_Lambda Role ARN returned by the CloudFormation script_`
+        ii. Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
+
+
+
+## Deployment instructions --OLD
 
 1. Run cloudFormation
 2. Grant cross account access as per [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/example-walkthroughs-managing-access-example2.html)
