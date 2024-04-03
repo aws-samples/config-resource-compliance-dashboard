@@ -1,4 +1,4 @@
-# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
+# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CID-CRCD)
 
 ## Description
 
@@ -28,9 +28,10 @@ In Athena, there is a table used to extract data from Configuration Snapshots. T
 ## Prerequisites
  
 1. AWS Account where you'll deploy the dashboard
-    1. 
+    1. TODO about what account configurations are supported... maybe above
 2. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation
-3. If you haven't, sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user
+3. To avoid cross-region data transfer, Amazon Quicksight and the Amazon S3 bucket that centrally collects Config Snapshots must be deployed in the same region. If you have already deployed either one of the resources, the other must use the same region. If you haven't deployed anything yet, you can chose a region of your preference. If you have deployed both resources in different regions, we strongly recommend making changes so that both are in the same region: cross-region data transfer cost will incur when Athena queries the Amazon S3 bucket. 
+4. Sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user
     1. Select **Enterprise** edition
     2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer
     3. **Use IAM federated identities and QuickSight-managed users**
@@ -38,8 +39,8 @@ In Athena, there is a table used to extract data from Configuration Snapshots. T
     5. Add an username and an e-mail where you'll receive notifications on failed QuickSight datasets updates
     6. Use the **QuickSight-managed role (default)**
     7. Don't modify the **Allow access and autodiscovery for these resources** section and click on **Finish**
-4. Ensure you have SPICE capacity left in the region where you're deploying the dashboard
-5. Enable AWS Config in the accounts and regions you want to track, setup the delivery of Configuration Snapshots to a centralized S3 buckey.
+5. Ensure you have SPICE capacity left in the region where you're deploying the dashboard
+6. Enable AWS Config in the accounts and regions you want to track, setup the delivery of Configuration Snapshots to a centralized S3 bucket in the region where you have activated Amazon Quicksight.
 
 ### AWS Config Prerequisites
 The solution supports AWS accounts and AWS accounts that are member of an AWS Organization. These two options have different ways of structuring the Configuration Snapshots in S3, the solution supports the following S3 prefixes. **Verify that your setup is compatible with the following.**
@@ -61,11 +62,14 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
 
 ## Deployment Instructions
 
+1. Make sure you are in the region where both your central Config Amazon S3 bucket (this can be on another AWS Account) and Amazon QuickSight are deployed.
+1. TODO Run the cloudformation to create a QuickSight role 
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-   - TODO suggest or configure athea info that will be used as parameters to the CloudFormation below
-2. Note down the following from above
-   - 
-3. Run CloudFormation script
+   - TODO suggest or configure athena info that will be used as parameters to the CloudFormation below
+1. Note down the following from above
+   - TODO parameter A
+   - TODO parameter B  
+1. Run CloudFormation script to create the Lambda function and its permissions
    - Use the following input parameters:
      - `ConfigLoggingBucketArn` = the S3 bucket where your Config snapshots are delivered
      - `ConfigLoggingAccountID` = the account holding the Config S3 bucket
@@ -74,14 +78,16 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
      - `AthenaQueryResultBucketName` = the bucket holding Athena query results 
      - `AthenaConfigSnapshotsTableName` = the name of the Athena table for the Config snapshots
    - Note down the output values of the cloudformation script: `Lambda function ARN` and `Lambda Role ARN`
-4. Configure the Config S3 bucket in the Log Archive account to allow cross-account access to the lambda function created above
+1. Configure the Config S3 bucket in the Log Archive account to allow cross-account access to the lambda function created above
    - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
-     - i. Name = `cid-crcd-deliver-config-snapshot`
-     - ii. Event types = `All object create events`
-     - iii. Destination = `Lambda function`
-     - Enter Lambda function ARN = `_Lambda function ARN returned by the CloudFormation script_`
+     - Name = `cid-crcd-deliver-config-snapshot`
+     - Event types = `All object create events`
+     - Destination = `Lambda function`
+     - Enter Lambda function ARN = `Lambda function ARN returned by the CloudFormation script`
    
    - Add the following statement to the bucket policy [documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html):
+     - Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `Lambda Role ARN returned by the CloudFormation script`
+     - Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
 
     ```
         {
@@ -98,8 +104,7 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
         }
     ```
 
-     - i. Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `_Lambda Role ARN returned by the CloudFormation script_`
-     - ii. Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
+     
 
 
 

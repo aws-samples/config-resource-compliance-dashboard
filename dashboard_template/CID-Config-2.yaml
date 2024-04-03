@@ -3387,8 +3387,8 @@ views:
         'transient_lastDdlTime'='1709651866')
     parameters:
       s3path:
-        default: s3://aws-controltower-logs-730335449096-eu-west-1/
-        description: S3 Path for aws_config_configuration_snapshots table
+        default: s3://your-s3-bucket-holding-config-data/
+        description: S3 Path for your centralized bucket containing Config data
   config_inventory_compliance_per_rule:
     dependsOn:
       views:

@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "CID-CRCD - IAM Policy and IAM Role granting Quicksight access to the S3 bucket containing AWS Config snapshots"
+
+Metadata:
+  # TODO parameters"
+
+
+
+Resources:
+
+  IAMRoleCIDCRCDQuickSightDataSource:
+    Type: "AWS::IAM::Role"
+    UpdateReplacePolicy: "Delete"
+    DeletionPolicy: "Delete"
+    Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Glue and the underlying S3 bucket that contains AWS Config snapshots"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - Ref: "IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject"
+      MaxSessionDuration: 3600
+      RoleName: "cid-crcd-quicksight-datasource-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "quicksight.amazonaws.com"
+
+  IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject:
+    Type: "AWS::IAM::ManagedPolicy"
+    UpdateReplacePolicy: "Delete"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "cid-crcd-glue-s3configsnapshotobject-policy"
+      Path: "/"
+      Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue and the Config S3 bucket"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "lakeformation:GetDataAccess"
+          - "athena:ListDataCatalogs"
+          - "athena:ListDatabases"
+          - "athena:ListTableMetadata"
+          Effect: "Allow"
+          Sid: "AthenaLakeFormationReads"
+        - Resource:
+          # TODO these are parameters: partition/region/account (is the current partition/region/account), 
+          # TODO table and database are given as input with the name I decide as default, telling the user not to change it
+          - "arn:aws:glue:eu-north-1:058264555211:catalog"
+          - "arn:aws:glue:eu-north-1:058264555211:database/customer_cur_data"
+          - "arn:aws:glue:eu-north-1:058264555211:table/customer_cur_data/*"
+          Action:
+          - "glue:GetPartition"
+          - "glue:GetPartitions"
+          - "glue:GetDatabases"
+          - "glue:GetTable"
+          - "glue:GetTables"
+          Effect: "Allow"
+          Sid: "AllowGlueData" # TODO rename this and all other SID
+        - Resource:
+          # TODO these are parameters: partition/region/account (is the current partition/region/account)
+          # TODO database and workgroup are given as input with the name I decide as default, telling the user not to change it
+          - "arn:aws:athena:eu-north-1:058264555211:datacatalog/AwsDataCatalog"
+          - "arn:aws:athena:eu-north-1:058264555211:database/customer_cur_data"
+          - "arn:aws:athena:eu-north-1:058264555211:workgroup/CID"
+          Action:
+          - "athena:ListDatabases"
+          - "athena:ListDataCatalogs"
+          - "athena:ListDatabases"
+          - "athena:GetQueryExecution"
+          - "athena:GetQueryResults"
+          - "athena:StartQueryExecution"
+          - "athena:GetQueryResultsStream"
+          - "athena:GetTableMetadata"
+          Effect: "Allow"
+          Sid: "AllowAthena"
+        - Resource:
+          # TODO these are parameters...
+          - "arn:aws:s3:::aws-athena-query-results-cid-058264555211-eu-north-1"
+          - "arn:aws:s3:::aws-athena-query-results-cid-058264555211-eu-north-1/*"
+          Action:
+          - "s3:GetBucketLocation"
+          - "s3:ListBucket"
+          - "s3:GetObject"
+          - "s3:PutObject"
+          - "s3:ListBucketMultipartUploads"
+          - "s3:ListMultipartUploadParts"
+          - "s3:AbortMultipartUpload"
+          Effect: "Allow"
+          Sid: "AllowReadAndWriteToWorkgroupOutput"
+        - Resource:
+          # TODO this is the S3 bucket with the Config data
+          - "arn:aws:s3:::cid-058264555211-share"
+          - "arn:aws:s3:::cid-data-058264555211"
+          - "arn:aws:s3:::costoptimizationdata058264555211"
+          Action:
+          - "s3:ListBucket"
+          Effect: "Allow"
+          Sid: "AllowListBucket"
+        - Resource:
+          # TODO this is the S3 bucket with the Config data
+          - "arn:aws:s3:::cid-058264555211-share/*"
+          - "arn:aws:s3:::cid-data-058264555211/*"
+          - "arn:aws:s3:::costoptimizationdata058264555211/*"
+          Action:
+          - "s3:GetObject"
+          - "s3:GetObjectVersion"
+          Effect: "Allow"
+          Sid: "AllowReadBucket"
+      

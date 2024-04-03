@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "Lambda function supporting AWS Config Resource Compliance Dashboard (CRCD) v2"
+Description: "CID-CRCD - Lambda function supporting AWS Config Resource Compliance Dashboard (CRCD) v2"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -339,7 +339,7 @@ Resources:
           Effect: "Allow"
           Principal:
             Service: "lambda.amazonaws.com"
-          Sid: ""
+          Sid: "AllowLambdaAssumeRole"
 
   # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
   LambdaPermissionLambdaCIDCRCDInvocationPermission:
