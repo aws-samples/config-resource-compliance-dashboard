@@ -1,24 +1,143 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "CID-CRCD - IAM Policy and IAM Role granting Quicksight access to the S3 bucket containing AWS Config snapshots"
+Description: "CID-CRCD - IAM Policy and IAM Role granting Quicksight access to the S3 bucket containing AWS Config snapshots and related infrastructure on Athena/Glue"
 
 Metadata:
-  # TODO parameters"
+  # TODO parameters: Athena parameters are the esame as the other CloudFromation template...
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Athena Configuration"
+        Parameters:
+          - AthenaWorkgroup
+          - AthenaDataSource
+          - AthenaDatabase
+          - AthenaTable
+          - AthenaQueryResultBucket
+      -
+        Label:
+          default: "AWS Config Logging"
+        Parameters:
+          - ConfigLoggingBucket
 
+    ParameterLabels:
+      AthenaWorkgroup:
+        default: "Athena workgroup"
+      AthenaDataSource:
+        default: "Athena data source"
+      AthenaDatabase:
+        default: "Athena database"
+      AthenaQueryResultBucket:
+        default: "Name of the Athena query results bucket"
+      AthenaTable:
+        default: "Athena table for AWS Config data"
+      ConfigLoggingBucket:
+        default: "AWS Config bucket"
 
+# TODO table and database are given as input with the name I decide as default, telling the user not to change it
+# TODO test the rules on the parameters, that they are mandatory etc...
+Parameters:
+
+  ConfigLoggingBucket:
+    Type: "String"
+    Default: "your-config-bucket"
+    Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    ConstraintDescription: "Required"
+
+  AthenaDataSource:
+    Type: "String"
+    Default: "cid-crcd-datasource"
+    Description: "The Athena data source that will also be used by the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaDatabase:
+    Type: "String"
+    Default: "cid-crcd-database"
+    Description: "The Athena/Glue database for the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaQueryResultBucket:
+    Type: "String"
+    Default: "cid-crcd-athenaresults" # TODO this is not possible in the default value of a parameter, add later? !Sub "cid-crcd-athenaresults-${AWS::Region}-${AWS::AccountId}" 
+    Description: "The Athena query result bucket for the workgroup (Required)"
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    ConstraintDescription: "Required"
+
+  AthenaWorkgroup:
+    Type: "String"
+    Default: "cid-crcd-dashboard"
+    Description: "The Athena workgroup for the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaTable:
+    Type: "String"
+    Default: "cid-crcd-config"
+    Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+# TODO verify all parameters are checked
+Rules:
+  MandatoryAthenaDataSource:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaDataSource
+          - ''
+        AssertDescription: "Athena data source is required"
+  MandatoryConfigLoggingBucket:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref ConfigLoggingBucket
+          - ''
+        AssertDescription: "Config bucket name is required"
+  MandatoryAthenaDatabase:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaDatabase
+          - ''
+        AssertDescription: "Athena database is required"
+  MandatoryAthenaQueryResultBucket:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaQueryResultBucket
+          - ''
+        AssertDescription: "Athena query result bucket is required"
+  MandatoryAthenaWorkgroup:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaWorkgroup
+          - ''
+        AssertDescription: "Athena workgroup is required"
+  MandatoryAthenaTable:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaTable
+          - ''
+        AssertDescription: "Athena table name is required"
 
 Resources:
-
   IAMRoleCIDCRCDQuickSightDataSource:
     Type: "AWS::IAM::Role"
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
-    Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Glue and the underlying S3 bucket that contains AWS Config snapshots"
+    Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
     Properties:
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject"
       MaxSessionDuration: 3600
-      RoleName: "cid-crcd-quicksight-datasource-role"
+      # TODO this is replicated in the output, is there a way to make a reference?
+      RoleName: !Sub "cid-crcd-quicksight-datasource-role-${AWS::Region}-${AWS::AccountId}"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -32,7 +151,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-glue-s3configsnapshotobject-policy"
+      ManagedPolicyName: !Sub "cid-crcd-glue-s3configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
       Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue and the Config S3 bucket"
       PolicyDocument:
@@ -45,13 +164,11 @@ Resources:
           - "athena:ListDatabases"
           - "athena:ListTableMetadata"
           Effect: "Allow"
-          Sid: "AthenaLakeFormationReads"
+          Sid: "ReadAthenaLakeFormation"
         - Resource:
-          # TODO these are parameters: partition/region/account (is the current partition/region/account), 
-          # TODO table and database are given as input with the name I decide as default, telling the user not to change it
-          - "arn:aws:glue:eu-north-1:058264555211:catalog"
-          - "arn:aws:glue:eu-north-1:058264555211:database/customer_cur_data"
-          - "arn:aws:glue:eu-north-1:058264555211:table/customer_cur_data/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AthenaTable}/*"
           Action:
           - "glue:GetPartition"
           - "glue:GetPartitions"
@@ -59,13 +176,11 @@ Resources:
           - "glue:GetTable"
           - "glue:GetTables"
           Effect: "Allow"
-          Sid: "AllowGlueData" # TODO rename this and all other SID
+          Sid: "AccessGlueData"
         - Resource:
-          # TODO these are parameters: partition/region/account (is the current partition/region/account)
-          # TODO database and workgroup are given as input with the name I decide as default, telling the user not to change it
-          - "arn:aws:athena:eu-north-1:058264555211:datacatalog/AwsDataCatalog"
-          - "arn:aws:athena:eu-north-1:058264555211:database/customer_cur_data"
-          - "arn:aws:athena:eu-north-1:058264555211:workgroup/CID"
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${AthenaDataSource}"
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroup}"
           Action:
           - "athena:ListDatabases"
           - "athena:ListDataCatalogs"
@@ -76,11 +191,10 @@ Resources:
           - "athena:GetQueryResultsStream"
           - "athena:GetTableMetadata"
           Effect: "Allow"
-          Sid: "AllowAthena"
+          Sid: "AccessAthenaDatabaseWorkgroup"
         - Resource:
-          # TODO these are parameters...
-          - "arn:aws:s3:::aws-athena-query-results-cid-058264555211-eu-north-1"
-          - "arn:aws:s3:::aws-athena-query-results-cid-058264555211-eu-north-1/*"
+          - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}"
+          - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}/*"
           Action:
           - "s3:GetBucketLocation"
           - "s3:ListBucket"
@@ -90,24 +204,29 @@ Resources:
           - "s3:ListMultipartUploadParts"
           - "s3:AbortMultipartUpload"
           Effect: "Allow"
-          Sid: "AllowReadAndWriteToWorkgroupOutput"
+          Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
         - Resource:
-          # TODO this is the S3 bucket with the Config data
-          - "arn:aws:s3:::cid-058264555211-share"
-          - "arn:aws:s3:::cid-data-058264555211"
-          - "arn:aws:s3:::costoptimizationdata058264555211"
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}"
           Action:
           - "s3:ListBucket"
           Effect: "Allow"
-          Sid: "AllowListBucket"
+          Sid: "AllowListTheS3ConfigBucket"
         - Resource:
-          # TODO this is the S3 bucket with the Config data
-          - "arn:aws:s3:::cid-058264555211-share/*"
-          - "arn:aws:s3:::cid-data-058264555211/*"
-          - "arn:aws:s3:::costoptimizationdata058264555211/*"
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}/*"
+          # TODO does not look like getObject need also "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}"
           Action:
           - "s3:GetObject"
           - "s3:GetObjectVersion"
           Effect: "Allow"
-          Sid: "AllowReadBucket"
+          Sid: "AllowReadTheS3ConfigBucket"
+
+Outputs:
+  # TODO CID-CMD tool will list it, users must pick it. Maybe is enough to return just the name?
+  # the tool can take the ARN as input parameter
+  QuickSightDataRoleARN:
+    Description: "ARN of the Role created for QuickSight"
+    Value:
+      Fn::GetAtt:
+        - "IAMRoleCIDCRCDQuickSightDataSource"
+        - "Arn"
       

@@ -1,0 +1,85 @@
+# TODO incorporate on the first CF templates
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2
+
+Parameters:
+
+  QuickSightUser:
+    Type: String
+    MinLength: 1
+    Default: REPLACE WITH QuickSight USER
+    Description: See https://quicksight.aws.amazon.com/sn/admin#users
+
+Resources:
+
+  CRDCAthenaQueryResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'cid-crcd-athena-query-results-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: BucketOwnerFullControl
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteContent
+            Status: 'Enabled'
+            ExpirationInDays: 7
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            # todo this is copied from CID CloudFormation template
+            - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
+
+  CRDCAthenaWorkgroup: # Athena workgroup to execute CID-CRCD queries with its own result bucket
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: 'cid-crcd-dashboard'
+      Description: 'Used by AWS Config Resource Compliance Dashboard (CRCD)'
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        ResultConfiguration:
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+          OutputLocation: !Sub 's3://${CRDCAthenaQueryResultsBucket}/'
+       
+
+
+  AthenaDataSourceCIDCRCD:
+    Type: AWS::QuickSight::DataSource
+    Properties:
+      AwsAccountId: !Sub '${AWS::AccountId}'
+      Type: ATHENA
+      DataSourceId: "cid-crcd-datasource" # TODO for now I hard code it
+      Name:         "cid-crcd-datasource"
+      DataSourceParameters:
+        AthenaParameters:
+          WorkGroup: !Ref CRDCAthenaWorkgroup
+          RoleArn: "cid-crcd-quicksight-datasource-role-eu-west-1-767398072207" ## TODO Hardcoded for now, then use a !Ref or a sub like this !Sub "arn:aws:iam::${AWS::AccountId}:role/${QuickSightDataSourceRoleName}"
+      Permissions:
+        - Actions:
+            - 'quicksight:DescribeDataSource'
+            - 'quicksight:DescribeDataSourcePermissions'
+            - 'quicksight:PassDataSource'
+            - 'quicksight:UpdateDataSource'
+            - 'quicksight:DeleteDataSource'
+            - 'quicksight:UpdateDataSourcePermissions'
+          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
+          # TODO check ${Setup.IdentityRegion}
+          # TODO Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
+
+Outputs:
+  AthenaWorkgroupName:
+    Description: 'Name of the Athena Workgroup'
+    Value: !Ref CRDCAthenaWorkgroup
