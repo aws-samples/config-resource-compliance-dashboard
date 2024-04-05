@@ -5,7 +5,7 @@ Parameters:
   lluccParameterExample:
     Type: String
     Default: ''
-    Description: Leave Empty / this is not used, todo delete
+    Description: Leave Empty / this is not used, todo delete - now changed
 
 
 Resources:
