@@ -1,8 +1,7 @@
+# TODO eventually delete, this is just a copy taken from https://github.com/aws-samples/aws-cudos-framework-deployment/blob/main/cfn-templates/cid-cfn.yml as reference
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deployment of CUDOS-CID copy
-
-# There are six top-level sections: AWSTemplateFormatVersion, Description, Parameters, Mappings, Resources, and Outputs; however, only the Resources section is required.
-# Metadata and Conditions are not mentioned by CF docs
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -730,6 +729,7 @@ Resources:
       Path: /
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSLambdaExecute
+  
   CustomResourceProcessPath:
     Type: AWS::Lambda::Function
     Properties:
