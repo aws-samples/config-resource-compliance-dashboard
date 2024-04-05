@@ -17,7 +17,9 @@ The infrastructure needed to collect and process the data is defined in CloudFor
 
 ## Architecture
 
-The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to an S3 bucket. Whenever there's a new object in the bucket, a Lambda function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If object is not a Configuration Snapshot, the function ignores it. 
+![CRCD](images/MultiAccountArchitecture.png "CID-CRCD Dashboard, Multi-Account architecture")
+
+The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to a centralized S3 bucket. Whenever there's a new object in the bucket, a Lambda function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If object is not a Configuration Snapshot, the function ignores it. 
 
 In Athena, there is a table used to extract data from Configuration Snapshots. The solution provides Athena views, which are SQL queries that extract data from S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these Athena views through QuickSight datasets.
 
@@ -63,9 +65,14 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
 ## Deployment Instructions
 
 1. Make sure you are in the region where both your central Config Amazon S3 bucket (this can be on another AWS Account) and Amazon QuickSight are deployed.
-1. TODO Run the cloudformation to create a QuickSight role 
+1. TODO Run the cloudformation to create the QuickSight Data Source role 
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
    - TODO suggest or configure athena info that will be used as parameters to the CloudFormation below
+
+```
+cid-cmd deploy --resources CID-Config-2.yaml --quicksight-datasource-id cid-crcd-datasource --athena-database cid-crcd-database --athena-workgroup cid-crcd-dashboard --quicksight-datasource-role-arn arn:aws:iam::767398072207:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207
+```
+
 1. Note down the following from above
    - TODO parameter A
    - TODO parameter B  
@@ -103,7 +110,29 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
             ]
         }
     ```
+   - WIP, more than just the Lambda function must have access to this bucket, a better policy may be
 
+   ```
+       {
+          "Sid": "Cross account access to everyone on the Dashboard Account",
+          "Effect": "Allow",
+          "Principal": {
+             "AWS": "arn:aws:iam::YOUR-DASHBOARD-ACCOUNT-ID:root"
+          },
+          "Action": [
+             "s3:GetBucketLocation",
+             "s3:GetObject",
+             "s3:ListBucket",
+             "s3:ListBucketMultipartUploads",
+             "s3:ListMultipartUploadParts",
+             "s3:AbortMultipartUpload"
+          ],
+          "Resource": [
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
+          ]
+       }
+   ```
      
 
 
