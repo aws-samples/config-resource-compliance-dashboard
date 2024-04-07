@@ -2835,15 +2835,29 @@ dashboards:
             VisualId: 14595418-4007-49a3-a19f-72c19fc68819
 datasets:
   config_inventory_s3:
+    # TODO see if adding parameters here works
+    parameters:
+      cid-crcd-datasource-arn:
+        default: aws::::cid-crcd-datasource
+        description: "Enter the name of the Athena datasource"
+        global: True
+      cid-crcd-database-name:
+        default: cid-crcd-database
+        description: "The name of the Athena/Glue database"
+        global: True
+      cid-crcd-datacatalog-name:
+        default: AwsDataCatalog
+        description: "The name of the data catalog in Athena"
+        global: True
     data:
       DataSetId: fd57ee7e-0b17-429a-a7dc-92b3d48e10eb
       Name: config_inventory_s3
       PhysicalTableMap:
         308d813c-2419-40d3-9bb3-ac3001543808:
           RelationalTable:
-            DataSourceArn: ${athena_datasource_arn}
-            Catalog: AwsDataCatalog
-            Schema: ${athena_database_name}
+            DataSourceArn: ${cid-crcd-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
+            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_inventory_s3
             InputColumns:
             - Name: accountid
@@ -3503,7 +3517,7 @@ views:
         default: tag2
         description: "Enter the second tag name used to categorize workloads"
         global: True
-    # TODO keep tag aliases fixed, so they match the configuration of elements in QS
+    # TODO keep tag aliases fixed (TAG1, TAG2), ..., so they match the configuration of elements in QS
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ec2 AS
       SELECT DISTINCT
