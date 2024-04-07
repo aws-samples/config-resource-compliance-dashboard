@@ -79,6 +79,29 @@ Resources:
           # TODO check ${Setup.IdentityRegion}
           # TODO Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
 
+
+
+  # WIP from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-glue-database.html
+  GlueDatabaseCIDCRCD:
+    Type: AWS::Glue::Database
+    Properties:
+      DatabaseInput:
+        Description: "Database for AWS Config Resource Compliance Dashboard (CID-CRCD)"
+        Name: "cid-crcd-database"
+      # The AWS account ID for the account in which to create the catalog object.
+      CatalogId: !Sub '${AWS::AccountId}'
+
+  
+Type: AWS::Glue::Table
+Properties:
+  CatalogId: String
+  DatabaseName: String
+  OpenTableFormatInput: 
+    OpenTableFormatInput
+  TableInput: 
+    TableInput
+
+
 Outputs:
   AthenaWorkgroupName:
     Description: 'Name of the Athena Workgroup'

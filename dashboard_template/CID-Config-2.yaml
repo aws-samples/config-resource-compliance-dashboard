@@ -1,4 +1,5 @@
 dashboards:
+  # TODO change name from CID-Config-2
   CID-CONFIG-2:
     dependsOn:
       datasets:
@@ -7,7 +8,7 @@ dashboards:
       - config_inventory_compliance_per_rule
       - config_inventory_ec2
       - config_inventory_s3
-    name: CID-Config-2
+    name: "AWS Config Resource Compliance Dashboard (CID-CRCD)"
     dashboardId: cid-config-2
     category: Custom
     theme: MIDNIGHT
@@ -3328,6 +3329,15 @@ views:
     dependsOn:
       views:
       - aws_config_configuration_snapshots
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_s3 AS
       SELECT DISTINCT
@@ -3335,8 +3345,8 @@ views:
       , "configurationItem"."awsregion" "Region"
       , "configurationItem"."arn" "ARN"
       , "configurationItem"."resourceName" "BucketName"
-      , "configurationItem"."tags"['TAG1'] "TAG1"
-      , "configurationItem"."tags"['TAG2'] "TAG2"
+      , "configurationItem"."tags"['${tag1}'] "TAG1"
+      , "configurationItem"."tags"['${tag2}'] "TAG2"
       , "configurationItem"."tags"['TAG3'] "TAG3"
       , "configurationItem"."tags"['TAG4'] "TAG4"
       , "configurationItem"."tags" "AllTags"
@@ -3349,7 +3359,7 @@ views:
       WHERE ("configurationItem"."resourcetype" = 'AWS::S3::Bucket')
   aws_config_configuration_snapshots:
     data: |-
-      CREATE EXTERNAL TABLE `aws_config_configuration_snapshots`(
+      CREATE EXTERNAL TABLE `${athenatablename}`(
         `fileversion` string COMMENT 'from deserializer',
         `configsnapshotid` string COMMENT 'from deserializer',
         `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
@@ -3388,7 +3398,10 @@ views:
     parameters:
       s3path:
         default: s3://your-s3-bucket-holding-config-data/
-        description: S3 Path for your centralized bucket containing Config data
+        description: S3 Path of your centralized bucket containing Config data (end it with a forward slash)
+      athenatablename:
+        default: cid-crcd-config
+        description: The name of the Athena table that contains the AWS Config data for the dashboard
   config_inventory_compliance_per_rule:
     dependsOn:
       views:
@@ -3481,6 +3494,16 @@ views:
     dependsOn:
       views:
       - aws_config_configuration_snapshots
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+    # TODO keep tag aliases fixed, so they match the configuration of elements in QS
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ec2 AS
       SELECT DISTINCT
@@ -3488,8 +3511,8 @@ views:
       , "configurationItem"."awsregion" "Region"
       , "json_extract_scalar"("configurationItem"."configuration", '$.instanceId') "InstanceId"
       , "configurationItem"."tags"['Name'] "TagName"
-      , "configurationItem"."tags"['TAG1'] "TAG1"
-      , "configurationItem"."tags"['TAG2'] "TAG2"
+      , "configurationItem"."tags"['${tag1}'] "TAG1"
+      , "configurationItem"."tags"['${tag2}'] "TAG2"
       , "configurationItem"."tags"['TAG3'] "TAG3"
       , "configurationItem"."tags"['TAG4'] "TAG4"
       , "configurationItem"."tags" "AllTags"
