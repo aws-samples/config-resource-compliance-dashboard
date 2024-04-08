@@ -1,3 +1,5 @@
+# DEPRECATED, these resources are included in cid-crcd-01.yaml
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - IAM Policy and IAM Role granting Quicksight access to the S3 bucket containing AWS Config snapshots and related infrastructure on Athena/Glue"
 

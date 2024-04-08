@@ -1,4 +1,4 @@
-# TODO incorporate on the first CF templates
+# DEPRECATED, these resources are included in cid-crcd-01.yaml
 
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2
