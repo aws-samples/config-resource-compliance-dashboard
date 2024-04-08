@@ -8,7 +8,7 @@ Parameters:
   QuickSightUser:
     Type: String
     MinLength: 1
-    Default: REPLACE WITH QuickSight USER
+    Default: Replace with QuickSight user
     Description: See https://quicksight.aws.amazon.com/sn/admin#users
 
 Resources:
@@ -39,7 +39,7 @@ Resources:
       cfn-lint:
         config:
           ignore_checks:
-            # todo this is copied from CID CloudFormation template
+            # TODO this is copied from CID CloudFormation template
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
 
   CRDCAthenaWorkgroup: # Athena workgroup to execute CID-CRCD queries with its own result bucket
@@ -53,7 +53,6 @@ Resources:
           EncryptionConfiguration:
             EncryptionOption: SSE_S3
           OutputLocation: !Sub 's3://${CRDCAthenaQueryResultsBucket}/'
-       
 
 
   AthenaDataSourceCIDCRCD:
@@ -66,7 +65,8 @@ Resources:
       DataSourceParameters:
         AthenaParameters:
           WorkGroup: !Ref CRDCAthenaWorkgroup
-          RoleArn: "cid-crcd-quicksight-datasource-role-eu-west-1-767398072207" ## TODO Hardcoded for now, then use a !Ref or a sub like this !Sub "arn:aws:iam::${AWS::AccountId}:role/${QuickSightDataSourceRoleName}"
+          # TODO Hardcoded for now, then use a !Ref or a sub like this !Sub "arn:aws:iam::${AWS::AccountId}:role/${QuickSightDataSourceRoleName}"
+          RoleArn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207" 
       Permissions:
         - Actions:
             - 'quicksight:DescribeDataSource'
@@ -75,13 +75,15 @@ Resources:
             - 'quicksight:UpdateDataSource'
             - 'quicksight:DeleteDataSource'
             - 'quicksight:UpdateDataSourcePermissions'
-          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
-          # TODO check ${Setup.IdentityRegion}
-          # TODO Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
+          # TODO the region is the one where QuickSight stores the users, returned by a lambda which ATM I can deploy separately (Cloud formation cid-crcd-supportingfunctions.yaml) and run manually
+          Principal: !Sub 'arn:${AWS::Partition}:quicksight:eu-west-1:${AWS::AccountId}:user/default/${QuickSightUser}'
+          # TODO check ${Setup.IdentityRegion} and why it was used originally - Looks like it was set by a lambda function called within the CloudFormation template or something????
+          # using ${AWS::Region} does not work
+          #     Resource handler returned message: "Invalid request provided: One or more principals in resource permissions list are not valid QuickSight users 
+          #     (Service: QuickSight, Status Code: 400, Request ID: null)" (RequestToken: 97c30ba1-f45f-584c-419b-22075bb4d96e, HandlerErrorCode: InvalidRequest)
+          # TODO original string was Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
 
 
-
-  # WIP from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-glue-database.html
   GlueDatabaseCIDCRCD:
     Type: AWS::Glue::Database
     Properties:
@@ -90,17 +92,7 @@ Resources:
         Name: "cid-crcd-database"
       # The AWS account ID for the account in which to create the catalog object.
       CatalogId: !Sub '${AWS::AccountId}'
-
   
-Type: AWS::Glue::Table
-Properties:
-  CatalogId: String
-  DatabaseName: String
-  OpenTableFormatInput: 
-    OpenTableFormatInput
-  TableInput: 
-    TableInput
-
 
 Outputs:
   AthenaWorkgroupName:
