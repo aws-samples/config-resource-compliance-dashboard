@@ -1,0 +1,341 @@
+# Unified template with everything needed before running the CID-CMD tool
+# Deploys
+# - IAM Policy and IAM Role granting Quicksight access to the S3 bucket containing AWS Config snapshots 
+#   and related infrastructure on Athena/Glue"
+
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2 - Template 01"
+
+
+Metadata:
+  # TODO parameters: Athena parameters are the esame as the other CloudFromation template...
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "QuickSight"
+        Parameters:
+            - QuickSightUser
+      -
+        Label:
+          default: "AWS Config Logging"
+        Parameters:
+          - ConfigLoggingBucket
+      -
+        Label:
+          default: "Athena Configuration (DO NOT CHANGE)"
+        Parameters:
+          - AthenaWorkgroup
+          - AthenaDataSource
+          - AthenaDatabase
+          - AthenaTable
+          - AthenaQueryResultBucketPrefix
+      
+    ParameterLabels:
+      AthenaWorkgroup:
+        default: "Athena workgroup"
+      AthenaDataSource:
+        default: "Athena data source"
+      AthenaDatabase:
+        default: "Athena database"
+      AthenaQueryResultBucketPrefix:
+        default: "Prefix of the Athena query results bucket"
+      AthenaTable:
+        default: "Athena table for AWS Config data"
+      ConfigLoggingBucket:
+        default: "AWS Config bucket"
+      QuickSightUser:
+        default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
+      
+
+# TODO table and database are given as input with the name I decide as default, telling the user not to change it
+# TODO test the rules on the parameters, that they are mandatory etc...
+Parameters:
+  QuickSightUser:
+    Type: String
+    MinLength: 1
+    Default: Replace with QuickSight user
+    Description: See https://quicksight.aws.amazon.com/sn/admin#users
+
+  ConfigLoggingBucket:
+    Type: "String"
+    Default: "your-config-bucket"
+    Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    ConstraintDescription: "Required"
+
+  AthenaDataSource:
+    Type: "String"
+    Default: "cid-crcd-datasource"
+    Description: "The Athena data source that will also be used by the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaDatabase:
+    Type: "String"
+    Default: "cid-crcd-database"
+    Description: "The Athena/Glue database for the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaQueryResultBucketPrefix:
+    Type: "String"
+    Default: "cid-crcd-athena-query-results" #It is not possible in the default value of a parameter to add variables like ${AWS::Region} or ${AWS::AccountId}" 
+    Description: "The Athena query result bucket for the workgroup, Account ID and Region will be added to the name by this tempalte (Required)"
+    # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
+    # that leaves 36 character for the prefix
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,33}[a-z0-9]$'
+    ConstraintDescription: "Required"
+
+  AthenaWorkgroup:
+    Type: "String"
+    Default: "cid-crcd-dashboard"
+    Description: "The Athena workgroup for the CID-CRCD dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+  AthenaTable:
+    Type: "String"
+    Default: "cid-crcd-config"
+    Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
+    MinLength: 1
+    ConstraintDescription: "Required"
+
+# TODO verify all parameters are checked, and not the default ones in case user input is necessary (e.g. QuickSight user, Config S3 bucket)
+Rules:
+  MandatoryAthenaDataSource:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaDataSource
+          - ''
+        AssertDescription: "Athena data source is required"
+  MandatoryConfigLoggingBucket:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref ConfigLoggingBucket
+          - ''
+        AssertDescription: "Config bucket name is required"
+  MandatoryAthenaDatabase:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaDatabase
+          - ''
+        AssertDescription: "Athena database is required"
+  MandatoryAthenaQueryResultBucketPrefix:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaQueryResultBucketPrefix
+          - ''
+        AssertDescription: "Athena query result bucket is required"
+  MandatoryAthenaWorkgroup:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaWorkgroup
+          - ''
+        AssertDescription: "Athena workgroup is required"
+  MandatoryAthenaTable:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref AthenaTable
+          - ''
+        AssertDescription: "Athena table name is required"
+
+Resources:
+
+  GlueDatabaseCIDCRCD:
+    Type: AWS::Glue::Database
+    Properties:
+      DatabaseInput:
+        Description: "Database for AWS Config Resource Compliance Dashboard (CID-CRCD)"
+        Name: !Sub "${AthenaDatabase}"
+      # The AWS account ID for the account in which to create the catalog object.
+      CatalogId: !Sub '${AWS::AccountId}'
+
+  CRDCAthenaQueryResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AthenaQueryResultBucketPrefix}-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      AccessControl: BucketOwnerFullControl
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteContent
+            Status: 'Enabled'
+            ExpirationInDays: 7
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            # TODO this is copied from CID CloudFormation template
+            - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
+
+  CRDCAthenaWorkgroup: # Athena workgroup to execute CID-CRCD queries with its own result bucket
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub '${AthenaWorkgroup}'
+      Description: 'Used by AWS Config Resource Compliance Dashboard (CRCD)'
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        ResultConfiguration:
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+          OutputLocation: !Sub 's3://${CRDCAthenaQueryResultsBucket}/'
+
+  IAMRoleCIDCRCDQuickSightDataSource:
+    Type: "AWS::IAM::Role"
+    UpdateReplacePolicy: "Delete"
+    DeletionPolicy: "Delete"
+    Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+      - Ref: "IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject"
+      MaxSessionDuration: 3600
+      # TODO this is replicated in the output, is there a way to make a reference?
+      RoleName: !Sub "cid-crcd-quicksight-datasource-role-${AWS::Region}-${AWS::AccountId}"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service: "quicksight.amazonaws.com"
+
+  IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject:
+    Type: "AWS::IAM::ManagedPolicy"
+    UpdateReplacePolicy: "Delete"
+    DeletionPolicy: "Delete"
+    Properties:
+      ManagedPolicyName: !Sub "cid-crcd-glue-s3configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
+      Path: "/"
+      Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource: "*"
+          Action:
+          - "lakeformation:GetDataAccess"
+          - "athena:ListDataCatalogs"
+          - "athena:ListDatabases"
+          - "athena:ListTableMetadata"
+          Effect: "Allow"
+          Sid: "ReadAthenaLakeFormation"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AthenaTable}/*"
+          Action:
+          - "glue:GetPartition"
+          - "glue:GetPartitions"
+          - "glue:GetDatabases"
+          - "glue:GetTable"
+          - "glue:GetTables"
+          Effect: "Allow"
+          Sid: "AccessGlueData"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${AthenaDataSource}"
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroup}"
+          Action:
+          - "athena:ListDatabases"
+          - "athena:ListDataCatalogs"
+          - "athena:ListDatabases"
+          - "athena:GetQueryExecution"
+          - "athena:GetQueryResults"
+          - "athena:StartQueryExecution"
+          - "athena:GetQueryResultsStream"
+          - "athena:GetTableMetadata"
+          Effect: "Allow"
+          Sid: "AccessAthenaDatabaseWorkgroup"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:s3:::${CRDCAthenaQueryResultsBucket}"
+          - !Sub "arn:${AWS::Partition}:s3:::${CRDCAthenaQueryResultsBucket}/*"
+          Action:
+          - "s3:GetBucketLocation"
+          - "s3:ListBucket"
+          - "s3:GetObject"
+          - "s3:PutObject"
+          - "s3:ListBucketMultipartUploads"
+          - "s3:ListMultipartUploadParts"
+          - "s3:AbortMultipartUpload"
+          Effect: "Allow"
+          Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}"
+          Action:
+          - "s3:ListBucket"
+          Effect: "Allow"
+          Sid: "AllowListTheS3ConfigBucket"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}/*"
+          # TODO does not look like getObject needs also "arn:${AWS::Partition}:s3:::${ConfigLoggingBucket}"
+          Action:
+          - "s3:GetObject"
+          - "s3:GetObjectVersion"
+          Effect: "Allow"
+          Sid: "AllowReadTheS3ConfigBucket"
+
+  AthenaDataSourceCIDCRCD:
+    Type: AWS::QuickSight::DataSource
+    Properties:
+      AwsAccountId: !Sub '${AWS::AccountId}'
+      Type: ATHENA
+      DataSourceId: !Sub '${AthenaDataSource}' # An ID for the data source. This ID is unique per AWS Region for each AWS account. 
+      Name:         !Sub '${AthenaDataSource}'
+      DataSourceParameters:
+        AthenaParameters:
+          WorkGroup: !Ref CRDCAthenaWorkgroup
+          # TODO Hardcoded for now, then use a !Ref or a sub like this !Sub "arn:aws:iam::${AWS::AccountId}:role/${QuickSightDataSourceRoleName}"
+          # RoleArn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207" 
+          RoleArn: 
+            Fn::GetAtt:
+              - "IAMRoleCIDCRCDQuickSightDataSource"
+              - "Arn"
+      Permissions:
+        - Actions:
+            - 'quicksight:DescribeDataSource'
+            - 'quicksight:DescribeDataSourcePermissions'
+            - 'quicksight:PassDataSource'
+            - 'quicksight:UpdateDataSource'
+            - 'quicksight:DeleteDataSource'
+            - 'quicksight:UpdateDataSourcePermissions'
+          # TODO the region is the one where QuickSight stores the users, returned by a lambda which ATM I can deploy separately (Cloud formation cid-crcd-supportingfunctions.yaml) and run manually
+          Principal: !Sub 'arn:${AWS::Partition}:quicksight:eu-west-1:${AWS::AccountId}:user/default/${QuickSightUser}'
+          # TODO check ${Setup.IdentityRegion} and why it was used originally - Looks like it was set by a lambda function called within the CloudFormation template or something????
+          # using ${AWS::Region} does not work
+          #     Resource handler returned message: "Invalid request provided: One or more principals in resource permissions list are not valid QuickSight users 
+          #     (Service: QuickSight, Status Code: 400, Request ID: null)" (RequestToken: 97c30ba1-f45f-584c-419b-22075bb4d96e, HandlerErrorCode: InvalidRequest)
+          # TODO original string was Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
+
+
+Outputs:
+  # TODO CID-CMD tool will list it, users must pick it. Maybe is enough to return just the name?
+  # the tool can take the ARN as input parameter
+  QuickSightDataRoleARN:
+    Description: "ARN of the Role created for QuickSight"
+    Value:
+      Fn::GetAtt:
+        - "IAMRoleCIDCRCDQuickSightDataSource"
+        - "Arn"
+  
+  AthenaWorkgroupName:
+    Description: 'Name of the Athena Workgroup'
+    Value: !Ref CRDCAthenaWorkgroup
