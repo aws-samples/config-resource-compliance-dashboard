@@ -27,6 +27,11 @@ Metadata:
           - PAthenaTable
           - PAthenaQueryResultBucketPrefix
           - PQuickSightDataSource
+      -
+        Label:
+          default: "Technical Parameters (DO NOT CHANGE)"
+        Parameters:
+          - LambdaLayerBucketPrefix
       
     ParameterLabels:
       PAthenaWorkgroup:
@@ -47,10 +52,17 @@ Metadata:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       PQuickSightDataSource:
         default: "QuickSight data source"
+      LambdaLayerBucketPrefix:
+        default: "LambdaLayerBucketPrefix - Please do not change"
       
 
 # TODO test the rules on the parameters, that they are mandatory etc...
 Parameters:
+  LambdaLayerBucketPrefix:
+    Type: String
+    Description: "An S3 bucket with a Lambda layer used by CID-CRCD dashboard"
+    Default: "aws-managed-cost-intelligence-dashboards"
+
   PQuickSightUser:
     Type: String
     MinLength: 1
@@ -355,8 +367,8 @@ Resources:
             - 'quicksight:UpdateDataSource'
             - 'quicksight:DeleteDataSource'
             - 'quicksight:UpdateDataSourcePermissions'
-          # TODO the region is the one where QuickSight stores the users, returned by a lambda which ATM I can deploy separately (Cloud formation cid-crcd-supportingfunctions.yaml) and run manually
-          Principal: !Sub 'arn:${AWS::Partition}:quicksight:eu-north-1:${AWS::AccountId}:user/default/${PQuickSightUser}'
+          # TODO the region is the one where QuickSight stores the users, returned by a lambda run by CloudFormation as CustomResource
+          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${PQuickSightUser}'
           # TODO check ${Setup.IdentityRegion} and why it was used originally - Looks like it was set by a lambda function called within the CloudFormation template or something????
           # using ${AWS::Region} does not work
           #     Resource handler returned message: "Invalid request provided: One or more principals in resource permissions list are not valid QuickSight users 
@@ -752,6 +764,120 @@ Resources:
       Principal: "s3.amazonaws.com"
       SourceAccount: !Ref PConfigLoggingAccountID
 
+  # ****************************************************************************************************************************************
+  # Runs a lambda to identify the region where QuickSight stores its users
+  Setup:
+    Type: Custom::CustomResource
+    Properties:
+      ServiceToken: !GetAtt CustomResourceFunctionInit.Arn
+
+  InitLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      RoleName: !Sub "cid-crcd-supportingLambdaExecution-role-${AWS::Region}-${AWS::AccountId}"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: quicksight:DescribeUser
+                Resource: !Sub 'arn:${AWS::Partition}:quicksight:*:${AWS::AccountId}:user/default/${PQuickSightUser}' # region=* as at this moment we do not know the Identity region where QS stores users
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSLambdaExecute
+
+  # this layer has the code to extract the Identity region for the QuickSight user
+  CidResourceLambdaLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName: 'CidCrcdLambdaLayer'
+      Description: An AWS managed layer with a cid-cmd package installed
+      Content:
+        S3Bucket: !Sub '${LambdaLayerBucketPrefix}-${AWS::Region}'
+        S3Key: 'cid-resource-lambda-layer/cid-0.2.46.zip' # replace version here if needed
+      CompatibleRuntimes:
+        - python3.10
+
+  CustomResourceFunctionInit:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "CidCrCdCustomResourceFunctionInit"
+      Role: !GetAtt 'InitLambdaExecutionRole.Arn'
+      Description: "Supports CID-CRCD Dashboad deployment by finding the Identity region where QuickSight stores its users"
+      Runtime: python3.12
+      Architectures: [ x86_64 ] # Compatible with arm64 but it is not supported in all regions
+      MemorySize: 128
+      Timeout: 300
+      Handler: 'index.lambda_handler'
+      Code:
+        ZipFile: |
+          import os
+          import uuid
+          import json
+          import boto3
+          import botocore
+          import urllib3
+
+          from cid.helpers import QuickSight # from layer
+          from cid.utils import set_parameters
+
+          QUICKSIGHT_USER = os.environ['QUICKSIGHT_USER']
+
+          def lambda_handler(event, context):
+              print(event)
+
+              region = boto3.session.Session().region_name
+              res = (True, f"In case of error check logs")
+              identity_region = ''
+              try:
+                  set_parameters({'quicksight-user': QUICKSIGHT_USER})
+                  identity_region = get_identity_region()
+                  print("QuickSight identity region: " + identity_region)
+                  
+                  
+              finally:
+                  log_url = f"https://{region}.console.aws.amazon.com/cloudwatch/home?region={region}#logEvent:group={context.log_group_name};stream={context.log_stream_name}"
+                  url = event.get('ResponseURL')
+                  body = {}
+                  body['Status'] = 'SUCCESS' if res[0] else 'FAILED'
+                  body['Reason'] = res[1] + '\nLogs: ' + log_url
+                  body['PhysicalResourceId'] = 'keep_it_constant'
+                  body['StackId'] = event.get('StackId')
+                  body['RequestId'] = event.get('RequestId')
+                  body['LogicalResourceId'] = event.get('LogicalResourceId')
+                  body['NoEcho'] = False
+                  body['Data'] =  {'Reason': res[1], 'uuid': str(uuid.uuid1()), 'IdentityRegion': identity_region}
+                  print(body)
+                  if not url: return
+                  json_body=json.dumps(body)
+                  try:
+                      http = urllib3.PoolManager()
+                      response = http.request('PUT', url, body=json_body, headers={'content-type' : '', 'content-length' : str(len(json_body))}, retries=False)
+                      print(f"Status code: {response}")
+                  except Exception as exc:
+                      print("Failed sending PUT to CFN: " + str(exc))
+
+          def get_identity_region():
+              qs = QuickSight(boto3.session.Session())
+              return qs.identityRegion
+
+      Layers:
+        - !Ref CidResourceLambdaLayer
+      Environment:
+        Variables:
+          QUICKSIGHT_USER: !Ref PQuickSightUser
+
+
 Outputs:
   # TODO CID-CMD tool will list it, users must pick it. Maybe is enough to return just the name?
   # the tool can take the ARN as input parameter
@@ -797,3 +923,8 @@ Outputs:
       Fn::GetAtt:
         - "IAMRoleLambdaPartitionerConfig"
         - "Arn"
+  
+  # TODO temp to see this on the output
+  QuickSightIdentityRegion:
+    Description: "Identity region where QS stores its users"
+    Value: !GetAtt Setup.IdentityRegion
