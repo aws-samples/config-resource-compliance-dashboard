@@ -45,7 +45,7 @@ In Athena, there is a table used to extract data from Configuration Snapshots. T
 6. Enable AWS Config in the accounts and regions you want to track, setup the delivery of Configuration Snapshots to a centralized S3 bucket in the region where you have activated Amazon Quicksight.
 
 ### AWS Config Prerequisites
-The solution supports AWS accounts and AWS accounts that are member of an AWS Organization. These two options have different ways of structuring the Configuration Snapshots in S3, the solution supports the following S3 prefixes. **Verify that your setup is compatible with the following.**
+The solution supports standalone AWS accounts and AWS accounts that are member of an AWS Organization. These two options have different ways of structuring the Configuration Snapshots in S3, the solution supports the following S3 prefixes. **Verify that your setup is compatible with the following.**
 
 In both cases below:
 * `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
@@ -62,7 +62,75 @@ Matches object keys like `AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/Y
 #### Standalone Account
 Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
 
-## Deployment Instructions
+## Deployment Instructions (Single account)
+These instructions apply to the case where you are installing the dashboard on the same account and region where your AWS Config logs are collected, whether that is a standalone account or the Log Archive account of your Organization.
+
+1. At every step, make sure you are in the region where both your central Config Amazon S3 bucket Amazon QuickSight are deployed.
+1. Open the CloudFromation console and run the script `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
+   - `QuickSightUser` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users)
+   - `ConfigLoggingBucket` Name of the Amazon S3 bucket that collects AWS Config data
+   - `ConfigLoggingAccountID` This is the 12-digit number of the current account 
+   - **Leave every other parameter to its default value**
+1. Write doen the following from the output of the CloudFrormation template:
+   - `LambdaARN`
+   - `LambdaRoleARN`
+   - `QuickSightDataRoleARN`
+   - `QuickSightDataSourceArn`
+1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
+   - Navigate to the AWS Console and open AWS CloudShell. Be sure to be in the correct region
+   - Install the CID-CMD tool running the following command:
+    ```
+    pip3 install git+https://github.com/aws-samples/aws-cudos-framework-deployment.git
+    ```
+   - On the top right corner, click on `Actions`, and then `Upload file`
+   - Select the `CID-Config-2.yaml` file under the `dashboard_template` directory and click on `Upload`
+   - Deploy the dashboard running the command (replace first the following parameters):
+     - `--view-aws-config-configuration-snapshots-s3path` The full path of the Amazon S3 bucket that contains your AWS Config logs, eg: `s3://my-config-logs-bucket/` be sure it ends with a forward slash `/`
+     - `--quicksight-datasource-role-arn` The value of the output `QuickSightDataRoleARN` from the CloudFormation template run above
+     - `TAG1`, `TAG2` TODO
+     - **Leave every other parameter to its default value**
+     - TODO finalize the parameters
+
+    ```
+    cid-cmd deploy --resources 'CID-Config-2.yaml' --view-aws-config-configuration-snapshots-s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role-arn 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --quicksight-datasource-id 'cid-crcd-datasource'  --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard' --dashboard-id 'cid-config-2'    --view-aws-config-configuration-snapshots-athenatablename 'cid-crcd-config'
+    ```
+1. Enable Refresh Schedule on Datasets. This will refresh the data in QuickSight with the frequency you specify:
+   - Navigate to QuickSight and then Datasets
+   - Click on a Dataset, and then open the Refresh tab
+   - Click on Add a new schedule, select Full refresh and a Frequency
+1. Configure the Config S3 bucket to trigger the `Lambda Partitioner function` when objects are added to the bucket and allow the same function permission to read objects
+   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
+     - Name = `cid-crcd-deliver-config-snapshot`
+     - Event types = `All object create events`
+     - Destination = `Lambda function`
+     - Enter Lambda function ARN = `Lambda function ARN returned by the CloudFormation script`
+   - Add the following statement to the bucket policy [documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html):
+     - Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `Lambda Role ARN returned by the CloudFormation script`
+     - Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket
+
+    ```
+        {
+            "Sid": "Cross account access for CID-CRCD dashboard",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "LAMBDA-PARTITIONER-RULE-ARN"
+            },
+            "Action": "s3:*",
+            "Resource": [
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
+                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
+            ]
+        }
+
+1. Visualize the dashboard:
+   - Navigate to QuickSight and then Dashboards
+   - Click on the CID-Config dashboard
+
+
+
+
+## Deployment Instructions (Multi account)
+_this does not work ATM, WIP_
 
 1. Make sure you are in the region where both your central Config Amazon S3 bucket (this can be on another AWS Account) and Amazon QuickSight are deployed.
 1. TODO Run the cloudformation to create the QuickSight Data Source role 
@@ -73,7 +141,7 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
 cid-cmd deploy --resources CID-Config-2.yaml --quicksight-datasource-id cid-crcd-datasource --athena-database cid-crcd-database --athena-workgroup cid-crcd-dashboard --quicksight-datasource-role-arn arn:aws:iam::767398072207:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207
 ```
 
-1. Note down the following from above
+4. Note down the following from above
    - TODO parameter A
    - TODO parameter B  
 1. Run CloudFormation script to create the Lambda function and its permissions

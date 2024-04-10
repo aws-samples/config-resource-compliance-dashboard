@@ -81,6 +81,7 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
 
+  # TODO this name has changed, check the first template
   AthenaConfigSnapshotsTableName:
     Type: "String"
     Default: "cid-crcd-configuration-snapshots"

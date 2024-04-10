@@ -7,9 +7,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2 - Template 01"
 
-
 Metadata:
-  # TODO parameters: Athena parameters are the esame as the other CloudFromation template...
+  # Athena parameters are the esame as the other CloudFromation template
   AWS::CloudFormation::Interface:
     ParameterGroups:
       -
@@ -49,13 +48,12 @@ Metadata:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       
 
-# TODO table and database are given as input with the name I decide as default, telling the user not to change it
 # TODO test the rules on the parameters, that they are mandatory etc...
 Parameters:
   QuickSightUser:
     Type: String
     MinLength: 1
-    Default: Replace with QuickSight user
+    Default: "Replace with QuickSight user"
     Description: See https://quicksight.aws.amazon.com/sn/admin#users
 
   ConfigLoggingBucket:
@@ -74,7 +72,8 @@ Parameters:
 
   AthenaDatabase:
     Type: "String"
-    Default: "cid-crcd-database"
+    # The name cannot have the symbol '-' and must have lowercase character. '_' seems accepted
+    Default: "cid_crcd_database"
     Description: "The Athena/Glue database for the CID-CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
@@ -187,7 +186,7 @@ Resources:
             # TODO this is copied from CID CloudFormation template
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
 
-  CRDCAthenaWorkgroup: # Athena workgroup to execute CID-CRCD queries with its own result bucket
+  AthenaWorkgroupCIDCRCD: # Athena workgroup to execute CID-CRCD queries with its own result bucket
     Type: AWS::Athena::WorkGroup
     Properties:
       Name: !Sub '${AthenaWorkgroup}'
@@ -200,7 +199,7 @@ Resources:
           OutputLocation: !Sub 's3://${CRDCAthenaQueryResultsBucket}/'
 
   IAMRoleCIDCRCDQuickSightDataSource:
-    Type: "AWS::IAM::Role"
+    Type: AWS::IAM::Role
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
@@ -220,7 +219,7 @@ Resources:
             Service: "quicksight.amazonaws.com"
 
   IAMManagedPolicyCIDCRCDGlueS3ConfigSnapshotObject:
-    Type: "AWS::IAM::ManagedPolicy"
+    Type: AWS::IAM::ManagedPolicy
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
@@ -293,7 +292,8 @@ Resources:
           Effect: "Allow"
           Sid: "AllowReadTheS3ConfigBucket"
 
-  AthenaDataSourceCIDCRCD:
+  # TODO this creates a data source on quicksight, but not on Athena, that still has only AwsDataCatalog
+  QuickSightDataSourceCIDCRCD:
     Type: AWS::QuickSight::DataSource
     Properties:
       AwsAccountId: !Sub '${AWS::AccountId}'
@@ -302,7 +302,7 @@ Resources:
       Name:         !Sub '${AthenaDataSource}'
       DataSourceParameters:
         AthenaParameters:
-          WorkGroup: !Ref CRDCAthenaWorkgroup
+          WorkGroup: !Ref AthenaWorkgroupCIDCRCD
           # TODO Hardcoded for now, then use a !Ref or a sub like this !Sub "arn:aws:iam::${AWS::AccountId}:role/${QuickSightDataSourceRoleName}"
           # RoleArn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207" 
           RoleArn: 
@@ -323,8 +323,22 @@ Resources:
           # using ${AWS::Region} does not work
           #     Resource handler returned message: "Invalid request provided: One or more principals in resource permissions list are not valid QuickSight users 
           #     (Service: QuickSight, Status Code: 400, Request ID: null)" (RequestToken: 97c30ba1-f45f-584c-419b-22075bb4d96e, HandlerErrorCode: InvalidRequest)
-          # TODO original string was Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
+          # original string was Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${QuickSightUser}'
 
+  # TODO from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-athena-datacatalog.html#cfn-athena-datacatalog-type
+  # The GLUE type takes a catalog ID parameter and is required. The catalog_id is the account ID of the AWS account to which the Glue catalog belongs.
+  # catalog-id=catalog_id
+  # The GLUE data catalog type also applies to the default AwsDataCatalog that already exists in your account, of which you can have only one and cannot modify.
+  # TODO Still unsure if I need my own Athena data catalog or if I can use the default AwsDataCatalog, and why CID/CUDOS creted its own
+  
+  AthenaDataCatalogCIDCRCD:
+    Type: AWS::Athena::DataCatalog
+    Properties:
+      Type: "GLUE"
+      Description: "CID-CRCD Athena data catalog used by the dashboard"
+      Name: !Sub '${AthenaDataSource}'
+      Parameters:
+        catalog-id: !Sub '${AWS::AccountId}'
 
 Outputs:
   # TODO CID-CMD tool will list it, users must pick it. Maybe is enough to return just the name?
@@ -335,7 +349,22 @@ Outputs:
       Fn::GetAtt:
         - "IAMRoleCIDCRCDQuickSightDataSource"
         - "Arn"
-  
-  AthenaWorkgroupName:
-    Description: 'Name of the Athena Workgroup'
-    Value: !Ref CRDCAthenaWorkgroup
+
+  # TODO returns arn:aws:athena:eu-west-3:767398072207:datacatalog/cid-crcd-datasource
+  # This is coming from a permission I grant here
+  AthenaDataCatalog:
+    Description: "Possible value of the ARN, see what works"
+    Value: !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${AthenaDataSource}"
+
+  # TODO returns 767398072207|cid-crcd-datasource
+  QuickSightDataSourceArnTwo:
+    Description: "Alternative possibility"
+    Value: !Ref QuickSightDataSourceCIDCRCD
+
+  # TODO returns arn:aws:quicksight:eu-west-3:767398072207:datasource/cid-crcd-datasource
+  QuickSightDataSourceArnThree:
+    Description: "Further alternative possibility"
+    Value:
+      Fn::GetAtt:
+        - "QuickSightDataSourceCIDCRCD"
+        - "Arn"

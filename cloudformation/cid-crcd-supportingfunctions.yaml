@@ -35,7 +35,7 @@ Metadata:
 
     ParameterLabels:
       QuickSightUser:
-        default: "User name of QuickSight user (as displayed in QuickSight admin panel)."
+        default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       LambdaLayerBucketPrefix:
         default: "LambdaLayerBucketPrefix - Please do not change"
 

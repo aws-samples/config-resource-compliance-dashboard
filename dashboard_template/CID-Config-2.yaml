@@ -1,5 +1,5 @@
 dashboards:
-  # TODO change name from CID-Config-2
+  # TODO change name from CID-Config-2 and the dashboardId below
   CID-CONFIG-2:
     dependsOn:
       datasets:
@@ -2835,18 +2835,17 @@ dashboards:
             VisualId: 14595418-4007-49a3-a19f-72c19fc68819
 datasets:
   config_inventory_s3:
-    # TODO see if adding parameters here works
     parameters:
-      cid-crcd-datasource-arn:
-        default: aws::::cid-crcd-datasource
-        description: "Enter the name of the Athena datasource"
+      cid-crcd-qs-datasource-arn:
+        default: arn:aws:::cid-crcd-datasource 
+        description: "Enter the ARN of the QuickSight datasource"
         global: True
       cid-crcd-database-name:
-        default: cid-crcd-database
+        default: cid_crcd_database
         description: "The name of the Athena/Glue database"
         global: True
       cid-crcd-datacatalog-name:
-        default: AwsDataCatalog
+        default: cid-crcd-datasource # was AwsDataCatalog
         description: "The name of the data catalog in Athena"
         global: True
     data:
@@ -2855,7 +2854,7 @@ datasets:
       PhysicalTableMap:
         308d813c-2419-40d3-9bb3-ac3001543808:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
             Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
             Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_inventory_s3
@@ -2959,15 +2958,28 @@ datasets:
     schedules:
     - default
   config_inventory_compliance_per_rule:
+    parameters:
+      cid-crcd-qs-datasource-arn:
+        default: arn:aws:::cid-crcd-datasource 
+        description: "Enter the ARN of the QuickSigth datasource"
+        global: True
+      cid-crcd-database-name:
+        default: cid_crcd_database
+        description: "The name of the Athena/Glue database"
+        global: True
+      cid-crcd-datacatalog-name:
+        default: cid-crcd-datasource # was AwsDataCatalog
+        description: "The name of the data catalog in Athena"
+        global: True
     data:
       DataSetId: d7bf61e4-9aba-47f9-983a-bac4c9146409
       Name: config_inventory_compliance_per_rule
       PhysicalTableMap:
         49b5b399-5c95-4003-817d-fd81b1f66c55:
           RelationalTable:
-            DataSourceArn: ${athena_datasource_arn}
-            Catalog: AwsDataCatalog
-            Schema: ${athena_database_name}
+            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
+            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_inventory_compliance_per_rule
             InputColumns:
             - Name: accountid
@@ -3037,15 +3049,28 @@ datasets:
     schedules:
     - default
   config_conformance_packs_compliance:
+    parameters:
+      cid-crcd-qs-datasource-arn:
+        default: arn:aws:::cid-crcd-datasource 
+        description: "Enter the ARN of the QuickSight datasource"
+        global: True
+      cid-crcd-database-name:
+        default: cid_crcd_database
+        description: "The name of the Athena/Glue database"
+        global: True
+      cid-crcd-datacatalog-name:
+        default: cid-crcd-datasource # was AwsDataCatalog
+        description: "The name of the data catalog in Athena"
+        global: True
     data:
       DataSetId: 42db2e79-66c0-4270-9f1b-64c7c6d5427c
       Name: config_conformance_packs_compliance
       PhysicalTableMap:
         fb836813-2afd-4c35-a7a7-5f9e3b8f104e:
           RelationalTable:
-            DataSourceArn: ${athena_datasource_arn}
-            Catalog: AwsDataCatalog
-            Schema: ${athena_database_name}
+            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
+            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_conformance_packs_compliance
             InputColumns:
             - Name: accountid
@@ -3127,15 +3152,28 @@ datasets:
     schedules:
     - default
   config_inventory_ec2:
+    parameters:
+      cid-crcd-qs-datasource-arn:
+        default: arn:aws:::cid-crcd-datasource 
+        description: "Enter the ARN of the QuickSight datasource"
+        global: True
+      cid-crcd-database-name:
+        default: cid_crcd_database
+        description: "The name of the Athena/Glue database"
+        global: True
+      cid-crcd-datacatalog-name:
+        default: cid-crcd-datasource # was AwsDataCatalog
+        description: "The name of the data catalog in Athena"
+        global: True
     data:
       DataSetId: 16c598af-4419-4cd4-993e-5e148c592f6d
       Name: config_inventory_ec2
       PhysicalTableMap:
         ce103326-068f-4f62-9f1b-df3e183f3e72:
           RelationalTable:
-            DataSourceArn: ${athena_datasource_arn}
-            Catalog: AwsDataCatalog
-            Schema: ${athena_database_name}
+            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
+            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_inventory_ec2
             InputColumns:
             - Name: accountid
@@ -3273,15 +3311,28 @@ datasets:
     schedules:
     - default
   config_inventory_compliance:
+    parameters:
+      cid-crcd-qs-datasource-arn:
+        default: arn:aws:::cid-crcd-datasource 
+        description: "Enter the ARN of the QuickSight datasource"
+        global: True
+      cid-crcd-database-name:
+        default: cid_crcd_database
+        description: "The name of the Athena/Glue database"
+        global: True
+      cid-crcd-datacatalog-name:
+        default: cid-crcd-datasource # was AwsDataCatalog
+        description: "The name of the data catalog in Athena"
+        global: True
     data:
       DataSetId: f7afbf41-0ccf-44d3-8b51-5764b8422c7d
       Name: config_inventory_compliance
       PhysicalTableMap:
         b3a20e42-29f9-4a6b-84ec-5171a9543667:
           RelationalTable:
-            DataSourceArn: ${athena_datasource_arn}
-            Catalog: AwsDataCatalog
-            Schema: ${athena_database_name}
+            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
+            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
+            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
             Name: config_inventory_compliance
             InputColumns:
             - Name: accountid
@@ -3368,54 +3419,57 @@ views:
       , "configurationItem"."resourcecreationtime" "CreationTime"
       , "json_extract_scalar"("configurationItem"."configuration", '$.creationDate') "CreationDate"
       FROM
-        (aws_config_configuration_snapshots
+        (${cid-crcd-athena-table}
       CROSS JOIN UNNEST("configurationitems") t (configurationItem))
       WHERE ("configurationItem"."resourcetype" = 'AWS::S3::Bucket')
+
   aws_config_configuration_snapshots:
+    # TODO https://docs.aws.amazon.com/athena/latest/ug/create-table.html IF NOT EXISTS???
     data: |-
-      CREATE EXTERNAL TABLE `${athenatablename}`(
-        `fileversion` string COMMENT 'from deserializer',
-        `configsnapshotid` string COMMENT 'from deserializer',
-        `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
-      PARTITIONED BY (
-        `accountid` string,
-        `dt` string,
-        `region` string)
-      ROW FORMAT SERDE
-        'org.openx.data.jsonserde.JsonSerDe'
-      WITH SERDEPROPERTIES (
-        'case.insensitive'='false',
-        'mapping.arn'='ARN',
-        'mapping.availabilityzone'='availabilityZone',
-        'mapping.awsaccountid'='awsAccountId',
-        'mapping.awsregion'='awsRegion',
-        'mapping.configsnapshotid'='configSnapshotId',
-        'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
-        'mapping.configurationitems'='configurationItems',
-        'mapping.configurationitemstatus'='configurationItemStatus',
-        'mapping.configurationitemversion'='configurationItemVersion',
-        'mapping.configurationstateid'='configurationStateId',
-        'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
-        'mapping.fileversion'='fileVersion',
-        'mapping.resourceid'='resourceId',
-        'mapping.resourcename'='resourceName',
-        'mapping.resourcetype'='resourceType',
-        'mapping.supplementaryconfiguration'='supplementaryConfiguration')
-      STORED AS INPUTFORMAT
-        'org.apache.hadoop.mapred.TextInputFormat'
-      OUTPUTFORMAT
-        'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
-      LOCATION
-        '${s3path}'
-      TBLPROPERTIES (
-        'transient_lastDdlTime'='1709651866')
+        CREATE EXTERNAL TABLE `${cid-crcd-athena-table}`(
+          `fileversion` string COMMENT 'from deserializer',
+          `configsnapshotid` string COMMENT 'from deserializer',
+          `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
+        PARTITIONED BY (
+          `accountid` string,
+          `dt` string,
+          `region` string)
+        ROW FORMAT SERDE
+          'org.openx.data.jsonserde.JsonSerDe'
+        WITH SERDEPROPERTIES (
+          'case.insensitive'='false',
+          'mapping.arn'='ARN',
+          'mapping.availabilityzone'='availabilityZone',
+          'mapping.awsaccountid'='awsAccountId',
+          'mapping.awsregion'='awsRegion',
+          'mapping.configsnapshotid'='configSnapshotId',
+          'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
+          'mapping.configurationitems'='configurationItems',
+          'mapping.configurationitemstatus'='configurationItemStatus',
+          'mapping.configurationitemversion'='configurationItemVersion',
+          'mapping.configurationstateid'='configurationStateId',
+          'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
+          'mapping.fileversion'='fileVersion',
+          'mapping.resourceid'='resourceId',
+          'mapping.resourcename'='resourceName',
+          'mapping.resourcetype'='resourceType',
+          'mapping.supplementaryconfiguration'='supplementaryConfiguration')
+        STORED AS INPUTFORMAT
+          'org.apache.hadoop.mapred.TextInputFormat'
+        OUTPUTFORMAT
+          'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
+        LOCATION
+          '${cid-crcd-s3configpath}'
+        TBLPROPERTIES (
+          'transient_lastDdlTime'='1709651866')
     parameters:
-      s3path:
+      cid-crcd-s3configpath:
         default: s3://your-s3-bucket-holding-config-data/
         description: S3 Path of your centralized bucket containing Config data (end it with a forward slash)
-      athenatablename:
+      cid-crcd-athena-table:
         default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard
+        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
+  
   config_inventory_compliance_per_rule:
     dependsOn:
       views:
@@ -3446,7 +3500,7 @@ views:
             , "json_extract_scalar"(rule, '$.complianceType') "Compliant"
             , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"(rule, '$.configRuleName'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId'), YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              ((aws_config_configuration_snapshots
+              ((${cid-crcd-athena-table}
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
             CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
             WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance')
@@ -3458,7 +3512,7 @@ views:
            "configurationItem"."resourceId" "ConformancePack"
          , "json_extract_scalar"(rule, '$.configRuleName') "RuleName"
          FROM
-           ((aws_config_configuration_snapshots
+           ((${cid-crcd-athena-table}
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
          WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
@@ -3498,7 +3552,7 @@ views:
             , "json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount') "TotalRuleCount"
             , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."resourceId", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              (aws_config_configuration_snapshots
+              (${cid-crcd-athena-table}
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
             WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
          )  sub
@@ -3540,7 +3594,7 @@ views:
       , "json_extract_scalar"("configurationItem"."configuration", '$.publicIpAddress') "PublicIp"
       , "json_extract_scalar"("configurationItem"."configuration", '$.state.name') "State"
       FROM
-        (aws_config_configuration_snapshots
+        (${cid-crcd-athena-table}
       CROSS JOIN UNNEST("configurationitems") t (configurationItem))
       WHERE ("configurationItem"."resourcetype" = 'AWS::EC2::Instance')
   config_inventory_compliance:
@@ -3570,7 +3624,7 @@ views:
             , "json_extract_scalar"("configurationItem"."configuration", '$.complianceType') "ComplianceType"
             , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId'), YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              (aws_config_configuration_snapshots
+              (${cid-crcd-athena-table}
             CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
             WHERE ("configurationItem"."resourceType" = 'AWS::Config::ResourceCompliance')
          )  sub
