@@ -538,6 +538,7 @@ Resources:
           # TODO: Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
           ATHENA_REGION: !Ref AWS::Region
       Code:
+        # TODO: handle the code
         ZipFile: | 
           import datetime
           import re
