@@ -1,5 +1,4 @@
-# Same as the official cid-crcd-resources.yaml, but with full code of lambda partitioner
-# Single CloudFormation template for all resources
+# OFFICIAL FINAL Single CloudFormation template for all resources
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
@@ -118,7 +117,7 @@ Parameters:
 
   PAthenaTable:
     Type: "String"
-    Default: "cid-crcd-config"
+    Default: "cid_crcd_config"
     Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"

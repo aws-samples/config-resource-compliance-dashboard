@@ -1,8 +1,17 @@
-# BACKUP version
+# OFFICIAL WIP 
+# Testing and Troubleshooting / changes below
+# 1. Looks like cid-crcd-config is not replaced onto ${cid-crcd-athena-table} - hence hardcoding the name of the table everywhere (a parameter is not needed anyway)
+# 2. Table name cannot contain the DASH character: change from cid-crcd-config to cid_crcd_config
+# 3. changed name CID-Config-2 and the dashboardId below
+
+# TODO changes
+
+# why the table creation SQL has no indication of the DB name?
+
+
 
 dashboards:
-  # TODO change name from CID-Config-2 and the dashboardId below
-  CID-CONFIG-2:
+  CID-CRCD-CONFIG:
     dependsOn:
       datasets:
       - config_conformance_packs_compliance
@@ -11,7 +20,7 @@ dashboards:
       - config_inventory_ec2
       - config_inventory_s3
     name: "AWS Config Resource Compliance Dashboard (CID-CRCD)"
-    dashboardId: cid-config-2
+    dashboardId: cid-config
     category: Custom
     theme: MIDNIGHT
     data: |-
@@ -3405,10 +3414,6 @@ views:
         default: tag2
         description: "Enter the second tag name used to categorize workloads"
         global: True
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
-        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_s3 AS
       SELECT DISTINCT
@@ -3425,14 +3430,14 @@ views:
       , "configurationItem"."resourcecreationtime" "CreationTime"
       , "json_extract_scalar"("configurationItem"."configuration", '$.creationDate') "CreationDate"
       FROM
-        (${cid-crcd-athena-table}
+        (cid_crcd_config
       CROSS JOIN UNNEST("configurationitems") t (configurationItem))
       WHERE ("configurationItem"."resourcetype" = 'AWS::S3::Bucket')
 
   aws_config_configuration_snapshots:
     # TODO https://docs.aws.amazon.com/athena/latest/ug/create-table.html IF NOT EXISTS???
     data: |-
-        CREATE EXTERNAL TABLE `${cid-crcd-athena-table}`(
+        CREATE EXTERNAL TABLE `cid_crcd_config`(
           `fileversion` string COMMENT 'from deserializer',
           `configsnapshotid` string COMMENT 'from deserializer',
           `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
@@ -3473,20 +3478,11 @@ views:
         default: s3://your-s3-bucket-holding-config-data/
         description: S3 Path of your centralized bucket containing Config data (end it with a forward slash)
         global: True
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
-        global: True
   
   config_inventory_compliance_per_rule:
     dependsOn:
       views:
       - aws_config_configuration_snapshots
-    parameters:
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
-        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_compliance_per_rule AS
       SELECT DISTINCT
@@ -3513,7 +3509,7 @@ views:
             , "json_extract_scalar"(rule, '$.complianceType') "Compliant"
             , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"(rule, '$.configRuleName'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId'), YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              ((${cid-crcd-athena-table}
+              ((cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
             CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
             WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance')
@@ -3525,7 +3521,7 @@ views:
            "configurationItem"."resourceId" "ConformancePack"
          , "json_extract_scalar"(rule, '$.configRuleName') "RuleName"
          FROM
-           ((${cid-crcd-athena-table}
+           ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
          WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
@@ -3535,11 +3531,6 @@ views:
     dependsOn:
       views:
       - aws_config_configuration_snapshots
-    parameters:
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
-        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_conformance_packs_compliance AS
       SELECT DISTINCT
@@ -3571,7 +3562,7 @@ views:
             , "json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount') "TotalRuleCount"
             , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."resourceId", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              (${cid-crcd-athena-table}
+              (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
             WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
          )  sub
@@ -3590,10 +3581,6 @@ views:
       tag2:
         default: tag2
         description: "Enter the second tag name used to categorize workloads"
-        global: True
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
         global: True
     # TODO keep tag aliases fixed (TAG1, TAG2), ..., so they match the configuration of elements in QS
     data: |-
@@ -3618,7 +3605,7 @@ views:
       , "json_extract_scalar"("configurationItem"."configuration", '$.publicIpAddress') "PublicIp"
       , "json_extract_scalar"("configurationItem"."configuration", '$.state.name') "State"
       FROM
-        (${cid-crcd-athena-table}
+        (cid_crcd_config
       CROSS JOIN UNNEST("configurationitems") t (configurationItem))
       WHERE ("configurationItem"."resourcetype" = 'AWS::EC2::Instance')
   
@@ -3626,11 +3613,6 @@ views:
     dependsOn:
       views:
       - aws_config_configuration_snapshots
-    parameters:
-      cid-crcd-athena-table:
-        default: cid-crcd-config
-        description: The name of the Athena table that contains the AWS Config data for the dashboard (use the default)
-        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_compliance AS
       SELECT DISTINCT
@@ -3654,7 +3636,7 @@ views:
             , "json_extract_scalar"("configurationItem"."configuration", '$.complianceType') "ComplianceType"
             , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId'), YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
-              (${cid-crcd-athena-table}
+              (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
             WHERE ("configurationItem"."resourceType" = 'AWS::Config::ResourceCompliance')
          )  sub
