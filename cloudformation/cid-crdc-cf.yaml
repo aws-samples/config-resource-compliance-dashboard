@@ -1,4 +1,5 @@
-# OFFICIAL FINAL Single CloudFormation template for all resources
+# working on the test one WIP
+# CloudFormation template for all resources
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
@@ -21,7 +22,7 @@ Metadata:
           default: "Athena Configuration (DO NOT CHANGE)"
         Parameters:
           - PAthenaWorkgroup
-          - PAthenaDataSource
+          - PAthenaDataSource # TODO deprecated, we try to use the CID-CMD default
           - PAthenaDatabase
           - PAthenaTable
           - PAthenaQueryResultBucketPrefix
@@ -86,7 +87,7 @@ Parameters:
 
   PAthenaDataSource:
     Type: "String"
-    Default: "CidCrcdDataCatalog" # TODO was "cid-crcd-datasource" but I want to follow the stype of the default AwsDataCatalog
+    Default: "CidCrcdDataCatalog" # TODO default AwsDataCatalog or my own?
     Description: "The Athena data source that will be used by the CID-CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
@@ -101,7 +102,7 @@ Parameters:
 
   PAthenaQueryResultBucketPrefix:
     Type: "String"
-    Default: "cid-crcd-athena-query-results" #It is not possible in the default value of a parameter to add variables like ${AWS::Region} or ${AWS::AccountId}" 
+    Default: "cid-crcd-athena-query-results" 
     Description: "The Athena query result bucket for the workgroup, Account ID and Region will be added to the name by this tempalte (Required)"
     # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
     # that leaves 36 character for the prefix
@@ -257,9 +258,8 @@ Resources:
     Properties:
       Path: "/"
       ManagedPolicyArns:
-      - Ref: "IAMManagedPolicyGlueAthenaS3"
+      - Ref: "IAMManagedPolicyQuickSightDataSource"
       MaxSessionDuration: 3600
-      # TODO this is replicated in the output, is there a way to make a reference?
       RoleName: !Sub "cid-crcd-quicksight-datasource-role-${AWS::Region}-${AWS::AccountId}"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -269,12 +269,13 @@ Resources:
           Principal:
             Service: "quicksight.amazonaws.com"
 
-  IAMManagedPolicyGlueAthenaS3:
+  IAMManagedPolicyQuickSightDataSource:
     Type: AWS::IAM::ManagedPolicy
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-glue-s3configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
+      # !Sub "cid-crcd-glue-s3configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy-${AWS::Region}-${AWS::AccountId}" 
       Path: "/"
       Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
       PolicyDocument:
@@ -288,10 +289,11 @@ Resources:
           - "athena:ListTableMetadata"
           Effect: "Allow"
           Sid: "ReadAthenaLakeFormation"
-        - Resource:
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
+        - Resource: "*"
+          # TODO remove, these are not destructive privileges
+          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
           Action:
           - "glue:GetPartition"
           - "glue:GetPartitions"
@@ -300,10 +302,12 @@ Resources:
           - "glue:GetTables"
           Effect: "Allow"
           Sid: "AccessGlueData"
-        - Resource:
-          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
-          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
+        - Resource: "*"
+          # TODO remove, these are not destructive privileges
+          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
+          # TODO this one is an invalid ARN resource when I open the policy on IAM console
+          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
           Action:
           - "athena:ListDatabases"
           - "athena:ListDataCatalogs"
@@ -343,14 +347,14 @@ Resources:
           Effect: "Allow"
           Sid: "AllowReadTheS3ConfigBucket"
 
-  # TODO this creates a data source on quicksight, but not on Athena, that still has only AwsDataCatalog - understand data source in QS vs. Athena
+  # TODO this is deprecated, if this goes, then I do not need the Lambda that finds the identity region 
   QuickSightDataSource:
     Type: AWS::QuickSight::DataSource
     Properties:
       AwsAccountId: !Sub '${AWS::AccountId}'
       Type: ATHENA
       DataSourceId: !Sub '${PQuickSightDataSource}' # An ID for the data source. This ID is unique per AWS Region for each AWS account. 
-      Name: "CID Config Dashboard DataSource" #  !Sub '${PQuickSightDataSource}'
+      Name:         !Sub '${PQuickSightDataSource}' # "CID Config Dashboard DataSource" #  
       DataSourceParameters:
         AthenaParameters:
           WorkGroup: !Ref AthenaWorkgroup
@@ -366,13 +370,9 @@ Resources:
             - 'quicksight:UpdateDataSource'
             - 'quicksight:DeleteDataSource'
             - 'quicksight:UpdateDataSourcePermissions'
-          # TODO the region is the one where QuickSight stores the users, returned by a lambda run by CloudFormation as CustomResource
-          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${PQuickSightUser}'
-          # TODO check ${Setup.IdentityRegion} and why it was used originally - Looks like it was set by a lambda function called within the CloudFormation template or something????
+          # The region is the one where QuickSight stores the users, returned by a lambda run by CloudFormation as CustomResource
           # using ${AWS::Region} does not work
-          #     Resource handler returned message: "Invalid request provided: One or more principals in resource permissions list are not valid QuickSight users 
-          #     (Service: QuickSight, Status Code: 400, Request ID: null)" (RequestToken: 97c30ba1-f45f-584c-419b-22075bb4d96e, HandlerErrorCode: InvalidRequest)
-          # original string was Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${PQuickSightUser}'
+          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${PQuickSightUser}'
 
   # TODO from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-athena-datacatalog.html#cfn-athena-datacatalog-type
   # The GLUE type takes a catalog ID parameter and is required. The catalog_id is the account ID of the AWS account to which the Glue catalog belongs.
@@ -381,14 +381,15 @@ Resources:
   # TODO Still unsure if I need my own Athena data catalog or if I can use the default AwsDataCatalog, and why CID/CUDOS creted its own
   
   # TODO this creates it on Athena, to be seen how (or if) it connects with everything else
-  AthenaDataCatalogDataSource:
-    Type: AWS::Athena::DataCatalog
-    Properties:
-      Type: GLUE
-      Description: "CID-CRCD Athena data catalog used by the dashboard"
-      Name: !Sub '${PAthenaDataSource}'
-      Parameters:
-        catalog-id: !Sub '${AWS::AccountId}'
+  # since it gives issues and I can't use it, I take it out until an investigation
+  #AthenaDataCatalogDataSource:
+  #  Type: AWS::Athena::DataCatalog
+  #  Properties:
+  #    Type: GLUE
+  #    Description: "CID-CRCD Athena data catalog used by the dashboard"
+  #    Name: !Sub '${PAthenaDataSource}'
+  #    Parameters:
+  #      catalog-id: !Sub '${AWS::AccountId}'
 
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
@@ -878,7 +879,9 @@ Resources:
 
 
 Outputs:
-  QuickSightDataRoleARN:
+  # TODO probably not needed, remove
+  # but it's default parameter --quicksight-datasource-role on CID-CMD tool
+  QuickSightDataSourceRoleARN:
     Description: "ARN of the Role created for QuickSight"
     Value:
       Fn::GetAtt:
@@ -886,10 +889,13 @@ Outputs:
         - "Arn"
 
   # TODO SEE IF IT IS NEEDED LATER
-  AthenaDataCatalog:
-    Description: "ARN of the Athena data catalog"
-    Value: !GetAtt AthenaDataCatalogDataSource.Arn # !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
+  # This breaks the template, ATM
+  #AthenaDataCatalog:
+  #  Description: "ARN of the Athena data catalog"
+  #  Value: !GetAtt AthenaDataCatalogDataSource.Arn  
+    # !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
 
+  # Will be an input to the CID-CMD tool
   QuickSightDataSourceArn:
     Description: "ARN of the QuickSight Data Source"
     Value:
@@ -897,6 +903,7 @@ Outputs:
         - "QuickSightDataSource"
         - "Arn"
   
+  # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaARN:
     Description: "ARN of the Lambda Partitioner function supporting CID-CRCD Dashboard"
     Value:
@@ -904,6 +911,7 @@ Outputs:
         - "LambdaFunctionPartitionerConfig"
         - "Arn"
 
+  # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaRoleARN:
     Description: "ARN of the execution role of the Lambda Partitioner function"
     Value:
