@@ -1,4 +1,5 @@
 # trying to not create QuickSight data source
+# changed permissions IAMManagedPolicyLambdaGlue
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
@@ -21,11 +22,11 @@ Metadata:
           default: "Athena Configuration (DO NOT CHANGE)"
         Parameters:
           - PAthenaWorkgroup
-          - PAthenaDataSource # TODO deprecated, we try to use the CID-CMD default
+          # - PAthenaDataSource # TODO deprecated, we try to use the CID-CMD default
           - PAthenaDatabase
           - PAthenaTable
           - PAthenaQueryResultBucketPrefix
-          - PQuickSightDataSource # TODO deprecated, we try to use the CID-CMD default
+          # - PQuickSightDataSource # TODO deprecated, we try to use the CID-CMD default
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -35,8 +36,8 @@ Metadata:
     ParameterLabels:
       PAthenaWorkgroup:
         default: "Athena workgroup"
-      PAthenaDataSource:
-        default: "Athena data source"
+      #PAthenaDataSource:
+      #  default: "Athena data source"
       PAthenaDatabase:
         default: "Athena database"
       PAthenaQueryResultBucketPrefix:
@@ -49,8 +50,8 @@ Metadata:
         default: "Config bucket account"
       PQuickSightUser:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
-      PQuickSightDataSource:
-        default: "QuickSight data source"
+ #     PQuickSightDataSource:
+ #       default: "QuickSight data source"
       LambdaLayerBucketPrefix:
         default: "LambdaLayerBucketPrefix - Please do not change"
       
@@ -84,12 +85,12 @@ Parameters:
     AllowedPattern: '^\d{12}$'
     ConstraintDescription: "Required"
 
-  PAthenaDataSource:
-    Type: "String"
-    Default: "CidCrcdDataCatalog" # TODO default AwsDataCatalog or my own?
-    Description: "The Athena data source that will be used by the CID-CRCD dashboard (Required)"
-    MinLength: 1
-    ConstraintDescription: "Required"
+ # PAthenaDataSource:
+ #   Type: "String"
+ #   Default: "CidCrcdDataCatalog" # TODO default AwsDataCatalog or my own?
+ #   Description: "The Athena data source that will be used by the CID-CRCD dashboard (Required)"
+ #   MinLength: 1
+ #   ConstraintDescription: "Required"
 
   PAthenaDatabase:
     Type: "String"
@@ -122,12 +123,12 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
   
-  PQuickSightDataSource:
-    Type: "String"
-    Default: "cid-crcd-qs-datasource" 
-    Description: "The QuickSight data source for the Data Sets of the CID-CRCD dashboard (Required)"
-    MinLength: 1
-    ConstraintDescription: "Required"
+#  PQuickSightDataSource:
+#    Type: "String"
+#    Default: "cid-crcd-qs-datasource" 
+#    Description: "The QuickSight data source for the Data Sets of the CID-CRCD dashboard (Required)"
+#    MinLength: 1
+#    ConstraintDescription: "Required"
 
 # TODO verify parameters are not the default ones in case user input is necessary (e.g. QuickSight user, Config S3 bucket, Config buicket account)
 Rules:
@@ -138,20 +139,20 @@ Rules:
           - !Ref PQuickSightUser
           - ''
         AssertDescription: "QuickSight user is required"
-  MandatoryAthenaDataSource:
-    Assertions:
-      - Assert: !Not 
-        - !Equals 
-          - !Ref PAthenaDataSource
-          - ''
-        AssertDescription: "Athena data source is required"
-  MandatoryQuickSightDataSource:
-    Assertions:
-      - Assert: !Not 
-        - !Equals 
-          - !Ref PQuickSightDataSource
-          - ''
-        AssertDescription: "QuickSight data source is required"
+#  MandatoryAthenaDataSource:
+#    Assertions:
+#      - Assert: !Not 
+#        - !Equals 
+#          - !Ref PAthenaDataSource
+#          - ''
+#        AssertDescription: "Athena data source is required"
+#  MandatoryQuickSightDataSource:
+#    Assertions:
+#      - Assert: !Not 
+#        - !Equals 
+#          - !Ref PQuickSightDataSource
+#          - ''
+#        AssertDescription: "QuickSight data source is required"
   MandatoryConfigLoggingBucket:
     Assertions:
       - Assert: !Not 
@@ -402,11 +403,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          # TODO isn't the Athena TABLE and not DATABASE to be used? Maybe add these two? Or check permissions once installed.
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
           - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}/*"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
           - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
           Action:
           - "glue:UpdatePartition"
@@ -879,13 +877,20 @@ Resources:
 
 Outputs:
   # TODO probably not needed, remove
-  # but it's default parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRoleARN:
     Description: "ARN of the Role created for QuickSight"
     Value:
       Fn::GetAtt:
         - "IAMRoleQuickSightDataSource"
         - "Arn"
+  
+  # parameter --quicksight-datasource-role on CID-CMD tool
+  QuickSightDataSourceRole:
+    Description: "Name of the Role created for QuickSight"
+    Value:
+      Fn::GetAtt:
+        - "IAMRoleQuickSightDataSource"
+        - "RoleName"
 
   # TODO SEE IF IT IS NEEDED LATER
   # This breaks the template, ATM

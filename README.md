@@ -83,16 +83,19 @@ These instructions apply to the case where you are installing the dashboard on t
     pip3 install git+https://github.com/aws-samples/aws-cudos-framework-deployment.git
     ```
    - On the top right corner, click on `Actions`, and then `Upload file`
-   - Select the `CID-Config-2.yaml` file under the `dashboard_template` directory and click on `Upload`
+   - Select the `CID-Config.yaml` file under the `dashboard_template` directory and click on `Upload`
    - Deploy the dashboard running the command (replace first the following parameters):
-     - `--view-aws-config-configuration-snapshots-s3path` The full path of the Amazon S3 bucket that contains your AWS Config logs, eg: `s3://my-config-logs-bucket/` be sure it ends with a forward slash `/`
-     - `--quicksight-datasource-role-arn` The value of the output `QuickSightDataRoleARN` from the CloudFormation template run above
+     - `--s3path` The full path of the Amazon S3 bucket that contains your AWS Config logs, eg: `s3://my-config-logs-bucket/` be sure it ends with a forward slash `/`
+     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template run above
      - `TAG1`, `TAG2` TODO
      - **Leave every other parameter to its default value**
      - TODO finalize the parameters
 
     ```
-    cid-cmd deploy --resources 'CID-Config-2.yaml' --view-aws-config-configuration-snapshots-s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role-arn 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --quicksight-datasource-id 'cid-crcd-datasource'  --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard' --dashboard-id 'cid-config-2'    --view-aws-config-configuration-snapshots-athenatablename 'cid-crcd-config'
+    cid-cmd deploy --resources 'CID-Config.yaml' --s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT'
+    
+    TODO check these...
+     --quicksight-datasource-id 'cid-crcd-datasource'  --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard' --dashboard-id 'cid-config-2'    --view-aws-config-configuration-snapshots-athenatablename 'cid-crcd-config'
     ```
 1. Enable Refresh Schedule on Datasets. This will refresh the data in QuickSight with the frequency you specify:
    - Navigate to QuickSight and then Datasets
@@ -113,9 +116,14 @@ These instructions apply to the case where you are installing the dashboard on t
             "Sid": "Cross account access for CID-CRCD dashboard",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "LAMBDA-PARTITIONER-RULE-ARN"
+                "AWS": "LAMBDA-PARTITIONER-ROLE-ARN"
             },
-            "Action": "s3:*",
+            "Action": [
+				"s3:GetBucketLocation",
+				"s3:GetObject",
+				"s3:ListBucket",
+				"s3:GetObjectVersion"
+			],
             "Resource": [
                 "arn:aws:s3:::YOUR-CONFIG-BUCKET",
                 "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"

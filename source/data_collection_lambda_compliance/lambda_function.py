@@ -29,6 +29,7 @@ OBJECT_KEY_MATCH_STATUS_CONFIG_SNAPSHOT_STANDALONE = 2
 athena = boto3.client('athena')
 
 class AthenaException(Exception):
+    # This is raised only if the Query is not in state SUCCEEDED
     pass
 
 def lambda_handler(event, context):
