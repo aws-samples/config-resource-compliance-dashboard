@@ -1,5 +1,4 @@
-# working on the test one WIP
-# CloudFormation template for all resources
+# FINAL version that relies on default resources by CID-CMD tool
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
@@ -16,28 +15,19 @@ Metadata:
           default: "AWS Config Logging"
         Parameters:
           - PConfigLoggingBucket
-          - PConfigLoggingAccountID
+          - PConfigLoggingAccountID # TODO this may not be needed if we cannot build cross-account access (with views) to the bucket. In that case it will always be the local account.
       -
         Label:
           default: "Athena Configuration (DO NOT CHANGE)"
         Parameters:
           - PAthenaWorkgroup
-          - PAthenaDataSource # TODO deprecated, we try to use the CID-CMD default
           - PAthenaDatabase
           - PAthenaTable
           - PAthenaQueryResultBucketPrefix
-          - PQuickSightDataSource
-      -
-        Label:
-          default: "Technical Parameters (DO NOT CHANGE)"
-        Parameters:
-          - LambdaLayerBucketPrefix
       
     ParameterLabels:
       PAthenaWorkgroup:
         default: "Athena workgroup"
-      PAthenaDataSource:
-        default: "Athena data source"
       PAthenaDatabase:
         default: "Athena database"
       PAthenaQueryResultBucketPrefix:
@@ -50,19 +40,10 @@ Metadata:
         default: "Config bucket account"
       PQuickSightUser:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
-      PQuickSightDataSource:
-        default: "QuickSight data source"
-      LambdaLayerBucketPrefix:
-        default: "LambdaLayerBucketPrefix - Please do not change"
       
 
 # TODO test the rules on the parameters, that they are mandatory etc...
 Parameters:
-  LambdaLayerBucketPrefix:
-    Type: String
-    Description: "An S3 bucket with a Lambda layer used by CID-CRCD dashboard"
-    Default: "aws-managed-cost-intelligence-dashboards"
-
   PQuickSightUser:
     Type: String
     MinLength: 1
@@ -83,13 +64,6 @@ Parameters:
     MaxLength: 12
     MinLength: 12
     AllowedPattern: '^\d{12}$'
-    ConstraintDescription: "Required"
-
-  PAthenaDataSource:
-    Type: "String"
-    Default: "CidCrcdDataCatalog" # TODO default AwsDataCatalog or my own?
-    Description: "The Athena data source that will be used by the CID-CRCD dashboard (Required)"
-    MinLength: 1
     ConstraintDescription: "Required"
 
   PAthenaDatabase:
@@ -122,13 +96,6 @@ Parameters:
     Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
-  
-  PQuickSightDataSource:
-    Type: "String"
-    Default: "cid-crcd-qs-datasource" 
-    Description: "The QuickSight data source for the Data Sets of the CID-CRCD dashboard (Required)"
-    MinLength: 1
-    ConstraintDescription: "Required"
 
 # TODO verify parameters are not the default ones in case user input is necessary (e.g. QuickSight user, Config S3 bucket, Config buicket account)
 Rules:
@@ -139,20 +106,6 @@ Rules:
           - !Ref PQuickSightUser
           - ''
         AssertDescription: "QuickSight user is required"
-  MandatoryAthenaDataSource:
-    Assertions:
-      - Assert: !Not 
-        - !Equals 
-          - !Ref PAthenaDataSource
-          - ''
-        AssertDescription: "Athena data source is required"
-  MandatoryQuickSightDataSource:
-    Assertions:
-      - Assert: !Not 
-        - !Equals 
-          - !Ref PQuickSightDataSource
-          - ''
-        AssertDescription: "QuickSight data source is required"
   MandatoryConfigLoggingBucket:
     Assertions:
       - Assert: !Not 
@@ -232,7 +185,6 @@ Resources:
       cfn-lint:
         config:
           ignore_checks:
-            # TODO this is copied from CID CloudFormation template
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
 
   # Athena workgroup to execute CID-CRCD queries with its own result bucket
@@ -274,7 +226,6 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      # !Sub "cid-crcd-glue-s3configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
       ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy-${AWS::Region}-${AWS::AccountId}" 
       Path: "/"
       Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
@@ -290,10 +241,6 @@ Resources:
           Effect: "Allow"
           Sid: "ReadAthenaLakeFormation"
         - Resource: "*"
-          # TODO remove, these are not destructive privileges
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
           Action:
           - "glue:GetPartition"
           - "glue:GetPartitions"
@@ -303,11 +250,6 @@ Resources:
           Effect: "Allow"
           Sid: "AccessGlueData"
         - Resource: "*"
-          # TODO remove, these are not destructive privileges
-          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
-          # TODO this one is an invalid ARN resource when I open the policy on IAM console
-          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          # - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
           Action:
           - "athena:ListDatabases"
           - "athena:ListDataCatalogs"
@@ -347,50 +289,6 @@ Resources:
           Effect: "Allow"
           Sid: "AllowReadTheS3ConfigBucket"
 
-  # TODO this is deprecated, if this goes, then I do not need the Lambda that finds the identity region 
-  QuickSightDataSource:
-    Type: AWS::QuickSight::DataSource
-    Properties:
-      AwsAccountId: !Sub '${AWS::AccountId}'
-      Type: ATHENA
-      DataSourceId: !Sub '${PQuickSightDataSource}' # An ID for the data source. This ID is unique per AWS Region for each AWS account. 
-      Name:         !Sub '${PQuickSightDataSource}' # "CID Config Dashboard DataSource" #  
-      DataSourceParameters:
-        AthenaParameters:
-          WorkGroup: !Ref AthenaWorkgroup
-          RoleArn: 
-            Fn::GetAtt:
-              - "IAMRoleQuickSightDataSource"
-              - "Arn"
-      Permissions:
-        - Actions:
-            - 'quicksight:DescribeDataSource'
-            - 'quicksight:DescribeDataSourcePermissions'
-            - 'quicksight:PassDataSource'
-            - 'quicksight:UpdateDataSource'
-            - 'quicksight:DeleteDataSource'
-            - 'quicksight:UpdateDataSourcePermissions'
-          # The region is the one where QuickSight stores the users, returned by a lambda run by CloudFormation as CustomResource
-          # using ${AWS::Region} does not work
-          Principal: !Sub 'arn:${AWS::Partition}:quicksight:${Setup.IdentityRegion}:${AWS::AccountId}:user/default/${PQuickSightUser}'
-
-  # TODO from https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-athena-datacatalog.html#cfn-athena-datacatalog-type
-  # The GLUE type takes a catalog ID parameter and is required. The catalog_id is the account ID of the AWS account to which the Glue catalog belongs.
-  # catalog-id=catalog_id
-  # The GLUE data catalog type also applies to the default AwsDataCatalog that already exists in your account, of which you can have only one and cannot modify.
-  # TODO Still unsure if I need my own Athena data catalog or if I can use the default AwsDataCatalog, and why CID/CUDOS creted its own
-  
-  # TODO this creates it on Athena, to be seen how (or if) it connects with everything else
-  # since it gives issues and I can't use it, I take it out until an investigation
-  #AthenaDataCatalogDataSource:
-  #  Type: AWS::Athena::DataCatalog
-  #  Properties:
-  #    Type: GLUE
-  #    Description: "CID-CRCD Athena data catalog used by the dashboard"
-  #    Name: !Sub '${PAthenaDataSource}'
-  #    Parameters:
-  #      catalog-id: !Sub '${AWS::AccountId}'
-
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
@@ -403,11 +301,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          # TODO isn't the Athena TABLE and not DATABASE to be used? Maybe add these two? Or check permissions once installed.
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-          # - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
           - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}/*"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
           - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
           Action:
           - "glue:UpdatePartition"
@@ -530,7 +425,6 @@ Resources:
         Ipv6AllowedForDualStack: false
       RuntimeManagementConfig:
         UpdateRuntimeOn: "Auto"
-      # TODO the file name from the code below will be called index.py once you open it in Lambda, this may change depending on how the final code is retrieved
       Handler: "index.lambda_handler"
       ReservedConcurrentExecutions: 1
       Role:
@@ -550,7 +444,6 @@ Resources:
           # TODO: Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
           ATHENA_REGION: !Ref AWS::Region
       Code:
-        # TODO: handle the code
         ZipFile: | 
           import datetime
           import re
@@ -583,6 +476,7 @@ Resources:
           athena = boto3.client('athena')
 
           class AthenaException(Exception):
+              # This is raised only if the Query is not in state SUCCEEDED
               pass
 
           def lambda_handler(event, context):
@@ -764,144 +658,20 @@ Resources:
       Principal: "s3.amazonaws.com"
       SourceAccount: !Ref PConfigLoggingAccountID
 
-  # ****************************************************************************************************************************************
-  # Runs a lambda to identify the region where QuickSight stores its users
-  Setup:
-    Type: Custom::CustomResource
-    Properties:
-      ServiceToken: !GetAtt CustomResourceFunctionInit.Arn
-
-  InitLambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties: 
-      RoleName: !Sub "cid-crcd-supportingLambdaExecution-role-${AWS::Region}-${AWS::AccountId}"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Path: /
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action: quicksight:DescribeUser
-                Resource: !Sub 'arn:${AWS::Partition}:quicksight:*:${AWS::AccountId}:user/default/${PQuickSightUser}' # region=* as at this moment we do not know the Identity region where QS stores users
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AWSLambdaExecute
-
-  # this layer has the code to extract the Identity region for the QuickSight user
-  CidResourceLambdaLayer:
-    Type: AWS::Lambda::LayerVersion
-    Properties:
-      LayerName: 'CidCrcdLambdaLayer'
-      Description: An AWS managed layer with a cid-cmd package installed
-      Content:
-        S3Bucket: !Sub '${LambdaLayerBucketPrefix}-${AWS::Region}'
-        S3Key: 'cid-resource-lambda-layer/cid-0.2.46.zip' # replace version here if needed
-      CompatibleRuntimes:
-        - python3.10
-
-  CustomResourceFunctionInit:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: "CidCrCdCustomResourceFunctionInit"
-      Role: !GetAtt 'InitLambdaExecutionRole.Arn'
-      Description: "Supports CID-CRCD Dashboad deployment by finding the Identity region where QuickSight stores its users"
-      Runtime: python3.12
-      Architectures: [ x86_64 ] # Compatible with arm64 but it is not supported in all regions
-      MemorySize: 128
-      Timeout: 300
-      Handler: 'index.lambda_handler'
-      Code:
-        ZipFile: |
-          import os
-          import uuid
-          import json
-          import boto3
-          import botocore
-          import urllib3
-
-          from cid.helpers import QuickSight # from layer
-          from cid.utils import set_parameters
-
-          QUICKSIGHT_USER = os.environ['QUICKSIGHT_USER']
-
-          def lambda_handler(event, context):
-              print(event)
-
-              region = boto3.session.Session().region_name
-              res = (True, f"In case of error check logs")
-              identity_region = ''
-              try:
-                  set_parameters({'quicksight-user': QUICKSIGHT_USER})
-                  identity_region = get_identity_region()
-                  print("QuickSight identity region: " + identity_region)
-                  
-                  
-              finally:
-                  log_url = f"https://{region}.console.aws.amazon.com/cloudwatch/home?region={region}#logEvent:group={context.log_group_name};stream={context.log_stream_name}"
-                  url = event.get('ResponseURL')
-                  body = {}
-                  body['Status'] = 'SUCCESS' if res[0] else 'FAILED'
-                  body['Reason'] = res[1] + '\nLogs: ' + log_url
-                  body['PhysicalResourceId'] = 'keep_it_constant'
-                  body['StackId'] = event.get('StackId')
-                  body['RequestId'] = event.get('RequestId')
-                  body['LogicalResourceId'] = event.get('LogicalResourceId')
-                  body['NoEcho'] = False
-                  body['Data'] =  {'Reason': res[1], 'uuid': str(uuid.uuid1()), 'IdentityRegion': identity_region}
-                  print(body)
-                  if not url: return
-                  json_body=json.dumps(body)
-                  try:
-                      http = urllib3.PoolManager()
-                      response = http.request('PUT', url, body=json_body, headers={'content-type' : '', 'content-length' : str(len(json_body))}, retries=False)
-                      print(f"Status code: {response}")
-                  except Exception as exc:
-                      print("Failed sending PUT to CFN: " + str(exc))
-
-          def get_identity_region():
-              qs = QuickSight(boto3.session.Session())
-              return qs.identityRegion
-
-      Layers:
-        - !Ref CidResourceLambdaLayer
-      Environment:
-        Variables:
-          QUICKSIGHT_USER: !Ref PQuickSightUser
-
 
 Outputs:
   # TODO probably not needed, remove
-  # but it's default parameter --quicksight-datasource-role on CID-CMD tool
-  QuickSightDataSourceRoleARN:
-    Description: "ARN of the Role created for QuickSight"
-    Value:
-      Fn::GetAtt:
-        - "IAMRoleQuickSightDataSource"
-        - "Arn"
-
-  # TODO SEE IF IT IS NEEDED LATER
-  # This breaks the template, ATM
-  #AthenaDataCatalog:
-  #  Description: "ARN of the Athena data catalog"
-  #  Value: !GetAtt AthenaDataCatalogDataSource.Arn  
-    # !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PAthenaDataSource}"
-
-  # Will be an input to the CID-CMD tool
-  QuickSightDataSourceArn:
-    Description: "ARN of the QuickSight Data Source"
-    Value:
-      Fn::GetAtt:
-        - "QuickSightDataSource"
-        - "Arn"
+  #QuickSightDataSourceRoleARN:
+  #  Description: "ARN of the Role created for QuickSight"
+  #  Value:
+  #    Fn::GetAtt:
+  #      - "IAMRoleQuickSightDataSource"
+  #      - "Arn"
+  
+  # parameter --quicksight-datasource-role on CID-CMD tool
+  QuickSightDataSourceRole:
+    Description: "Name of the Role created for QuickSight"
+    Value: !Ref IAMRoleQuickSightDataSource
   
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaARN:
@@ -918,8 +688,3 @@ Outputs:
       Fn::GetAtt:
         - "IAMRoleLambdaPartitionerConfig"
         - "Arn"
-  
-  # TODO temp to see this on the output
-  QuickSightIdentityRegion:
-    Description: "Identity region where QuickSight stores its users"
-    Value: !GetAtt Setup.IdentityRegion

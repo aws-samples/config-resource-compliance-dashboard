@@ -1,14 +1,4 @@
-# CID-WIP being developed out of this
- 
-# Testing and Troubleshooting / changes below
-# 1. Looks like cid-crcd-config is not replaced onto ${cid-crcd-athena-table} - hence hardcoding the name of the table everywhere (a parameter is not needed anyway)
-# 2. Table name cannot contain the DASH character: change from cid-crcd-config to cid_crcd_config
-# 3. changed name CID-Config-2 and the dashboardId below
-
-# TODO changes
-# why the table creation SQL has no indication of the DB name?
-
-
+# OFFICIAL Dashboard template 
 
 dashboards:
   CID-CRCD-CONFIG:
@@ -2846,28 +2836,15 @@ dashboards:
             VisualId: 14595418-4007-49a3-a19f-72c19fc68819
 datasets:
   config_inventory_s3:
-    parameters:
-      cid-crcd-qs-datasource-arn:
-        default: arn:aws:quicksight:REGION:123412341234:datasource/cid-crcd-qs-datasource
-        description: "Enter the ARN of the QuickSight datasource"
-        global: True
-      cid-crcd-database-name:
-        default: cid_crcd_database
-        description: "The name of the Athena/Glue database"
-        global: True
-      cid-crcd-datacatalog-name:
-        default: cid-crcd-datasource # was AwsDataCatalog
-        description: "The name of the data catalog in Athena"
-        global: True
     data:
       DataSetId: fd57ee7e-0b17-429a-a7dc-92b3d48e10eb
       Name: config_inventory_s3
       PhysicalTableMap:
         308d813c-2419-40d3-9bb3-ac3001543808:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
-            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
-            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
             Name: config_inventory_s3
             InputColumns:
             - Name: accountid
@@ -2969,28 +2946,15 @@ datasets:
     schedules:
     - default
   config_inventory_compliance_per_rule:
-    parameters:
-      cid-crcd-qs-datasource-arn:
-        default: arn:aws:::cid-crcd-datasource 
-        description: "Enter the ARN of the QuickSigth datasource"
-        global: True
-      cid-crcd-database-name:
-        default: cid_crcd_database
-        description: "The name of the Athena/Glue database"
-        global: True
-      cid-crcd-datacatalog-name:
-        default: cid-crcd-datasource # was AwsDataCatalog
-        description: "The name of the data catalog in Athena"
-        global: True
     data:
       DataSetId: d7bf61e4-9aba-47f9-983a-bac4c9146409
       Name: config_inventory_compliance_per_rule
       PhysicalTableMap:
         49b5b399-5c95-4003-817d-fd81b1f66c55:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
-            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
-            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
+            DataSourceArn: ${athena_datasource_arn} 
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
             Name: config_inventory_compliance_per_rule
             InputColumns:
             - Name: accountid
@@ -3060,28 +3024,15 @@ datasets:
     schedules:
     - default
   config_conformance_packs_compliance:
-    parameters:
-      cid-crcd-qs-datasource-arn:
-        default: arn:aws:::cid-crcd-datasource 
-        description: "Enter the ARN of the QuickSight datasource"
-        global: True
-      cid-crcd-database-name:
-        default: cid_crcd_database
-        description: "The name of the Athena/Glue database"
-        global: True
-      cid-crcd-datacatalog-name:
-        default: cid-crcd-datasource # was AwsDataCatalog
-        description: "The name of the data catalog in Athena"
-        global: True
     data:
       DataSetId: 42db2e79-66c0-4270-9f1b-64c7c6d5427c
       Name: config_conformance_packs_compliance
       PhysicalTableMap:
         fb836813-2afd-4c35-a7a7-5f9e3b8f104e:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
-            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
-            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
             Name: config_conformance_packs_compliance
             InputColumns:
             - Name: accountid
@@ -3163,28 +3114,15 @@ datasets:
     schedules:
     - default
   config_inventory_ec2:
-    parameters:
-      cid-crcd-qs-datasource-arn:
-        default: arn:aws:::cid-crcd-datasource 
-        description: "Enter the ARN of the QuickSight datasource"
-        global: True
-      cid-crcd-database-name:
-        default: cid_crcd_database
-        description: "The name of the Athena/Glue database"
-        global: True
-      cid-crcd-datacatalog-name:
-        default: cid-crcd-datasource # was AwsDataCatalog
-        description: "The name of the data catalog in Athena"
-        global: True
     data:
       DataSetId: 16c598af-4419-4cd4-993e-5e148c592f6d
       Name: config_inventory_ec2
       PhysicalTableMap:
         ce103326-068f-4f62-9f1b-df3e183f3e72:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
-            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
-            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
             Name: config_inventory_ec2
             InputColumns:
             - Name: accountid
@@ -3322,28 +3260,15 @@ datasets:
     schedules:
     - default
   config_inventory_compliance:
-    parameters:
-      cid-crcd-qs-datasource-arn:
-        default: arn:aws:::cid-crcd-datasource 
-        description: "Enter the ARN of the QuickSight datasource"
-        global: True
-      cid-crcd-database-name:
-        default: cid_crcd_database
-        description: "The name of the Athena/Glue database"
-        global: True
-      cid-crcd-datacatalog-name:
-        default: cid-crcd-datasource # was AwsDataCatalog
-        description: "The name of the data catalog in Athena"
-        global: True
     data:
       DataSetId: f7afbf41-0ccf-44d3-8b51-5764b8422c7d
       Name: config_inventory_compliance
       PhysicalTableMap:
         b3a20e42-29f9-4a6b-84ec-5171a9543667:
           RelationalTable:
-            DataSourceArn: ${cid-crcd-qs-datasource-arn} # TODO the original was ${athena_datasource_arn} looks like the value is determined by CID-CMD tool
-            Catalog: ${cid-crcd-datacatalog-name} # TODO the original was hard coded AwsDataCatalog
-            Schema: ${cid-crcd-database-name} # TODO the original was ${athena_database_name}
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
             Name: config_inventory_compliance
             InputColumns:
             - Name: accountid
@@ -3414,6 +3339,10 @@ views:
         default: tag2
         description: "Enter the second tag name used to categorize workloads"
         global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_s3 AS
       SELECT DISTINCT
@@ -3423,7 +3352,7 @@ views:
       , "configurationItem"."resourceName" "BucketName"
       , "configurationItem"."tags"['${tag1}'] "TAG1"
       , "configurationItem"."tags"['${tag2}'] "TAG2"
-      , "configurationItem"."tags"['TAG3'] "TAG3"
+      , "configurationItem"."tags"['${tag3}'] "TAG3"
       , "configurationItem"."tags"['TAG4'] "TAG4"
       , "configurationItem"."tags" "AllTags"
       , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
@@ -3582,6 +3511,10 @@ views:
         default: tag2
         description: "Enter the second tag name used to categorize workloads"
         global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
     # TODO keep tag aliases fixed (TAG1, TAG2), ..., so they match the configuration of elements in QS
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ec2 AS
@@ -3592,7 +3525,7 @@ views:
       , "configurationItem"."tags"['Name'] "TagName"
       , "configurationItem"."tags"['${tag1}'] "TAG1"
       , "configurationItem"."tags"['${tag2}'] "TAG2"
-      , "configurationItem"."tags"['TAG3'] "TAG3"
+      , "configurationItem"."tags"['${tag3}'] "TAG3"
       , "configurationItem"."tags"['TAG4'] "TAG4"
       , "configurationItem"."tags" "AllTags"
       , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
