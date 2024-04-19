@@ -1,5 +1,4 @@
 # OFFICIAL Dashboard template 
-
 dashboards:
   CID-CRCD-CONFIG:
     dependsOn:
@@ -2889,7 +2888,7 @@ datasets:
               NewColumnName: Bucket Name
           - RenameColumnOperation:
               ColumnName: tag1
-              NewColumnName: Tag1 (tag)
+              NewColumnName: Tag1 (tag) # TODO maybe here I can change the display name?
           - RenameColumnOperation:
               ColumnName: tag2
               NewColumnName: Tag2 (tag)
@@ -3343,6 +3342,10 @@ views:
         default: tag3
         description: "Enter the third tag name used to categorize workloads"
         global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_s3 AS
       SELECT DISTINCT
@@ -3353,7 +3356,7 @@ views:
       , "configurationItem"."tags"['${tag1}'] "TAG1"
       , "configurationItem"."tags"['${tag2}'] "TAG2"
       , "configurationItem"."tags"['${tag3}'] "TAG3"
-      , "configurationItem"."tags"['TAG4'] "TAG4"
+      , "configurationItem"."tags"['${tag4}'] "TAG4"
       , "configurationItem"."tags" "AllTags"
       , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
       , "configurationItem"."resourcecreationtime" "CreationTime"
@@ -3364,7 +3367,6 @@ views:
       WHERE ("configurationItem"."resourcetype" = 'AWS::S3::Bucket')
 
   aws_config_configuration_snapshots:
-    # TODO https://docs.aws.amazon.com/athena/latest/ug/create-table.html IF NOT EXISTS???
     data: |-
         CREATE EXTERNAL TABLE `cid_crcd_config`(
           `fileversion` string COMMENT 'from deserializer',
@@ -3515,6 +3517,10 @@ views:
         default: tag3
         description: "Enter the third tag name used to categorize workloads"
         global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     # TODO keep tag aliases fixed (TAG1, TAG2), ..., so they match the configuration of elements in QS
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ec2 AS
@@ -3526,7 +3532,7 @@ views:
       , "configurationItem"."tags"['${tag1}'] "TAG1"
       , "configurationItem"."tags"['${tag2}'] "TAG2"
       , "configurationItem"."tags"['${tag3}'] "TAG3"
-      , "configurationItem"."tags"['TAG4'] "TAG4"
+      , "configurationItem"."tags"['${tag4}'] "TAG4"
       , "configurationItem"."tags" "AllTags"
       , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
       , "configurationItem"."resourcecreationtime" "CreationTime"
