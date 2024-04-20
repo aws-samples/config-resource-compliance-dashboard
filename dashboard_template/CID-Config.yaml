@@ -1,4 +1,4 @@
-# OFFICIAL Dashboard template 
+# old dasboard template, it has the old file name but all the parameters
 dashboards:
   CID-CRCD-CONFIG:
     dependsOn:

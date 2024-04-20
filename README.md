@@ -173,11 +173,12 @@ These instructions apply to the case where you are installing the dashboard on t
      - `--tag1` The name of the first tag you use to categorize workloads
      - `--tag2` The name of the second tag you use to categorize workloads
      - `--tag3` The name of the third tag you use to categorize workloads
-     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a default value, e.g. `--tag3 'tag3'`
+     - `--tag4` The name of the fourth tag you use to categorize workloads
+     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a default value, e.g. `--tag4 'tag4'`
      - **Leave every other parameter to its default value**
 
     ```
-    cid-cmd deploy --resources 'CID-Config.yaml' --s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --dashboard-id 'cid-config' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
+    cid-cmd deploy --resources 'cid-crcd.yaml' --s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
 1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`
 1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected)
