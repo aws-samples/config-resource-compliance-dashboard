@@ -37,9 +37,9 @@ Tag compliance collects the results of AWS Config Managed Rule [required-tags](h
 
 The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to a centralized S3 bucket. Whenever there's a new object in the bucket, a Lambda function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If the object is not a Configuration Snapshot, the function ignores it. 
 
-In Amazon Athena, there is a table used to extract data from Configuration Snapshots. The solution provides Athena views, which are SQL queries that extract data from S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these views through Amazon QuickSight datasets.
+An Amazon Athena table is used to extract data from Configuration Snapshots. The solution provides Athena views, which are SQL queries that extract data from S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these views through Amazon QuickSight datasets.
 
-If you will install the dashboard on an account part of an AWS Organization, this must be done on the same account that contains the Amazon S3 bucket where your AWS Config Configuration Snapshots are delivered. Alternatively, you can install the dashboard on a dedicated Dashboard Account, but you'll have to replicate AWS Config Configuration Snapshots across accounts to a local Amazon S3 bucket. This architecture is below.
+If you will install the dashboard on an account part of an AWS Organization, this must be done on the same account that contains the Amazon S3 bucket where your AWS Config Configuration Snapshots are delivered. Alternatively, you can install the dashboard on a dedicated Dashboard Account, but you'll have to replicate AWS Config Configuration Snapshots across accounts to a local Amazon S3 bucket. In this case, the architecture is below.
 
 ![CRCD](images/Architecture-DedicatedDasboardAccount.png "CID-CRCD Dashboard, deployment on AWS Organization")
 
@@ -92,7 +92,7 @@ Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnap
 
 
 ## Deployment Instructions (Dashboard Account with object replication)
-In this scenario, you will install the AWS Config Resource Compliance Dashboard on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
+In this scenario, you will install the AWS Config Resource Compliance Dashboard (CID-CRCD) on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
 
 For this scenario is necessary to configure object replication from the centralized Amazon S3 Config bucket in the Log Archive account (the source bucket), to an Amazon S3 bucket that you will create in the Dashboard Account (the destination bucket).
 
