@@ -1,4 +1,4 @@
-# Latest template
+# Dashboard template to install with CID-CMD tool
 dashboards:
   CID-CRCD:
     dependsOn:
@@ -4294,24 +4294,6 @@ datasets:
       LogicalTableMap:
         ed77abe1-4999-4b4e-8c37-0235a9313b0c:
           Alias: config_inventory_ec2
-          # CUSTOMIZATION parametrize TAG names in the dashboard
-          #parameters:
-          #  tag1:
-          #    default: tag1
-          #    description: "Enter the first tag name used to categorize workloads"
-          #    global: True
-          #  tag2:
-          #    default: tag2
-          #    description: "Enter the second tag name used to categorize workloads"
-          #    global: True
-          #  tag3:
-          #    default: tag3
-          #    description: "Enter the third tag name used to categorize workloads"
-          #    global: True
-          #  tag4:
-          #    default: tag4
-          #    description: "Enter the fourth tag name used to categorize workloads"
-          #    global: True
           DataTransforms:
           - RenameColumnOperation:
               ColumnName: accountid
@@ -4327,7 +4309,6 @@ datasets:
               NewColumnName: Name (tag)
           - RenameColumnOperation:
               ColumnName: tag1
-              # NewColumnName: '${tag1} (tag)'
               NewColumnName: Tag1 (tag) 
           - RenameColumnOperation:
               ColumnName: tag2
@@ -4447,24 +4428,6 @@ datasets:
       LogicalTableMap:
         9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0:
           Alias: config_inventory_s3
-          # CUSTOMIZATION parametrize TAG names in the dashboard
-          #parameters:
-          #  tag1:
-          #    default: tag1
-          #    description: "Enter the first tag name used to categorize workloads"
-          #    global: True
-          #  tag2:
-          #    default: tag2
-          #    description: "Enter the second tag name used to categorize workloads"
-          #    global: True
-          #  tag3:
-          #    default: tag3
-          #    description: "Enter the third tag name used to categorize workloads"
-          #    global: True
-          #  tag4:
-          #    default: tag4
-          #    description: "Enter the fourth tag name used to categorize workloads"
-          #    global: True
           DataTransforms:
           - RenameColumnOperation:
               ColumnName: accountid
@@ -4480,7 +4443,6 @@ datasets:
               NewColumnName: Bucket Name
           - RenameColumnOperation:
               ColumnName: tag1
-              # NewColumnName: '${tag1} (tag)'
               NewColumnName: Tag1 (tag)
           - RenameColumnOperation:
               ColumnName: tag2
@@ -4537,7 +4499,6 @@ datasets:
       - config_inventory_s3
     schedules:
     - default
-# TODO delete crawlers: {}
 views:
   config_conformance_packs_compliance:
     dependsOn:
@@ -4708,7 +4669,7 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
-    # CUSTOMIZATION
+    # CUSTOMIZATION - custom tags
     parameters:
       tag1:
         default: tag1
@@ -4755,7 +4716,7 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
-    # CUSTOMIZATION
+    # CUSTOMIZATION - custom tags
     parameters:
       tag1:
         default: tag1

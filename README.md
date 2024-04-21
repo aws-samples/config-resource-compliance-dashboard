@@ -71,25 +71,29 @@ Once you have decided the region, AWS resources supporting the dashboard (deploy
 
 
 ### Amazon S3 prefixes for AWS Config objects
-The solution supports manual AWS Config setups on standalone AWS accounts and as deployed by AWS Control Tower on AWS Organizations. These two options have different ways of structuring the Amazon S3 prefixes of the AWS Config Configuration Snapshots. The Lambda Partitioner function supports the following S3 prefixes. 
+The solution supports the following ways of activating AWS Config:
+1. manual setup on standalone AWS accounts
+1. deployment by AWS Control Tower on AWS Organizations
 
-**Verify that your setup is compatible with the following.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config Configuration Snapshots and will discard them.
+These two options have different ways of structuring the prefixes of the AWS Config Configuration Snapshots on Amazon S3. They are defined below, and the Lambda Partitioner function supports both of them.
 
-In both cases below:
+
+#### Supported AWS Config prefixes on Amazon S3
+In both cases:
 * `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
 * `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234
 * `REGION` identifies an AWS region, e.g. us-east-1
-* `YYYY/MM/DD` represents a date
-* `TIMESTAMP` a full timestamp, e.g. 20180411T054711Z
+* `YYYY/MM/DD` represents a date, e.g. 2024/04/18
+* `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z
+* `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb
 
+##### Manual AWS Config setup prefix on Amazon S3
+`AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
 
-#### AWS Control Tower prefix on Amazon S3
-Matches object keys like `AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
+##### AWS Control Tower prefix on Amazon S3
+`AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
 
-
-#### Manual AWS Config setup prefix on Amazon S3
-Matches object keys like `AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_a970aeff-cb3d-4c4e-806b-88fa14702hdb.json.gz`
-
+**Verify that your setup is compatible with the Amazon S3 prefixes above.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config Configuration Snapshots and will discard them. As a consequence, your Athena table will be empty.
 
 ## Deployment Instructions (Dashboard Account with object replication)
 In this scenario, you will install the AWS Config Resource Compliance Dashboard (CID-CRCD) on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
