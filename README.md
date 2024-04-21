@@ -244,15 +244,15 @@ In order to destroy the CID CRCD dashboard, you need to:
 1. Delete the dashboard by executing the following command:
 
 ```
-cid-cmd delete --resources CID-Config.yaml
+cid-cmd delete --resources cid-crcd.yaml
 ```
 
 Where:
 
-* `CID-Config.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed)
+* `cid-crcd.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed)
 
-1. When prompted:
-   - Select the `[cid-crcd] CID-Config` dashboard
+3. When prompted:
+   - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CID-CRCD)` dashboard
    - For each QuickSight dataset, choose `yes` to delete the dataset
    - Accept the default values of the S3 Path for the Athena table.
    - For each Athena view, choose `yes` to delete the dataset
