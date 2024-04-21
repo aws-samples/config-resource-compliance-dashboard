@@ -12,7 +12,8 @@ The AWS Config Resource Compliance Dashboard (CID-CRCD) shows the inventory of r
 - Month-by-month evolution of the compliance status of your resources
 - Breakdown of compliance per service, account and region
 - Compliance of AWS Config Rules and Conformance Packs
-- Inventory of EC2, S3 resources with filtering on account, region, tags
+- Inventory of EC2, S3 resources with filtering on account, region, customizable tags
+- A deep dive on tagging compliance
 
 The dashboard uses these sources to get these insights:
 
@@ -20,10 +21,15 @@ The dashboard uses these sources to get these insights:
 
 The infrastructure needed to collect and process the data is defined in CloudFormation. 
 
-### Cutom tags support
+### Custom tags support
 ![CRCD](images/dashboard04.png "CID-CRCD Dashboard, Configuration Items")
 
-The dashboard allows filtering of resources by the custom tags that you use to categorize workloads. The name of the tags will be provided by you during the installation.
+The dashboard allows filtering of resources by the custom tags that you use to categorize workloads. The name of the tags will be provided by you during installation.
+
+### Tag compliance
+Tag compliance collects the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can activate this rule as many times as needed, just give it a name that starts with `required-tags`.
+
+![CRCD](images/dashboard-tagscompliance.png "CID-CRCD Dashboard, Tag Compliance")
 
 ## Architecture
 
@@ -221,83 +227,12 @@ These instructions apply to the case where you are installing the dashboard on t
 
 1. Visualize the dashboard:
    - Navigate to QuickSight and then Dashboards
+   - Make sure you are in the correct region
    - Click on the **AWS Config Resource Compliance Dashboard (CID-CRCD)** dashboard
 
 
 
 
-## Deployment Instructions (Dashboard account with cross-account access)
-_this does not work ATM, WIP_
-
-1. Make sure you are in the region where both your central Config Amazon S3 bucket (this can be on another AWS Account) and Amazon QuickSight are deployed.
-1. TODO Run the cloudformation to create the QuickSight Data Source role 
-1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-   - TODO suggest or configure athena info that will be used as parameters to the CloudFormation below
-
-```
-cid-cmd deploy --resources CID-Config-2.yaml --quicksight-datasource-id cid-crcd-datasource --athena-database cid-crcd-database --athena-workgroup cid-crcd-dashboard --quicksight-datasource-role-arn arn:aws:iam::767398072207:role/cid-crcd-quicksight-datasource-role-eu-west-1-767398072207
-```
-
-4. Note down the following from above
-   - TODO parameter A
-   - TODO parameter B  
-1. Run CloudFormation script to create the Lambda function and its permissions
-   - Use the following input parameters:
-     - `ConfigLoggingBucketArn` = the S3 bucket where your Config snapshots are delivered
-     - `ConfigLoggingAccountID` = the account holding the Config S3 bucket
-     - `AthenaWorkgroup` = the Athena workgroup for CID-CRCD dashboard
-     - `AthenaDatabaseName` = the name of the Athena database created above
-     - `AthenaQueryResultBucketName` = the bucket holding Athena query results 
-     - `AthenaConfigSnapshotsTableName` = the name of the Athena table for the Config snapshots
-   - Note down the output values of the cloudformation script: `Lambda function ARN` and `Lambda Role ARN`
-1. Configure the Config S3 bucket in the Log Archive account to allow cross-account access to the lambda function created above
-   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
-     - Name = `cid-crcd-deliver-config-snapshot`
-     - Event types = `All object create events`
-     - Destination = `Lambda function`
-     - Enter Lambda function ARN = `Lambda function ARN returned by the CloudFormation script`
-   
-   - Add the following statement to the bucket policy [documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html):
-     - Replace `LAMBDA-PARTITIONER-RULE-ARN` with the `Lambda Role ARN returned by the CloudFormation script`
-     - Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket in the Log Archive account.
-
-    ```
-        {
-            "Sid": "Cross account access for CID-CRCD dashboard",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "LAMBDA-PARTITIONER-RULE-ARN"
-            },
-            "Action": "s3:*",
-            "Resource": [
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
-            ]
-        }
-    ```
-   - WIP, more than just the Lambda function must have access to this bucket, a better policy may be
-
-   ```
-       {
-          "Sid": "Cross account access to everyone on the Dashboard Account",
-          "Effect": "Allow",
-          "Principal": {
-             "AWS": "arn:aws:iam::YOUR-DASHBOARD-ACCOUNT-ID:root"
-          },
-          "Action": [
-             "s3:GetBucketLocation",
-             "s3:GetObject",
-             "s3:ListBucket",
-             "s3:ListBucketMultipartUploads",
-             "s3:ListMultipartUploadParts",
-             "s3:AbortMultipartUpload"
-          ],
-          "Resource": [
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
-          ]
-       }
-   ```
      
 
 
