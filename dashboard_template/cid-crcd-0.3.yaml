@@ -1,4 +1,4 @@
-# Dashboard template to install with CID-CMD tool
+# Dashboard template to install with CID-CMD tool - bkp
 dashboards:
   CID-CRCD-ANALYSIS:
     dependsOn:
@@ -997,27 +997,6 @@ dashboards:
               SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
               VisualIds:
               - fbdb77c0-8deb-44f1-b320-bdb90689cd16
-        Status: ENABLED
-      - CrossDataset: SINGLE_DATASET
-        FilterGroupId: 346c6bfe-364b-4e99-b201-7b3d4692ed50
-        Filters:
-        - CategoryFilter:
-            Column:
-              ColumnName: Name (tag)
-              DataSetIdentifier: config_inventory_ec2
-            Configuration:
-              FilterListConfiguration:
-                MatchOperator: CONTAINS
-                NullOption: NON_NULLS_ONLY
-                SelectAllOptions: FILTER_ALL_VALUES
-            FilterId: 7b794893-8144-4837-9d30-f772c46d09c0
-        ScopeConfiguration:
-          SelectedSheets:
-            SheetVisualScopingConfigurations:
-            - Scope: SELECTED_VISUALS
-              SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
-              VisualIds:
-              - 4a17513b-15d5-443c-9519-2daa961b3ef0
         Status: ENABLED
       Options: {}
       ParameterDeclarations: []
@@ -3029,14 +3008,6 @@ dashboards:
             SourceFilterId: 16b7e14d-a9dc-4fd5-b585-f98c171fba4a
             Title: EC2 Public IP
             Type: MULTI_SELECT
-        - Dropdown:
-            DisplayOptions:
-              SelectAllOptions:
-                Visibility: VISIBLE
-            FilterControlId: 93dabc4b-a785-4e6d-9ada-a15d133cfc04
-            SourceFilterId: 7b794893-8144-4837-9d30-f772c46d09c0
-            Title: EC2 Name (tag)
-            Type: MULTI_SELECT
         Layouts:
         - Configuration:
             GridLayout:
@@ -3054,12 +3025,6 @@ dashboards:
               - ColumnIndex: 6
                 ColumnSpan: 6
                 ElementId: b172d6e8-c74c-44a2-9cfd-c4fbd710d02f
-                ElementType: FILTER_CONTROL
-                RowIndex: 0
-                RowSpan: 2
-              - ColumnIndex: 12
-                ColumnSpan: 6
-                ElementId: 93dabc4b-a785-4e6d-9ada-a15d133cfc04
                 ElementType: FILTER_CONTROL
                 RowIndex: 0
                 RowSpan: 2
@@ -3287,12 +3252,6 @@ dashboards:
                   Width: 67px
                 - CustomLabel: ${tag1} (tag)
                   FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.tagapplication.8.1710339712055
-                - CustomLabel: ${tag2} (tag)
-                  FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.tagdepartment.9.1710339712861
-                - CustomLabel: ${tag3} (tag)
-                  FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag3.12.1711364488217
-                - CustomLabel: ${tag4} (tag)
-                  FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag4.13.1711364489799
               FieldWells:
                 TableAggregatedFieldWells:
                   GroupBy:
@@ -3387,12 +3346,6 @@ dashboards:
                 SelectedFieldOptions:
                 - CustomLabel: ${tag1} (tag)
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag1.3.1711365043301
-                - CustomLabel: ${tag2} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag2.4.1711365047118
-                - CustomLabel: ${tag3} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag3.5.1711365049768
-                - CustomLabel: ${tag4} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag4.6.1711365052602
                 - FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.lastconfigsnapshot.8.1711365160992
                   Width: 224px
               FieldWells:

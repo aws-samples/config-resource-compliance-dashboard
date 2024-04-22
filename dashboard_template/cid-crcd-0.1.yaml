@@ -1,6 +1,6 @@
-# Dashboard template to install with CID-CMD tool
+# Dashboard template to install with CID-CMD tool old
 dashboards:
-  CID-CRCD-ANALYSIS:
+  CID-CRCD:
     dependsOn:
       datasets:
       - config_conformance_packs_compliance
@@ -8,29 +8,11 @@ dashboards:
       - config_inventory_compliance_per_rule
       - config_inventory_ec2
       - config_inventory_s3
-    # CUSTOMIZATION - descriptive name of the dashboard
+    # CUSTOMIZATION
     name: "AWS Config Resource Compliance Dashboard (CID-CRCD)"
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    # CUSTOMIZATION - custom tags on the dashboard visual elements
-    parameters:
-      tag1:
-        default: tag1
-        description: "Enter the first tag name used to categorize workloads"
-        global: True
-      tag2:
-        default: tag2
-        description: "Enter the second tag name used to categorize workloads"
-        global: True
-      tag3:
-        default: tag3
-        description: "Enter the third tag name used to categorize workloads"
-        global: True
-      tag4:
-        default: tag4
-        description: "Enter the fourth tag name used to categorize workloads"
-        global: True
     data: |-
       AnalysisDefaults:
         DefaultNewSheetConfiguration:
@@ -956,69 +938,6 @@ dashboards:
               VisualIds:
               - 71631735-a049-4e8f-bc60-17a2c7c2700a
         Status: ENABLED
-      - CrossDataset: SINGLE_DATASET
-        FilterGroupId: 66549ca0-ff89-44db-930c-c466b0941eff
-        Filters:
-        - CategoryFilter:
-            Column:
-              ColumnName: Private IP
-              DataSetIdentifier: config_inventory_ec2
-            Configuration:
-              FilterListConfiguration:
-                MatchOperator: CONTAINS
-                NullOption: NON_NULLS_ONLY
-                SelectAllOptions: FILTER_ALL_VALUES
-            FilterId: 9cbd9969-ec4f-4185-b43b-1f48284f7bf6
-        ScopeConfiguration:
-          SelectedSheets:
-            SheetVisualScopingConfigurations:
-            - Scope: SELECTED_VISUALS
-              SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
-              VisualIds:
-              - fbdb77c0-8deb-44f1-b320-bdb90689cd16
-        Status: ENABLED
-      - CrossDataset: SINGLE_DATASET
-        FilterGroupId: af120a8b-d22c-41c7-ac6d-f71e9f12875d
-        Filters:
-        - CategoryFilter:
-            Column:
-              ColumnName: Public IP
-              DataSetIdentifier: config_inventory_ec2
-            Configuration:
-              FilterListConfiguration:
-                MatchOperator: CONTAINS
-                NullOption: NON_NULLS_ONLY
-                SelectAllOptions: FILTER_ALL_VALUES
-            FilterId: 16b7e14d-a9dc-4fd5-b585-f98c171fba4a
-        ScopeConfiguration:
-          SelectedSheets:
-            SheetVisualScopingConfigurations:
-            - Scope: SELECTED_VISUALS
-              SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
-              VisualIds:
-              - fbdb77c0-8deb-44f1-b320-bdb90689cd16
-        Status: ENABLED
-      - CrossDataset: SINGLE_DATASET
-        FilterGroupId: 346c6bfe-364b-4e99-b201-7b3d4692ed50
-        Filters:
-        - CategoryFilter:
-            Column:
-              ColumnName: Name (tag)
-              DataSetIdentifier: config_inventory_ec2
-            Configuration:
-              FilterListConfiguration:
-                MatchOperator: CONTAINS
-                NullOption: NON_NULLS_ONLY
-                SelectAllOptions: FILTER_ALL_VALUES
-            FilterId: 7b794893-8144-4837-9d30-f772c46d09c0
-        ScopeConfiguration:
-          SelectedSheets:
-            SheetVisualScopingConfigurations:
-            - Scope: SELECTED_VISUALS
-              SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
-              VisualIds:
-              - 4a17513b-15d5-443c-9519-2daa961b3ef0
-        Status: ENABLED
       Options: {}
       ParameterDeclarations: []
       Sheets:
@@ -1802,9 +1721,7 @@ dashboards:
                 - be043ce3-5b0e-4e87-8993-6960a76c1b3c.accountid.2.1680188664312
                 - be043ce3-5b0e-4e87-8993-6960a76c1b3c.region.3.1680188665130
                 - be043ce3-5b0e-4e87-8993-6960a76c1b3c.compliancetype.4.1680188666164
-                SelectedFieldOptions:
-                - FieldId: be043ce3-5b0e-4e87-8993-6960a76c1b3c.resourceid.0.1680188655240
-                  Width: 519px
+                SelectedFieldOptions: []
               FieldWells:
                 TableAggregatedFieldWells:
                   GroupBy:
@@ -1856,8 +1773,6 @@ dashboards:
                   FontConfiguration:
                     FontSize:
                       Relative: LARGE
-                  Height: 29
-                  TextWrap: WRAP
             Subtitle:
               Visibility: VISIBLE
             Title:
@@ -1888,8 +1803,8 @@ dashboards:
                 ScrollbarOptions:
                   VisibleRange:
                     PercentRange:
-                      From: 5.882352941176473
-                      To: 64.7058823529412
+                      From: 8.82352941176471
+                      To: 67.64705882352943
                 TickLabelOptions:
                   LabelOptions:
                     FontConfiguration:
@@ -2936,7 +2851,7 @@ dashboards:
                 Visibility: VISIBLE
             FilterControlId: f30c2958-f823-475e-afa2-5289aea19242
             SourceFilterId: 40fd4a0c-6021-4e30-9e30-6e456a06974e
-            Title: ${tag1} (tag)
+            Title: Tag1 (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -2951,7 +2866,7 @@ dashboards:
                 Visibility: VISIBLE
             FilterControlId: ac3102d9-4eb2-427d-b3e2-bd30ad23bd9c
             SourceFilterId: 6c9d9acc-ed0a-40c0-b04c-46f394d306e5
-            Title: ${tag2} (tag)
+            Title: Tag2 (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -2966,22 +2881,18 @@ dashboards:
                 Visibility: VISIBLE
             FilterControlId: 2911644a-3fc1-412d-81ab-aaf58b5202d6
             SourceFilterId: 7f724479-0fe3-43ab-8f4c-1dcc46bc696b
-            Title: ${tag3} (tag)
+            Title: Tag3 (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
-              InfoIconLabelOptions:
-                Visibility: HIDDEN
               SelectAllOptions:
                 Visibility: VISIBLE
               TitleOptions:
-                FontConfiguration:
-                  FontSize:
-                    Relative: MEDIUM
+                FontConfiguration: {}
                 Visibility: VISIBLE
             FilterControlId: 751f2f9f-0033-4580-b157-f550560b7884
             SourceFilterId: dd3b0926-7467-4c0e-9e1d-21b9829db37c
-            Title: ${tag4} (tag)
+            Title: Tag4 (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -3013,30 +2924,6 @@ dashboards:
             SourceFilterId: 2ef51280-64dd-45a2-9db7-cf73e8a2717e
             Title: Region
             Type: MULTI_SELECT
-        - Dropdown:
-            DisplayOptions:
-              SelectAllOptions:
-                Visibility: VISIBLE
-            FilterControlId: b172d6e8-c74c-44a2-9cfd-c4fbd710d02f
-            SourceFilterId: 9cbd9969-ec4f-4185-b43b-1f48284f7bf6
-            Title: EC2 Private IP
-            Type: MULTI_SELECT
-        - Dropdown:
-            DisplayOptions:
-              SelectAllOptions:
-                Visibility: VISIBLE
-            FilterControlId: 4c8cc6d0-5085-4003-9576-20b64c2f5f72
-            SourceFilterId: 16b7e14d-a9dc-4fd5-b585-f98c171fba4a
-            Title: EC2 Public IP
-            Type: MULTI_SELECT
-        - Dropdown:
-            DisplayOptions:
-              SelectAllOptions:
-                Visibility: VISIBLE
-            FilterControlId: 93dabc4b-a785-4e6d-9ada-a15d133cfc04
-            SourceFilterId: 7b794893-8144-4837-9d30-f772c46d09c0
-            Title: EC2 Name (tag)
-            Type: MULTI_SELECT
         Layouts:
         - Configuration:
             GridLayout:
@@ -3046,59 +2933,21 @@ dashboards:
                   ResizeOption: FIXED
               Elements:
               - ColumnIndex: 0
-                ColumnSpan: 6
-                ElementId: 4c8cc6d0-5085-4003-9576-20b64c2f5f72
-                ElementType: FILTER_CONTROL
-                RowIndex: 0
-                RowSpan: 2
-              - ColumnIndex: 6
-                ColumnSpan: 6
-                ElementId: b172d6e8-c74c-44a2-9cfd-c4fbd710d02f
-                ElementType: FILTER_CONTROL
-                RowIndex: 0
-                RowSpan: 2
-              - ColumnIndex: 12
-                ColumnSpan: 6
-                ElementId: 93dabc4b-a785-4e6d-9ada-a15d133cfc04
-                ElementType: FILTER_CONTROL
-                RowIndex: 0
-                RowSpan: 2
-              - ColumnIndex: 0
                 ColumnSpan: 36
                 ElementId: fbdb77c0-8deb-44f1-b320-bdb90689cd16
                 ElementType: VISUAL
-                RowIndex: 2
+                RowIndex: 0
                 RowSpan: 12
               - ColumnIndex: 0
                 ColumnSpan: 36
                 ElementId: 2952b842-8f9d-4be4-bf95-e0af0a60d177
                 ElementType: VISUAL
-                RowIndex: 14
+                RowIndex: 12
                 RowSpan: 12
-              - ColumnIndex: 0
-                ColumnSpan: 10
+              - ColumnSpan: 18
                 ElementId: 42034de9-2b91-41a2-965e-8eef7edae9f5
                 ElementType: VISUAL
-                RowIndex: 26
-                RowSpan: 11
-              - ColumnIndex: 10
-                ColumnSpan: 9
-                ElementId: 6c2006a0-1577-4095-9c2b-245dbfd3a768
-                ElementType: VISUAL
-                RowIndex: 26
-                RowSpan: 11
-              - ColumnIndex: 19
-                ColumnSpan: 8
-                ElementId: 63e379e3-22d5-4e70-a972-d3174a44c893
-                ElementType: VISUAL
-                RowIndex: 26
-                RowSpan: 11
-              - ColumnIndex: 27
-                ColumnSpan: 9
-                ElementId: 4a17513b-15d5-443c-9519-2daa961b3ef0
-                ElementType: VISUAL
-                RowIndex: 26
-                RowSpan: 11
+                RowSpan: 12
         Name: Configuration Items
         SheetControlLayouts:
         - Configuration:
@@ -3142,157 +2991,9 @@ dashboards:
                 RowSpan: 1
         SheetId: 7d8b6017-4ddd-474c-a9d4-d14602d8e3c6
         Visuals:
-        - BarChartVisual:
-            Actions: []
-            ChartConfiguration:
-              BarsArrangement: CLUSTERED
-              DataLabels:
-                Overlap: DISABLE_OVERLAP
-                Visibility: HIDDEN
-              FieldWells:
-                BarChartAggregatedFieldWells:
-                  Category:
-                  - CategoricalDimensionField:
-                      Column:
-                        ColumnName: Tag4 (tag)
-                        DataSetIdentifier: config_inventory_ec2
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag4.0.1713776411386
-                  Colors: []
-                  Values: []
-              Orientation: HORIZONTAL
-              SortConfiguration:
-                CategoryItemsLimit:
-                  OtherCategories: INCLUDE
-                ColorItemsLimit:
-                  OtherCategories: INCLUDE
-                SmallMultiplesLimitConfiguration:
-                  OtherCategories: INCLUDE
-              Tooltip:
-                FieldBasedTooltip:
-                  AggregationVisibility: HIDDEN
-                  TooltipFields:
-                  - FieldTooltipItem:
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag4.0.1713776411386
-                      Visibility: VISIBLE
-                  TooltipTitleType: PRIMARY_VALUE
-                SelectedTooltipType: DETAILED
-                TooltipVisibility: VISIBLE
-            ColumnHierarchies: []
-            Subtitle:
-              Visibility: VISIBLE
-            Title:
-              FormatText:
-                RichText: <visual-title>Resources by ${tag4} (tag)</visual-title>
-              Visibility: VISIBLE
-            VisualId: 4a17513b-15d5-443c-9519-2daa961b3ef0
-        - BarChartVisual:
-            Actions: []
-            ChartConfiguration:
-              BarsArrangement: CLUSTERED
-              DataLabels:
-                Overlap: DISABLE_OVERLAP
-                Visibility: HIDDEN
-              FieldWells:
-                BarChartAggregatedFieldWells:
-                  Category:
-                  - CategoricalDimensionField:
-                      Column:
-                        ColumnName: Tag3 (tag)
-                        DataSetIdentifier: config_inventory_ec2
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag3.0.1713776397633
-                  Colors: []
-                  Values: []
-              Orientation: HORIZONTAL
-              SortConfiguration:
-                CategoryItemsLimit:
-                  OtherCategories: INCLUDE
-                ColorItemsLimit:
-                  OtherCategories: INCLUDE
-                SmallMultiplesLimitConfiguration:
-                  OtherCategories: INCLUDE
-              Tooltip:
-                FieldBasedTooltip:
-                  AggregationVisibility: HIDDEN
-                  TooltipFields:
-                  - FieldTooltipItem:
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag3.0.1713776397633
-                      Visibility: VISIBLE
-                  TooltipTitleType: PRIMARY_VALUE
-                SelectedTooltipType: DETAILED
-                TooltipVisibility: VISIBLE
-            ColumnHierarchies: []
-            Subtitle:
-              Visibility: VISIBLE
-            Title:
-              FormatText:
-                RichText: <visual-title>Resources by ${tag3} (tag)</visual-title>
-              Visibility: VISIBLE
-            VisualId: 63e379e3-22d5-4e70-a972-d3174a44c893
-        - BarChartVisual:
-            Actions: []
-            ChartConfiguration:
-              BarsArrangement: CLUSTERED
-              DataLabels:
-                Overlap: DISABLE_OVERLAP
-                Visibility: HIDDEN
-              FieldWells:
-                BarChartAggregatedFieldWells:
-                  Category:
-                  - CategoricalDimensionField:
-                      Column:
-                        ColumnName: Tag2 (tag)
-                        DataSetIdentifier: config_inventory_ec2
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag2.0.1713776322399
-                  Colors: []
-                  Values: []
-              Orientation: HORIZONTAL
-              SortConfiguration:
-                CategoryItemsLimit:
-                  OtherCategories: INCLUDE
-                ColorItemsLimit:
-                  OtherCategories: INCLUDE
-                SmallMultiplesLimitConfiguration:
-                  OtherCategories: INCLUDE
-              Tooltip:
-                FieldBasedTooltip:
-                  AggregationVisibility: HIDDEN
-                  TooltipFields:
-                  - FieldTooltipItem:
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag2.0.1713776322399
-                      Visibility: VISIBLE
-                  TooltipTitleType: PRIMARY_VALUE
-                SelectedTooltipType: DETAILED
-                TooltipVisibility: VISIBLE
-            ColumnHierarchies: []
-            Subtitle:
-              Visibility: VISIBLE
-            Title:
-              FormatText:
-                RichText: <visual-title>Resources by ${tag2} (tag)</visual-title>
-              Visibility: VISIBLE
-            VisualId: 6c2006a0-1577-4095-9c2b-245dbfd3a768
         - TableVisual:
             Actions: []
             ChartConfiguration:
-              FieldOptions:
-                Order: []
-                SelectedFieldOptions:
-                - FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.amiid.1.1710339678334
-                  Width: 165px
-                - FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.instanceid.2.1710339702335
-                  Width: 149px
-                - FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.region.6.1710339708877
-                  Width: 98px
-                - FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.state.7.1710339709651
-                  Width: 67px
-                - CustomLabel: ${tag1} (tag)
-                  FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.tagapplication.8.1710339712055
-                - CustomLabel: ${tag2} (tag)
-                  FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.tagdepartment.9.1710339712861
-                - CustomLabel: ${tag3} (tag)
-                  FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag3.12.1711364488217
-                - CustomLabel: ${tag4} (tag)
-                  FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag4.13.1711364489799
               FieldWells:
                 TableAggregatedFieldWells:
                   GroupBy:
@@ -3338,11 +3039,6 @@ dashboards:
                       FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.state.7.1710339709651
                   - CategoricalDimensionField:
                       Column:
-                        ColumnName: Name (tag)
-                        DataSetIdentifier: config_inventory_ec2
-                      FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tagname.14.1713788072054
-                  - CategoricalDimensionField:
-                      Column:
                         ColumnName: Tag1 (tag)
                         DataSetIdentifier: config_inventory_ec2
                       FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.tagapplication.8.1710339712055
@@ -3361,6 +3057,11 @@ dashboards:
                         ColumnName: Tag4 (tag)
                         DataSetIdentifier: config_inventory_ec2
                       FieldId: ed77abe1-4999-4b4e-8c37-0235a9313b0c.tag4.13.1711364489799
+                  - CategoricalDimensionField:
+                      Column:
+                        ColumnName: Tags
+                        DataSetIdentifier: config_inventory_ec2
+                      FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.alltags.10.1710339719181
                   - DateDimensionField:
                       Column:
                         ColumnName: Last Config Snapshot
@@ -3368,10 +3069,6 @@ dashboards:
                       FieldId: 154f08fc-e68e-40f1-b5f4-b5cc0798e203.lastconfigsnapshot.11.1710339720903
                   Values: []
               SortConfiguration: {}
-              TableOptions:
-                HeaderStyle:
-                  Height: 25
-                  TextWrap: WRAP
             Subtitle:
               Visibility: VISIBLE
             Title:
@@ -3385,14 +3082,6 @@ dashboards:
               FieldOptions:
                 Order: []
                 SelectedFieldOptions:
-                - CustomLabel: ${tag1} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag1.3.1711365043301
-                - CustomLabel: ${tag2} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag2.4.1711365047118
-                - CustomLabel: ${tag3} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag3.5.1711365049768
-                - CustomLabel: ${tag4} (tag)
-                  FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag4.6.1711365052602
                 - FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.lastconfigsnapshot.8.1711365160992
                   Width: 224px
               FieldWells:
@@ -3433,6 +3122,11 @@ dashboards:
                         ColumnName: Tag4 (tag)
                         DataSetIdentifier: config_inventory_s3
                       FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag4.6.1711365052602
+                  - CategoricalDimensionField:
+                      Column:
+                        ColumnName: Tags
+                        DataSetIdentifier: config_inventory_s3
+                      FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.alltags.9.1711365309502
                   - DateDimensionField:
                       Column:
                         ColumnName: Creation Date
@@ -3456,8 +3150,6 @@ dashboards:
                   Values: []
               SortConfiguration: {}
               TableOptions:
-                CellStyle:
-                  Height: 25
                 HeaderStyle:
                   Height: 25
                   TextWrap: WRAP
@@ -3472,8 +3164,6 @@ dashboards:
             Actions: []
             ChartConfiguration:
               BarsArrangement: CLUSTERED
-              CategoryLabelOptions:
-                Visibility: HIDDEN
               DataLabels:
                 Overlap: DISABLE_OVERLAP
                 Visibility: HIDDEN
@@ -3509,8 +3199,6 @@ dashboards:
             Subtitle:
               Visibility: VISIBLE
             Title:
-              FormatText:
-                RichText: <visual-title>Resources by ${tag1} (tag)</visual-title>
               Visibility: VISIBLE
             VisualId: 42034de9-2b91-41a2-965e-8eef7edae9f5
       - ContentType: INTERACTIVE
@@ -4621,7 +4309,7 @@ datasets:
               NewColumnName: Name (tag)
           - RenameColumnOperation:
               ColumnName: tag1
-              NewColumnName: Tag1 (tag)
+              NewColumnName: Tag1 (tag) 
           - RenameColumnOperation:
               ColumnName: tag2
               NewColumnName: Tag2 (tag)
@@ -4811,7 +4499,6 @@ datasets:
       - config_inventory_s3
     schedules:
     - default
-crawlers: {}
 views:
   config_conformance_packs_compliance:
     dependsOn:
