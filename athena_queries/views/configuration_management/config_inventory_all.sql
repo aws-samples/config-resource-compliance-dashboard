@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW "config_inventory_all" AS 
+CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_all AS 
 SELECT DISTINCT
   a."AccountId"
 , a."Region"
@@ -20,10 +20,10 @@ FROM
         "configurationItem"."awsAccountId" "AccountId"
       , "configurationItem"."awsregion" "Region"
       , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "Date"
-      , "configurationItem"."tags"['CostCenter'] "TAG1"
-      , "configurationItem"."tags"['Application'] "TAG2"
-      , "configurationItem"."tags"['Environment'] "TAG3"
-      , "configurationItem"."tags"['Owner'] "TAG4"
+      , "configurationItem"."tags"['<TAG1>'] "TAG1"
+      , "configurationItem"."tags"['<TAG2>'] "TAG2"
+      , "configurationItem"."tags"['<TAG3>'] "TAG3"
+      , "configurationItem"."tags"['<TAG4>'] "TAG4"
       , "configurationItem"."tags" "AllTags"
       , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
       , "configurationItem"."resourcetype" "ResourceType"

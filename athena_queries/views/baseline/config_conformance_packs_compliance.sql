@@ -1,6 +1,6 @@
-CREATE OR REPLACE VIEW ${athena_database_name}.config_conformance_packs_compliance AS
+CREATE OR REPLACE VIEW ${athena_database_name}.config_conformance_packs_compliance AS 
 SELECT DISTINCT
-a."AccountId"
+  a."AccountId"
 , a."Region"
 , a."Date"
 , a."ResourceId"
@@ -12,9 +12,9 @@ a."AccountId"
 , a."TotalRuleCount"
 FROM
   (
-    SELECT *
-    FROM
-      (
+   SELECT *
+   FROM
+     (
       SELECT DISTINCT
         "accountId" "AccountId"
       , "region" "Region"
@@ -28,9 +28,9 @@ FROM
       , "json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount') "TotalRuleCount"
       , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."resourceId", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
       FROM
-        (aws_config_configuration_snapshots
+        (cid_crcd_config
       CROSS JOIN UNNEST("configurationitems") t (configurationItem))
       WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
-    )  sub
-    WHERE (Rowrank = 1)
+   )  sub
+   WHERE (Rowrank = 1)
 )  a

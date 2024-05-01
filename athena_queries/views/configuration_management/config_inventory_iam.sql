@@ -1,3 +1,4 @@
+-- WIP
 CREATE OR REPLACE VIEW "config_inventory_iam" AS 
 SELECT DISTINCT
   "configurationItem"."awsAccountId" "AccountId"

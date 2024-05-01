@@ -31,6 +31,6 @@ STORED AS INPUTFORMAT
 OUTPUTFORMAT 
   'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
 LOCATION
-  '<S3 Destination>'
+  '<s3://S3-BUCKET-NAME/>'
 TBLPROPERTIES (
   'transient_lastDdlTime'='1713190251')
