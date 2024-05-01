@@ -1,7 +1,0 @@
-{
-    "name": "default",
-    "s3BucketName": "TARGET_BUCKET_NAME",
-    "configSnapshotDeliveryProperties": {
-        "deliveryFrequency": "TwentyFour_Hours"
-    }
-}
