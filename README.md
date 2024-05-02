@@ -12,7 +12,7 @@ The AWS Config Resource Compliance Dashboard (CID-CRCD) shows the inventory of r
 - Month-by-month evolution of the compliance status of your resources
 - Breakdown of compliance per service, account and region
 - Compliance of AWS Config Rules and Conformance Packs
-- Inventory of EC2, S3 resources with filtering on account, region, customizable tags
+- Inventory of Amazon EC2, Amazon S3 and Amazon Relational Database Service (RDS) resources with filtering on account, region, customizable tags
 - A deep dive on tagging compliance
 
 The dashboard uses these sources to get these insights:
@@ -98,7 +98,7 @@ In both cases:
 ## Deployment Instructions (Dashboard Account with object replication)
 In this scenario, you will install the AWS Config Resource Compliance Dashboard (CID-CRCD) on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
 
-For this scenario is necessary to configure object replication from the centralized Amazon S3 Config bucket in the Log Archive account (the source bucket), to an Amazon S3 bucket that you will create in the Dashboard Account (the destination bucket).
+For this scenario it is necessary to configure object replication from the centralized Amazon S3 Config bucket in the Log Archive account (the source bucket), to an Amazon S3 bucket that you will create in the Dashboard Account (the destination bucket).
 
 Log onto the Dashboard Account, open the Amazon S3 console and create an Amazon S3 bucket in the region where you will deploy the dashboard, make sure to activate versioning. From now on, this will be called the **Data Collection Bucket**. 
 
@@ -184,7 +184,7 @@ These instructions apply to the case where you are installing the dashboard on t
      - `--tag2` The name of the second tag you use to categorize workloads
      - `--tag3` The name of the third tag you use to categorize workloads
      - `--tag4` The name of the fourth tag you use to categorize workloads
-     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a default value, e.g. `--tag4 'tag4'`
+     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`
      - **Leave every other parameter to its default value**
 
     ```
