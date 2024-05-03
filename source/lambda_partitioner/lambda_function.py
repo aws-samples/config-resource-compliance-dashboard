@@ -9,18 +9,18 @@ ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"
 ATHENA_REGION = os.environ['ATHENA_REGION']
 ACCOUNT_ID = None  # Determined at runtime, it is the same AWS Account of the lambda function
 ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
-LOGGING_ON = True  # enables additional logging to CloudWatch
+LOGGING_ON = False  # enables additional logging to CloudWatch
 
 # This regular expresions is compatible with how ControlTower stores Config logs in S3
 # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
 # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
 # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-REGEX_CONFIG_SNAPSHOT_ORGANIZATION = '^([\w-]+)/AWSLogs/(\d+)/Config/([\w-]+)/(\d+)/(\d+)/(\d+)/ConfigSnapshot/[^\\\]+$'
+REGEX_CONFIG_SNAPSHOT_ORGANIZATION = r'^([\w-]+)/AWSLogs/(\d+)/Config/([\w-]+)/(\d+)/(\d+)/(\d+)/(ConfigSnapshot|ConfigHistory)/[^\\]+$'
 
 # This regular expresions is compatible with how Config Logs are stored in S3 for a standalone account
 # Structure for Config Snapshots: AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
-# Object name follows the same pattern for Config above
-REGEX_CONFIG_SNAPSHOT_STANDALONE = '^AWSLogs/(\d+)/Config/([\w-]+)/(\d+)/(\d+)/(\d+)/ConfigSnapshot/[^\\\]+$'
+# Object name follows the same pattern above
+REGEX_CONFIG_SNAPSHOT_STANDALONE = r'^AWSLogs/(\d+)/Config/([\w-]+)/(\d+)/(\d+)/(\d+)/(ConfigSnapshot|ConfigHistory)/[^\\]+$'
 
 OBJECT_KEY_MATCH_STATUS_FAIL = 0
 OBJECT_KEY_MATCH_STATUS_CONFIG_SNAPSHOT_ORGANIZATION = 1
@@ -36,6 +36,8 @@ def lambda_handler(event, context):
     global ACCOUNT_ID
 
     object_key = event['Records'][0]['s3']['object']['key']
+    
+    if LOGGING_ON: print('This is the object key', object_key)
 
     # the object key contains the full name of the S3 object, including the prefixes
     outcome, match = get_object_key_match(object_key)
@@ -62,7 +64,7 @@ def lambda_handler(event, context):
     
     drop_partition(accountid, region, date)
     add_partition(accountid, region, date, object_key_parent)
-    
+
 def get_object_key_match(object_key):
     global ACCOUNT_ID
     global TABLE_NAME
@@ -124,7 +126,7 @@ def get_date(outcome, match):
         result = datetime.date(int(match.group(3)), int(match.group(4)), int(match.group(5)))
 
     return result
-    
+
 def add_partition(accountid_partition_value, region_partition_value, dt_partition_value, partition_location):
     execute_query('ALTER TABLE {table_name} ADD PARTITION {partition} location \'{partition_location}\''.format(
         table_name=TABLE_NAME,
