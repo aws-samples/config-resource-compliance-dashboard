@@ -444,11 +444,12 @@ Resources:
           # TODO: Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
           ATHENA_REGION: !Ref AWS::Region
       Code:
-        ZipFile: | 
+        ZipFile: |           
           import datetime
           import re
           import boto3
           import os
+          import json
 
           TABLE_NAME = ""  # TODO: this can only be the env variable "CONFIG_TABLE_NAME"
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
@@ -466,7 +467,7 @@ Resources:
 
           # This regular expresions is compatible with how Config Logs are stored in S3 for a standalone account
           # Structure for Config Snapshots: AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
-          # Object name follows the same pattern above
+          # Object name follows the same pattern for Config above
           REGEX_CONFIG_SNAPSHOT_STANDALONE = r'^AWSLogs/(\d+)/Config/([\w-]+)/(\d+)/(\d+)/(\d+)/(ConfigSnapshot|ConfigHistory)/[^\\]+$'
 
           OBJECT_KEY_MATCH_STATUS_FAIL = 0
@@ -481,21 +482,50 @@ Resources:
 
           def lambda_handler(event, context):
               global ACCOUNT_ID
-
-              object_key = event['Records'][0]['s3']['object']['key']
-
-              if LOGGING_ON: print('This is the object key', object_key)
+              if LOGGING_ON: print('This is the event', event)
+                
+              event_object_key = None
+              event_bucket_name = None
+              found_event = False
+                
+              # Is this called directly by S3 event notification?
+              try:
+                  event_object_key = event['Records'][0]['s3']['object']['key']
+                  event_bucket_name = event['Records'][0]['s3']['bucket']['name']
+                  if LOGGING_ON: print('This is an S3 event')
+                  found_event = True
+              except KeyError:
+                  # key doesn't exist
+                  if LOGGING_ON: print('This is not an S3 event, trying SNS')
+                  pass
+                
+              if not found_event:
+                  # Is this called via SNS topic?
+                  try:
+                      message = json.loads(event['Records'][0]['Sns']['Message'])
+                      if LOGGING_ON: print('This is an SNS event, and this is the message', message)
+                      event_bucket_name = message['Records'][0]['s3']['bucket']['name']
+                      event_object_key = message['Records'][0]['s3']['object']['key']
+                  except KeyError:
+                      # key doesn't exist
+                      print('This is not an SNS event either!!')
+                      # at this point I cannot continue
+                      raise
+              
+              if LOGGING_ON: 
+                  print('This is the object key', event_object_key)
+                  print('This is the bucket', event_bucket_name)
 
               # the object key contains the full name of the S3 object, including the prefixes
-              outcome, match = get_object_key_match(object_key)
+              outcome, match = get_object_key_match(event_object_key)
               if outcome == OBJECT_KEY_MATCH_STATUS_FAIL:
                   return
 
               ACCOUNT_ID = context.invoked_function_arn.split(':')[4]
 
               object_key_parent = 's3://{bucket_name}/{object_key_parent}/'.format(
-                  bucket_name=event['Records'][0]['s3']['bucket']['name'],
-                  object_key_parent=os.path.dirname(object_key))
+                  bucket_name=event_bucket_name,
+                  object_key_parent=os.path.dirname(event_object_key))
               
               if LOGGING_ON: print('This is match.groups', match.groups())
 
@@ -511,7 +541,7 @@ Resources:
               
               drop_partition(accountid, region, date)
               add_partition(accountid, region, date, object_key_parent)
-    
+
           def get_object_key_match(object_key):
               global ACCOUNT_ID
               global TABLE_NAME
@@ -573,7 +603,7 @@ Resources:
                   result = datetime.date(int(match.group(3)), int(match.group(4)), int(match.group(5)))
 
               return result
-    
+
           def add_partition(accountid_partition_value, region_partition_value, dt_partition_value, partition_location):
               execute_query('ALTER TABLE {table_name} ADD PARTITION {partition} location \'{partition_location}\''.format(
                   table_name=TABLE_NAME,
