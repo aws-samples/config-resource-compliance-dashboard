@@ -203,6 +203,7 @@ These instructions apply to the case where you are installing the dashboard on t
    - The datasets for this dashboard have all the `config_` prefix
    - Click on a Dataset, and then open the Refresh tab
    - Click on Add a new schedule, select Full refresh and a Frequency
+
 1. Configure the Config S3 bucket to trigger the Lambda Partitioner function when objects are added to the bucket and allow the same function permission to read objects:
    - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
      - Name = `cid-crcd-deliver-config-snapshot`
@@ -233,6 +234,12 @@ These instructions apply to the case where you are installing the dashboard on t
             ]
         }
     ```
+
+> The code in the CID-CRCD Lambda partitioner function supports this advanced scenario.
+> * If your bucket publishes events notifications to an SNS topic, you can subscribe the CID-CRCD Lambda partitioner function to the topic.
+> * If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the CID-CRCD Lambda partitioner function to that SNS topic.
+
+
 
 1. Visualize the dashboard:
    - Navigate to QuickSight and then Dashboards
