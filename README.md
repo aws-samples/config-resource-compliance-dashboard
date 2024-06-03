@@ -1,4 +1,4 @@
-# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CID-CRCD) v2.0.0 (Beta)
+# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CID-CRCD) v2.0.0
 
 ## Description
 
