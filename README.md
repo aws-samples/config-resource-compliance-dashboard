@@ -1,13 +1,13 @@
-# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CID-CRCD) v2.0.0
+# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) v2.0.0
 
 ## Description
 
-![CRCD](images/dashboard01.png "CID-CRCD Dashboard, Compliance tab")
-![CRCD](images/dashboard02.png "CID-CRCD Dashboard, Compliance tab")
-![CRCD](images/dashboard03.png "CID-CRCD Dashboard, Compliance tab")
+![CRCD](images/dashboard01.png "CRCD Dashboard, Compliance tab")
+![CRCD](images/dashboard02.png "CRCD Dashboard, Compliance tab")
+![CRCD](images/dashboard03.png "CRCD Dashboard, Compliance tab")
 
 
-The AWS Config Resource Compliance Dashboard (CID-CRCD) shows the inventory of resources, along with their compliance status, running across multiple AWS accounts. The dashboard provides:
+The AWS Config Resource Compliance Dashboard (CRCD) shows the inventory of resources, along with their compliance status, running across multiple AWS accounts. The dashboard provides:
 
 - Month-by-month evolution of the compliance status of your resources
 - Breakdown of compliance per service, account and region
@@ -57,6 +57,8 @@ Once you have decided the region, AWS resources supporting the dashboard (deploy
 ## Prerequisites
  
 1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config Configuration Snapshots to a centralized S3 bucket in the Log Archive account
+   1. If you do not have AWS Config enabled, follow [these instructions](https://aws.amazon.com/blogs/mt/managing-aws-organizations-accounts-using-aws-config-and-aws-cloudformation-stacksets/) to use AWS CloudFormation StackSets to enable AWS Config on all member accounts under organizational units in a single execution
+
 1. An AWS Account where you'll deploy the dashboard (the Dashboard Account)
 1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation
 1. Sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user:
@@ -70,35 +72,6 @@ Once you have decided the region, AWS resources supporting the dashboard (deploy
 1. Ensure you have SPICE capacity left in the region where you're deploying the dashboard
 
 
-### Amazon S3 prefixes for AWS Config objects
-The solution supports the following ways of activating AWS Config:
-1. manual setup on standalone AWS accounts
-1. deployment by AWS Control Tower on AWS Organizations
-
-These two options have different ways of structuring the prefixes of the AWS Config Configuration Snapshots on Amazon S3. They are defined below, and the Lambda Partitioner function supports all of them.
-
-
-#### Supported AWS Config prefixes on Amazon S3
-
-##### Manual AWS Config setup 
-`AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
-
-`AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigHistory/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
-
-##### AWS Control Tower deployment
-`AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
-
-`AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigHistory/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
-
-Where:
-* `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
-* `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234
-* `REGION` identifies an AWS region, e.g. us-east-1
-* `YYYY/MM/DD` represents a date, e.g. 2024/04/18
-* `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z
-* `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb
-
-**Verify that your setup is compatible with the Amazon S3 prefixes above.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config Configuration Snapshots and will discard them. As a consequence, your Athena table will be empty.
 
 ## Deployment Instructions (Dashboard Account with object replication)
 In this scenario, you will install the AWS Config Resource Compliance Dashboard (CID-CRCD) on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
@@ -157,7 +130,7 @@ Replace `SOURCE_ACCOUNT_REPLICATION_ROLE_ARN` and `DESTINATION_BUCKET_ARN` in th
 
 You can follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html) for that.
 
-Once object replication is configured, follow the instructions on hte next paragraph. In your case, the Amazon S3 bucket will always be the local Data Collection Bucket.
+Once object replication is configured, follow the instructions on the next paragraph. In your case, the Amazon S3 bucket will always be the local Data Collection Bucket.
 
 ## Deployment Instructions (Log Archive account)
 These instructions apply to the case where you are installing the dashboard on the same account and region where your AWS Config logs are collected, whether that is a standalone account or the Log Archive account of your Organization.
@@ -176,9 +149,14 @@ These instructions apply to the case where you are installing the dashboard on t
    - `QuickSightDataSourceRole`
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
    - Navigate to the AWS Console and open AWS CloudShell. Be sure to be in the correct region
+   - The tool requires Python 3
+   - Make sure you have the latest pip package installed:
+    ```
+    python3 -m ensurepip --upgrade
+    ```
    - Install the CID-CMD tool running the following command:
     ```
-    pip3 install git+https://github.com/aws-samples/aws-cudos-framework-deployment.git
+    pip3 install --upgrade cid-cmd
     ```
    - On the top right corner, click on `Actions`, and then `Upload file`
    - Select the `CID-Config.yaml` file under the `dashboard_template` directory and click on `Upload`
@@ -278,6 +256,40 @@ Where:
    - Amazon S3 Config Logging Bucket: remove the bucket policy statement that allows the Lambda Partitioner function to read objects
    - Amazon S3 Config Logging Bucket: remove the Event notification that triggered the  Lambda Partitioner function
    - If you configured replication for the Config objects across accounts, remove the destination bucket and the replication configuration.
+
+# Additional Information
+
+## Amazon S3 prefixes for AWS Config objects
+The solution supports the following ways of activating AWS Config:
+1. manual setup on standalone AWS accounts
+1. deployment by AWS Control Tower on AWS Organizations
+
+These two options have different ways of structuring the prefixes of the AWS Config Configuration Snapshots on Amazon S3. They are defined below, and the Lambda Partitioner function supports all of them.
+
+**Verify that your setup is compatible with the Amazon S3 prefixes.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config Configuration Snapshots and will discard them. As a consequence, your Athena table will be empty.
+
+
+### Supported AWS Config prefixes on Amazon S3
+
+#### Manual AWS Config setup 
+`AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
+
+`AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigHistory/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
+
+#### AWS Control Tower deployment
+`AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigSnapshot/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
+
+`AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigHistory/ACCOUNT-ID_Config_REGION_ConfigSnapshot_TIMESTAMP_RANDOM.json.gz`
+
+Where:
+* `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
+* `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234
+* `REGION` identifies an AWS region, e.g. us-east-1
+* `YYYY/MM/DD` represents a date, e.g. 2024/04/18
+* `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z
+* `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb
+
+
 
 
 # Security
