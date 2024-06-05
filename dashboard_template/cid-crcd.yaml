@@ -11,7 +11,7 @@ dashboards:
       - config_inventory_rds
       - config_inventory_s3
     # CUSTOMIZATION - descriptive name of the dashboard
-    name: "AWS Config Resource Compliance Dashboard (CID-CRCD)"
+    name: "AWS Config Resource Compliance Dashboard (CRCD)"
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT

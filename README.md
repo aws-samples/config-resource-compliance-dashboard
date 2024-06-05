@@ -22,18 +22,18 @@ The dashboard uses these sources to get these insights:
 The infrastructure needed to collect and process the data is defined in CloudFormation. 
 
 ### Custom tags support
-![CRCD](images/dashboard04.png "CID-CRCD Dashboard, Configuration Items")
+![CRCD](images/dashboard04.png "CRCD Dashboard, Configuration Items")
 
 The dashboard allows filtering of resources by the custom tags that you use to categorize workloads. The name of the tags will be provided by you during installation.
 
 ### Tag compliance
 Tag compliance collects the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can activate this rule as many times as needed, just give it a name that starts with `required-tags`.
 
-![CRCD](images/dashboard-tagscompliance.png "CID-CRCD Dashboard, Tag Compliance")
+![CRCD](images/dashboard-tagscompliance.png "CRCD Dashboard, Tag Compliance")
 
 ## Architecture
 
-![CRCD](images/Architecture-LogArchiveAccount.png "CID-CRCD Dashboard, deployment on AWS Organization")
+![CRCD](images/Architecture-LogArchiveAccount.png "CRCD Dashboard, deployment on AWS Organization")
 
 The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to a centralized S3 bucket on a dedicated Log Archive account. Whenever there's a new object in the bucket, the Lambda Config Partitioner function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If the object is not a Configuration Snapshot, the function ignores it. 
 
@@ -188,7 +188,7 @@ Once object replication is configured, follow the instructions on the next parag
    - Click on Add a new schedule, select Full refresh and a Frequency
 
 1. Configure the Config S3 bucket to trigger the Lambda Partitioner function when objects are added to the bucket and allow the same function permission to read objects:
-   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the CID-CRCD Lambda partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
+   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the Lambda Partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
      - Name = `cid-crcd-deliver-config-snapshot`
      - Event types = `All object create events`
      - Destination = `Lambda function`
@@ -200,7 +200,7 @@ Once object replication is configured, follow the instructions on the next parag
 
     ```
         {
-            "Sid": "Lambda Partitioner access for CID-CRCD dashboard",
+            "Sid": "Lambda Partitioner access for CRCD dashboard",
             "Effect": "Allow",
             "Principal": {
                 "AWS": "LAMBDA-PARTITIONER-ROLE-ARN"
@@ -218,26 +218,21 @@ Once object replication is configured, follow the instructions on the next parag
         }
     ```
 
-> The code in the CID-CRCD Lambda partitioner function supports this advanced scenario.
-> * If your bucket publishes events notifications to an SNS topic, you can subscribe the CID-CRCD Lambda partitioner function to the topic.
-> * If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the CID-CRCD Lambda partitioner function to that SNS topic.
+> The code in the Lambda Partitioner function supports this advanced scenario.
+> * If your bucket publishes events notifications to an SNS topic, you can subscribe the Lambda Partitioner function to the topic.
+> * If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the Lambda Partitioner function to that SNS topic.
 
 
 
 1. Visualize the dashboard:
    - Navigate to QuickSight and then Dashboards
    - Make sure you are in the correct region
-   - Click on the **AWS Config Resource Compliance Dashboard (CID-CRCD)** dashboard
-
-
-
-
-     
+   - Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard
 
 
 ## Destroy resources
 
-In order to destroy the CID CRCD dashboard, you need to:
+In order to destroy the dashboard, you need to:
 
 1. Navigate to the AWS Console and open AWS CloudShell in the region where you have deployed the dashboard
 1. Delete the dashboard by executing the following command:
@@ -251,7 +246,7 @@ Where:
 * `cid-crcd.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed)
 
 3. When prompted:
-   - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CID-CRCD)` dashboard
+   - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CRCD)` dashboard
    - For each QuickSight dataset, choose `yes` to delete the dataset
    - Accept the default values of the S3 Path for the Athena table.
    - For each Athena view, choose `yes` to delete the dataset

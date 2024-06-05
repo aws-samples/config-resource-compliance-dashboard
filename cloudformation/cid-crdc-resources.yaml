@@ -1,6 +1,5 @@
-# FINAL version that relies on default resources by CID-CMD tool
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "CID-CRCD - Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
+Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -15,7 +14,7 @@ Metadata:
           default: "AWS Config Logging"
         Parameters:
           - PConfigLoggingBucket
-          - PConfigLoggingAccountID # TODO this may not be needed if we cannot build cross-account access (with views) to the bucket. In that case it will always be the local account.
+          - PConfigLoggingAccountID 
       -
         Label:
           default: "Athena Configuration (DO NOT CHANGE)"
@@ -41,8 +40,6 @@ Metadata:
       PQuickSightUser:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       
-
-# TODO test the rules on the parameters, that they are mandatory etc...
 Parameters:
   PQuickSightUser:
     Type: String
@@ -97,7 +94,7 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
 
-# TODO verify parameters are not the default ones in case user input is necessary (e.g. QuickSight user, Config S3 bucket, Config buicket account)
+
 Rules:
   MandatoryQuickSightUser:
     Assertions:
@@ -187,7 +184,7 @@ Resources:
           ignore_checks:
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
 
-  # Athena workgroup to execute CID-CRCD queries with its own result bucket
+  # Athena workgroup to execute CRCD queries with its own result bucket
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
   AthenaWorkgroup: 
     Type: AWS::Athena::WorkGroup
@@ -282,7 +279,6 @@ Resources:
           Sid: "AllowListTheS3ConfigBucket"
         - Resource:
           - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}/*"
-          # TODO does not look like getObject needs also "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
           Action:
           - "s3:GetObject"
           - "s3:GetObjectVersion"
@@ -357,7 +353,6 @@ Resources:
           - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
           Action:
           - "s3:GetObject"
-          # TODO check what's really needed
           - "s3:ListBucket"
           - "s3:ListBucketVersions"
           - "s3:GetObjectVersion"
@@ -376,7 +371,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        # TODO keep the log group name the same as the lambda function, use a reference
+        # keep the log group name the same as the lambda function
         - Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cid-crcd-config-snapshot-partitioner:*"
           Action:
           - "logs:PutLogEvents"
@@ -438,10 +433,10 @@ Resources:
       Environment:
         Variables:
           ATHENA_DATABASE_NAME: !Ref PAthenaDatabase
-          ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket # TODO DOES IT PASS THE RESOURCE? AthenaQueryResultBucketName
+          ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket
           ATHENA_WORKGROUP: !Ref PAthenaWorkgroup
           CONFIG_TABLE_NAME: !Ref PAthenaTable
-          # TODO: Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
+          # Refactor the lambda code and remove this variable. It's the region where the function is deployed anyway
           ATHENA_REGION: !Ref AWS::Region
       Code:
         ZipFile: |           
@@ -451,7 +446,7 @@ Resources:
           import os
           import json
 
-          TABLE_NAME = ""  # TODO: this can only be the env variable "CONFIG_TABLE_NAME"
+          TABLE_NAME = ""  # this can only be the env variable "CONFIG_TABLE_NAME"
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
           ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
           ATHENA_REGION = os.environ['ATHENA_REGION']
@@ -691,15 +686,7 @@ Resources:
       SourceAccount: !Ref PConfigLoggingAccountID
 
 
-Outputs:
-  # TODO probably not needed, remove
-  #QuickSightDataSourceRoleARN:
-  #  Description: "ARN of the Role created for QuickSight"
-  #  Value:
-  #    Fn::GetAtt:
-  #      - "IAMRoleQuickSightDataSource"
-  #      - "Arn"
-  
+Outputs:  
   # parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRole:
     Description: "Name of the Role created for QuickSight"
