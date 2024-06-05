@@ -35,15 +35,14 @@ Tag compliance collects the results of AWS Config Managed Rule [required-tags](h
 
 ![CRCD](images/Architecture-LogArchiveAccount.png "CID-CRCD Dashboard, deployment on AWS Organization")
 
-The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to a centralized S3 bucket. Whenever there's a new object in the bucket, a Lambda function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If the object is not a Configuration Snapshot, the function ignores it. 
+The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver Configuration Snapshots to a centralized S3 bucket on a dedicated Log Archive account. Whenever there's a new object in the bucket, the Lambda Config Partitioner function is triggered. This function checks if the object is a Configuration Snapshot, and adds a new partition to the corresponding Athena table with the new data. If the object is not a Configuration Snapshot, the function ignores it. 
+
+For more information on how the Lambda Partitioner function recognizes Configuration Snapshots, see [Amazon S3 prefixes for AWS Config objects](README.md#amazon-s3-prefixes-for-aws-config-objects).
 
 An Amazon Athena table is used to extract data from Configuration Snapshots. The solution provides Athena views, which are SQL queries that extract data from S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these views through Amazon QuickSight datasets.
 
-If you will install the dashboard on an account part of an AWS Organization, this must be done on the same account that contains the Amazon S3 bucket where your AWS Config Configuration Snapshots are delivered. Alternatively, you can install the dashboard on a dedicated Dashboard Account, but you'll have to replicate AWS Config Configuration Snapshots across accounts to a local Amazon S3 bucket. In this case, the architecture is below.
+If you install the dashboard on an account part of an AWS Organization, this must be done on the same Log Archive account that contains the Amazon S3 bucket where your AWS Config Configuration Snapshots are delivered. Alternatively, you can install the dashboard on a dedicated Dashboard Account, but you'll have to replicate AWS Config Configuration Snapshots across accounts to a local Amazon S3 bucket. This will be explained in the optional step in the installation instructions.
 
-![CRCD](images/Architecture-DedicatedDasboardAccount.png "CID-CRCD Dashboard, deployment on AWS Organization")
-
-From now on, we'll refer to the account that contains the Amazon S3 bucket where your AWS Config Configuration Snapshots are delivered as the **Log Archive** account. We'll use **Dashboard Account** to indicate the account where you deploy the AWS Config Resource Compliance Dashboard. Depending on your deployment model, these two may be the same AWS account.
 
 ## Regional considerations
 **Data transfer costs will incur when Amazon Athena queries an Amazon S3 bucket across regions.**
@@ -73,8 +72,15 @@ Once you have decided the region, AWS resources supporting the dashboard (deploy
 
 
 
-## Deployment Instructions (Dashboard Account with object replication)
-In this scenario, you will install the AWS Config Resource Compliance Dashboard (CID-CRCD) on a Dashboard Account separated from the Log Archive account. Skip to the next paragraph to install the dashboard directly on the Log Archive Account.
+## Deployment Instructions 
+
+### Optional Step (installation on dedicated Dashboard Account)
+
+Follow this optional step if you want to install the AWS Config Resource Compliance Dashboard (CRCD) on a Dashboard Account separated from the Log Archive account. In this case, the architecture of the solution is below.
+
+![CRCD](images/Architecture-DedicatedDasboardAccount.png "CRCD Dashboard, deployment on AWS Organization")
+
+**Skip to the next paragraph to install the dashboard directly on the Log Archive account.**
 
 For this scenario it is necessary to configure object replication from the centralized Amazon S3 Config bucket in the Log Archive account (the source bucket), to an Amazon S3 bucket that you will create in the Dashboard Account (the destination bucket).
 
@@ -130,10 +136,9 @@ Replace `SOURCE_ACCOUNT_REPLICATION_ROLE_ARN` and `DESTINATION_BUCKET_ARN` in th
 
 You can follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html) for that.
 
-Once object replication is configured, follow the instructions on the next paragraph. In your case, the Amazon S3 bucket will always be the local Data Collection Bucket.
+Once object replication is configured, follow the instructions on the next paragraph. In your case, the Amazon S3 bucket will always be the Data Collection Bucket.
 
-## Deployment Instructions (Log Archive account)
-These instructions apply to the case where you are installing the dashboard on the same account and region where your AWS Config logs are collected, whether that is a standalone account or the Log Archive account of your Organization.
+## Deployment Steps
 
 1. At every step, make sure you are in the region where both your central Config Amazon S3 bucket Amazon QuickSight are deployed.
 1. Open the CloudFormation console and upload the template file `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
