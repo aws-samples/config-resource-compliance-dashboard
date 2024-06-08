@@ -455,7 +455,7 @@ Resources:
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-          PATTERN = '^(?<org_id>[\w-]+)?/?AWSLogs/(?<account_id>\d+)/Config/(?<region>[\w-]+)/(?<year>\d+)/(?<month>\d+)/(?<day>\d+)/(?<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
+          PATTERN = = '^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
           athena = boto3.client('athena')
 
