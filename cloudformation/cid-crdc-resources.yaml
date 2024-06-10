@@ -67,7 +67,7 @@ Parameters:
     Type: "String"
     # The name cannot have the symbol '-' and must have lowercase character. '_' seems accepted
     Default: "cid_crcd_database"
-    Description: "The Athena/Glue database for the CID-CRCD dashboard (Required)"
+    Description: "The Athena/Glue database for the CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
@@ -83,7 +83,7 @@ Parameters:
   PAthenaWorkgroup:
     Type: "String"
     Default: "cid-crcd-dashboard"
-    Description: "The Athena workgroup for the CID-CRCD dashboard (Required)"
+    Description: "The Athena workgroup for the CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
@@ -151,7 +151,7 @@ Resources:
     Type: AWS::Glue::Database
     Properties:
       DatabaseInput:
-        Description: "Database for AWS Config Resource Compliance Dashboard (CID-CRCD)"
+        Description: "Database for AWS Config Resource Compliance Dashboard (CRCD)"
         Name: !Sub "${PAthenaDatabase}"
       # The AWS account ID for the account in which to create the catalog object.
       CatalogId: !Sub '${AWS::AccountId}'
@@ -203,7 +203,7 @@ Resources:
     Type: AWS::IAM::Role
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
-    Description: "CID-CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
+    Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
     Properties:
       Path: "/"
       ManagedPolicyArns:
@@ -225,13 +225,12 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy-${AWS::Region}-${AWS::AccountId}" 
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
+      Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
         - Resource: "*"
           Action:
-          - "lakeformation:GetDataAccess"
           - "athena:ListDataCatalogs"
           - "athena:ListDatabases"
           - "athena:ListTableMetadata"
@@ -252,10 +251,8 @@ Resources:
           - "athena:ListDataCatalogs"
           - "athena:ListDatabases"
           - "athena:GetQueryExecution"
-          - "athena:GetQueryResults"
           - "athena:StartQueryExecution"
           - "athena:GetQueryResultsStream"
-          - "athena:GetTableMetadata"
           Effect: "Allow"
           Sid: "AccessAthenaDatabaseWorkgroup"
         - Resource:
@@ -266,7 +263,6 @@ Resources:
           - "s3:ListBucket"
           - "s3:GetObject"
           - "s3:PutObject"
-          - "s3:ListBucketMultipartUploads"
           - "s3:ListMultipartUploadParts"
           - "s3:AbortMultipartUpload"
           Effect: "Allow"
@@ -292,7 +288,7 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-glue-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that gives Glue permissions to CID-CRCD Lambda execution role"
+      Description: "CRCD Dashboard - Policy that gives Glue permissions to CRCD Lambda execution role"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -321,7 +317,7 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-s3-athenaqueryresults-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CID-CRCD Lambda execution role"
+      Description: "CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CRCD Lambda execution role"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -344,7 +340,7 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-s3-configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that allows CID-CRCD Lambda to receive objects from the Config S3 bucket"
+      Description: "CRCD Dashboard - Policy that allows CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -367,7 +363,7 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-cloudwatch-logs-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that gives CloudWatch Logs permissions to CID-CRCD Lambda execution role"
+      Description: "CRCD Dashboard - Policy that gives CloudWatch Logs permissions to CRCD Lambda execution role"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -387,7 +383,7 @@ Resources:
     Properties:
       ManagedPolicyName: !Sub "cid-crcd-athena-policy-${AWS::Region}-${AWS::AccountId}"
       Path: "/"
-      Description: "CID-CRCD Dashboard - Policy that gives Athena permissions to CID-CRCD Lambda execution role"
+      Description: "CRCD Dashboard - Policy that gives Athena permissions to CRCD Lambda execution role"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -404,7 +400,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: "cid-crcd-config-snapshot-partitioner"
-      Description: "CID-CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config Snapshots events"
+      Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config Snapshots events"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -650,7 +646,7 @@ Resources:
     Type: AWS::IAM::Role
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
-    Description: "CID-CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
+    Description: "CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
     Properties:
       Path: "/"
       ManagedPolicyArns:
@@ -694,7 +690,7 @@ Outputs:
   
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaARN:
-    Description: "ARN of the Lambda Partitioner function supporting CID-CRCD Dashboard"
+    Description: "ARN of the Lambda Partitioner function supporting CRCD Dashboard"
     Value:
       Fn::GetAtt:
         - "LambdaFunctionPartitionerConfig"
@@ -702,7 +698,7 @@ Outputs:
 
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaRoleARN:
-    Description: "ARN of the execution role of the Lambda Partitioner function"
+    Description: "ARN of the execution role of the CRCD Lambda Partitioner function"
     Value:
       Fn::GetAtt:
         - "IAMRoleLambdaPartitionerConfig"
