@@ -209,7 +209,7 @@ Resources:
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
       MaxSessionDuration: 3600
-      RoleName: !Sub "cid-crcd-quicksight-datasource-role-${AWS::Region}-${AWS::AccountId}"
+      RoleName: !Sub "cid-crcd-quicksight-datasource-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -223,7 +223,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy-${AWS::Region}-${AWS::AccountId}" 
+      ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy" 
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
       PolicyDocument:
@@ -286,7 +286,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-glue-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-glue-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Glue permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -315,7 +315,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-s3-athenaqueryresults-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-s3-athenaqueryresults-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CRCD Lambda execution role"
       PolicyDocument:
@@ -338,7 +338,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-s3-configsnapshotobject-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-s3-configsnapshotobject-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
@@ -361,7 +361,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-cloudwatch-logs-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-cloudwatch-logs-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives CloudWatch Logs permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -381,7 +381,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-athena-policy-${AWS::Region}-${AWS::AccountId}"
+      ManagedPolicyName: !Sub "cid-crcd-athena-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Athena permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -656,7 +656,7 @@ Resources:
       - Ref: "IAMManagedPolicyLambdaCloudWatchLogs"
       - Ref: "IAMManagedPolicyLambdaS3ConfigSnapshotObject"
       MaxSessionDuration: 3600
-      RoleName: !Sub "cid-crcd-lambda-partitioner-role-${AWS::Region}-${AWS::AccountId}"
+      RoleName: !Sub "cid-crcd-lambda-partitioner-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
