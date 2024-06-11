@@ -49,14 +49,12 @@ Parameters:
 
   PConfigLoggingBucket:
     Type: "String"
-    Default: "your-config-bucket"
     Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "Required"
   
   PConfigLoggingAccountID:
     Type: "String"
-    Default: "123412341234"
     Description: "AWS Account ID that contains the bucket holding AWS Config snapshots (Required)"
     MaxLength: 12
     MinLength: 12
@@ -90,7 +88,7 @@ Parameters:
   PAthenaTable:
     Type: "String"
     Default: "cid_crcd_config"
-    Description: "The Athena table that contains the AWS Config data for the dashboard (Required)"
+    Description: "The name that will be assigned to the Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
