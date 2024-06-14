@@ -63,10 +63,13 @@ Parameters:
 
   PAthenaDatabase:
     Type: "String"
-    # The name cannot have the symbol '-' and must have lowercase character. '_' seems accepted
     Default: "cid_crcd_database"
     Description: "The Athena/Glue database for the CRCD dashboard (Required)"
     MinLength: 1
+    # The name for an Athena database 
+    # Max 255 characters cannot have the symbol '-' and must have lowercase character, '_' is accepted
+    # This value is not meant to be changed by the user, but we'll add the allowed pattern anyway
+    AllowedPattern: '^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]$'
     ConstraintDescription: "Required"
 
   PAthenaQueryResultBucketPrefix:
