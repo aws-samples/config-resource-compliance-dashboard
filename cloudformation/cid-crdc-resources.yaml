@@ -14,7 +14,6 @@ Metadata:
           default: "AWS Config Logging"
         Parameters:
           - PConfigLoggingBucket
-          - PConfigLoggingAccountID 
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -36,8 +35,6 @@ Metadata:
         default: "Athena table for AWS Config data"
       PConfigLoggingBucket:
         default: "AWS Config bucket"
-      PConfigLoggingAccountID:
-        default: "Config bucket account"
       PQuickSightUser:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       PGlueDataCatalog:
@@ -56,14 +53,6 @@ Parameters:
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "Required"
   
-  PConfigLoggingAccountID:
-    Type: "String"
-    Description: "AWS Account ID that contains the bucket holding AWS Config snapshots (Required)"
-    MaxLength: 12
-    MinLength: 12
-    AllowedPattern: '^\d{12}$'
-    ConstraintDescription: "Required"
-
   PAthenaDatabase:
     Type: "String"
     Default: "cid_crcd_database"
@@ -118,13 +107,6 @@ Rules:
           - !Ref PConfigLoggingBucket
           - ''
         AssertDescription: "Config bucket name is required"
-  MandatoryConfigLoggingAccountID:
-    Assertions:
-      - Assert: !Not 
-        - !Equals 
-          - !Ref PConfigLoggingAccountID
-          - ''
-        AssertDescription: "Config bucket account is required"
   MandatoryAthenaDatabase:
     Assertions:
       - Assert: !Not 
@@ -719,7 +701,7 @@ Resources:
       Action: "lambda:InvokeFunction"
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
       Principal: "s3.amazonaws.com"
-      SourceAccount: !Ref PConfigLoggingAccountID
+      SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
 
 
 Outputs:  
