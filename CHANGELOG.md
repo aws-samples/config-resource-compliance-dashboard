@@ -1,6 +1,3 @@
-# [1.0.0] - 2023-09-14
-Initial version
-
 # [2.0.0] - 2024-05-01
 ## Added
 - CloudFormation scripts
@@ -12,6 +9,8 @@ Initial version
 - Removed dependency on CloudTrail data
 - Removed Terraform scripts
 
-
 ## Fixed
 N/A
+
+# [1.0.0] - 2023-09-14
+Initial version

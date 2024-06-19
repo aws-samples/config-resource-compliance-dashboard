@@ -17,12 +17,13 @@ Metadata:
           - PConfigLoggingAccountID 
       -
         Label:
-          default: "Athena Configuration (DO NOT CHANGE)"
+          default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - PAthenaWorkgroup
           - PAthenaDatabase
           - PAthenaTable
           - PAthenaQueryResultBucketPrefix
+          - PGlueDataCatalog
       
     ParameterLabels:
       PAthenaWorkgroup:
@@ -39,6 +40,8 @@ Metadata:
         default: "Config bucket account"
       PQuickSightUser:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
+      PGlueDataCatalog:
+        default: "Existing Glue Data Catalog"
       
 Parameters:
   PQuickSightUser:
@@ -95,6 +98,10 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required"
 
+  PGlueDataCatalog:
+    Type: "String"
+    Default: "AwsDataCatalog"
+    Description: "Existing Glue Data Catalog"
 
 Rules:
   MandatoryQuickSightUser:
@@ -146,6 +153,13 @@ Rules:
           - !Ref PAthenaTable
           - ''
         AssertDescription: "Athena table name is required"
+  MandatoryGlueDataCatalog:
+    Assertions:
+      - Assert: !Not 
+        - !Equals 
+          - !Ref PGlueDataCatalog
+          - ''
+        AssertDescription: "Glue Data Catalog name is required"
 
 Resources:
   GlueDatabase:
@@ -230,57 +244,82 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        - Resource: "*"
-          Action:
-          - "athena:ListDataCatalogs"
-          - "athena:ListDatabases"
-          - "athena:ListTableMetadata"
-          Effect: "Allow"
-          Sid: "ReadAthenaLakeFormation"
-        - Resource: "*"
-          Action:
-          - "glue:GetPartition"
-          - "glue:GetPartitions"
-          - "glue:GetDatabases"
-          - "glue:GetTable"
-          - "glue:GetTables"
-          Effect: "Allow"
-          Sid: "AccessGlueData"
-        - Resource: "*"
-          Action:
-          - "athena:ListDatabases"
-          - "athena:ListDataCatalogs"
-          - "athena:ListDatabases"
-          - "athena:GetQueryExecution"
-          - "athena:StartQueryExecution"
-          - "athena:GetQueryResultsStream"
-          Effect: "Allow"
-          Sid: "AccessAthenaDatabaseWorkgroup"
-        - Resource:
-          - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}"
-          - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}/*"
-          Action:
-          - "s3:GetBucketLocation"
-          - "s3:ListBucket"
-          - "s3:GetObject"
-          - "s3:PutObject"
-          - "s3:ListMultipartUploadParts"
-          - "s3:AbortMultipartUpload"
-          Effect: "Allow"
-          Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
-        - Resource:
-          - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
-          Action:
-          - "s3:ListBucket"
-          Effect: "Allow"
-          Sid: "AllowListTheS3ConfigBucket"
-        - Resource:
-          - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}/*"
-          Action:
-          - "s3:GetObject"
-          - "s3:GetObjectVersion"
-          Effect: "Allow"
-          Sid: "AllowReadTheS3ConfigBucket"
+          - Sid: "ReadAthenaLakeFormation"
+            Action:
+              - "lakeformation:GetDataAccess"
+              - "athena:ListDataCatalogs"
+              - "athena:ListDatabases"
+              - "athena:ListTableMetadata"
+            Effect: "Allow"
+            Resource: "*"
+              # required https://docs.aws.amazon.com/lake-formation/latest/dg/access-control-underlying-data.html
+              # Cannot restrict this. See https://docs.aws.amazon.com/athena/latest/ug/datacatalogs-example-policies.html#datacatalog-policy-listing-data-catalogs
+          - Sid: "AccessGlueData"
+            Action:
+              - "glue:GetPartition"
+              - "glue:GetPartitions"
+              - "glue:GetDatabase"
+              - "glue:GetDatabases"
+              - "glue:GetTable"
+              - "glue:GetTables"
+            Effect: "Allow"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
+              # TODO is there a way to refer to the ARN of the resource (GlueDatabase/) here?? should we do that?
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
+              # TODO the views are also created a Tables in Glue, for which I need to grant permission... check if views are created in this tamplate in the end (not ATM)
+              # all my views will start with 'config_' 
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_*/*"
+          - Sid: "AccessAthenaDatabaseWorkgroup"
+            Action:
+              - "athena:ListDatabases"
+              - "athena:ListDataCatalogs"
+              - "athena:GetQueryExecution"
+              - "athena:GetQueryResults"
+              - "athena:StartQueryExecution"
+              - "athena:GetQueryResultsStream"
+              - "athena:ListTableMetadata"
+              - "athena:GetTableMetadata"
+            Effect: "Allow"
+            Resource:
+              # TODO find resource name for GlueDataCatalog
+              # TODO confirm athena database arn exists, I used the same for GLUE right above...
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PGlueDataCatalog}"
+              # - !Sub arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${CidDatabase}
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
+          - Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
+            Action:
+              - "s3:GetBucketLocation"
+              - "s3:ListBucket"
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:ListMultipartUploadParts"
+              - "s3:ListBucketMultipartUploads"
+              - "s3:AbortMultipartUpload"
+            Effect: "Allow"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}/*"
+          - Sid: "AllowListTheS3ConfigBucket"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
+            Action:
+              - "s3:ListBucket"
+            Effect: "Allow"
+          - Sid: "AllowReadTheS3ConfigBucket"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}/*"
+            Action:
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+            Effect: "Allow"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: 'W11'
+            reason: "Need to use * for Lakeformation and Athena"
 
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
@@ -401,7 +440,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: "cid-crcd-config-snapshot-partitioner"
-      Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config Snapshots events"
+      Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config Snapshots"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
