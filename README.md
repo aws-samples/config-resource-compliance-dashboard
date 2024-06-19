@@ -145,7 +145,6 @@ Once object replication is configured, follow the instructions on the next parag
    - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`
    - `QuickSightUser` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users)
    - `ConfigLoggingBucket` Name of the Amazon S3 bucket that collects AWS Config data
-   - `ConfigLoggingAccountID` This is the 12-digit number of the current account 
    - **Leave every other parameter to its default value**
 1. Run the template.
 1. Write down the following from the output of the CloudFormation template:

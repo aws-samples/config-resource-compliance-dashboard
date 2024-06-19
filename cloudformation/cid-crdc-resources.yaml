@@ -247,12 +247,16 @@ Resources:
             Effect: "Allow"
             Resource:
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              # TODO is there a way to refer to the ARN of the resource (GlueDatabase/) here?? should we do that?
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
-              # TODO the views are also created a Tables in Glue, for which I need to grant permission... check if views are created in this tamplate in the end (not ATM)
-              # all my views will start with 'config_' 
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_*/*"
+              # the views are also created as tables in Glue, for which I need to grant permission
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_conformance_packs_compliance/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_all/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_compliance/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_compliance_per_rule/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_ec2/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_rds/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_s3/*"
           - Sid: "AccessAthenaDatabaseWorkgroup"
             Action:
               - "athena:ListDatabases"
@@ -265,11 +269,9 @@ Resources:
               - "athena:GetTableMetadata"
             Effect: "Allow"
             Resource:
-              # TODO find resource name for GlueDataCatalog
-              # TODO confirm athena database arn exists, I used the same for GLUE right above...
+              # TODO athena database arn does not exist (I used the same for GLUE right above)...
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PGlueDataCatalog}"
-              # - !Sub arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${CidDatabase}
-              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
           - Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
             Action:
@@ -473,7 +475,7 @@ Resources:
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-          PATTERN = '^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
+          PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
           athena = boto3.client('athena')
 
@@ -516,7 +518,7 @@ Resources:
                   print('This is the object key', event_object_key)
                   print('This is the bucket', event_bucket_name)
 
-              object_key_parent = 's3://{event_bucket_name}/{os.path.dirname(event_object_key)}/'
+              object_key_parent = f's3://{event_bucket_name}/{os.path.dirname(event_object_key)}/'
 
               # process object key
               match  = re.match(PATTERN, event_object_key)
@@ -543,7 +545,7 @@ Resources:
               execute_query(f"""
                   ALTER TABLE {TABLE_NAME}
                   DROP IF EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}')
-              """")
+              """)
 
           def execute_query(query):
               print('Executing query:', query)
@@ -553,7 +555,7 @@ Resources:
                       'Database': ATHENA_DATABASE_NAME
                   },
                   ResultConfiguration={
-                      'OutputLocation': f's3://{athena_query_results_bucket}',
+                      'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
                   },
                   WorkGroup=ATHENA_WORKGROUP
               )
