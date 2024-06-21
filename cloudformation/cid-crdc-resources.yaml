@@ -8,46 +8,46 @@ Metadata:
         Label:
           default: "QuickSight"
         Parameters:
-            - PQuickSightUser
+            - QuickSightUserName
       -
         Label:
           default: "AWS Config Logging"
         Parameters:
-          - PConfigLoggingBucket
+          - ConfigLoggingBucketName
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
-          - PAthenaWorkgroup
+          - AthenaWorkgroupName
           - PAthenaDatabase
-          - PAthenaTable
-          - PAthenaQueryResultBucketPrefix
-          - PGlueDataCatalog
+          - AthenaTableName
+          - AthenaQueryResultBucketPrefix
+          - GlueDataCatalogName
       
     ParameterLabels:
-      PAthenaWorkgroup:
+      AthenaWorkgroupName:
         default: "Athena workgroup"
       PAthenaDatabase:
         default: "Athena database"
-      PAthenaQueryResultBucketPrefix:
+      AthenaQueryResultBucketPrefix:
         default: "Prefix of the Athena query results bucket"
-      PAthenaTable:
+      AthenaTableName:
         default: "Athena table for AWS Config data"
-      PConfigLoggingBucket:
-        default: "AWS Config bucket"
-      PQuickSightUser:
+      ConfigLoggingBucketName:
+        default: "Name of the Amazon S3 bucket destination of AWS Config snapshots"
+      QuickSightUserName:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
-      PGlueDataCatalog:
+      GlueDataCatalogName:
         default: "Existing Glue Data Catalog"
       
 Parameters:
-  PQuickSightUser:
+  QuickSightUserName:
     Type: String
     MinLength: 1
     Default: "Replace with QuickSight user"
     Description: See https://quicksight.aws.amazon.com/sn/admin#users
 
-  PConfigLoggingBucket:
+  ConfigLoggingBucketName:
     Type: "String"
     Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
@@ -64,7 +64,7 @@ Parameters:
     AllowedPattern: '^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]$'
     ConstraintDescription: "Required"
 
-  PAthenaQueryResultBucketPrefix:
+  AthenaQueryResultBucketPrefix:
     Type: "String"
     Default: "cid-crcd-athena-query-results" 
     Description: "The Athena query result bucket for the workgroup, Account ID and Region will be added to the name by this tempalte (Required)"
@@ -73,38 +73,38 @@ Parameters:
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,33}[a-z0-9]$'
     ConstraintDescription: "Required"
 
-  PAthenaWorkgroup:
+  AthenaWorkgroupName:
     Type: "String"
     Default: "cid-crcd-dashboard"
     Description: "The Athena workgroup for the CRCD dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
-  PAthenaTable:
+  AthenaTableName:
     Type: "String"
     Default: "cid_crcd_config"
     Description: "The name that will be assigned to the Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required"
 
-  PGlueDataCatalog:
+  GlueDataCatalogName:
     Type: "String"
     Default: "AwsDataCatalog"
-    Description: "Existing Glue Data Catalog"
+    Description: "Name of the existing Glue Data Catalog"
 
 Rules:
   MandatoryQuickSightUser:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PQuickSightUser
+          - !Ref QuickSightUserName
           - ''
         AssertDescription: "QuickSight user is required"
   MandatoryConfigLoggingBucket:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PConfigLoggingBucket
+          - !Ref ConfigLoggingBucketName
           - ''
         AssertDescription: "Config bucket name is required"
   MandatoryAthenaDatabase:
@@ -118,28 +118,28 @@ Rules:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PAthenaQueryResultBucketPrefix
+          - !Ref AthenaQueryResultBucketPrefix
           - ''
         AssertDescription: "Athena query result bucket is required"
   MandatoryAthenaWorkgroup:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PAthenaWorkgroup
+          - !Ref AthenaWorkgroupName
           - ''
         AssertDescription: "Athena workgroup is required"
   MandatoryAthenaTable:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PAthenaTable
+          - !Ref AthenaTableName
           - ''
         AssertDescription: "Athena table name is required"
   MandatoryGlueDataCatalog:
     Assertions:
       - Assert: !Not 
         - !Equals 
-          - !Ref PGlueDataCatalog
+          - !Ref GlueDataCatalogName
           - ''
         AssertDescription: "Glue Data Catalog name is required"
 
@@ -156,7 +156,7 @@ Resources:
   AthenaQueryResultBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub '${PAthenaQueryResultBucketPrefix}-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub '${AthenaQueryResultBucketPrefix}-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -192,7 +192,7 @@ Resources:
   AthenaWorkgroup: 
     Type: AWS::Athena::WorkGroup
     Properties:
-      Name: !Sub '${PAthenaWorkgroup}'
+      Name: !Sub '${AthenaWorkgroupName}'
       Description: 'Used by AWS Config Resource Compliance Dashboard (CRCD)'
       RecursiveDeleteOption: True 
       WorkGroupConfiguration:
@@ -272,10 +272,10 @@ Resources:
               - "athena:GetTableMetadata"
             Effect: "Allow"
             Resource:
-              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PGlueDataCatalog}"
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${GlueDataCatalogName}"
               # TODO athena database arn does not exist (I used the same for GLUE right above)...
               # REMOVED Athena permissions are for Athena resources - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroupName}"
           - Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
             Action:
               - "s3:GetBucketLocation"
@@ -291,13 +291,13 @@ Resources:
               - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}/*"
           - Sid: "AllowListTheS3ConfigBucket"
             Resource:
-              - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
             Action:
               - "s3:ListBucket"
             Effect: "Allow"
           - Sid: "AllowReadTheS3ConfigBucket"
             Resource:
-              - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}/*"
             Action:
               - "s3:GetObject"
               - "s3:GetObjectVersion"
@@ -384,8 +384,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}/*"
-          - !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}/*"
+          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
           Action:
           - "s3:GetObject"
           - "s3:ListBucket"
@@ -436,7 +436,7 @@ Resources:
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
-        - Resource: !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
+        - Resource: !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroupName}"
           Action:
           - "athena:StartQueryExecution"
           - "athena:GetQueryExecution"
@@ -484,8 +484,8 @@ Resources:
         Variables:
           ATHENA_DATABASE_NAME: !Ref PAthenaDatabase
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket
-          ATHENA_WORKGROUP: !Ref PAthenaWorkgroup
-          CONFIG_TABLE_NAME: !Ref PAthenaTable
+          ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
+          CONFIG_TABLE_NAME: !Ref AthenaTableName
       Code:
         ZipFile: |
           import re
@@ -649,7 +649,7 @@ Resources:
         - "LambdaFunctionPartitionerConfig"
         - "Arn"
       Action: "lambda:InvokeFunction"
-      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${PConfigLoggingBucket}"
+      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
       Principal: "s3.amazonaws.com"
       SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
 
