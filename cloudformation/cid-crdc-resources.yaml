@@ -23,7 +23,7 @@ Metadata:
           - AthenaTableName
           - AthenaQueryResultBucketPrefix
           - GlueDataCatalogName
-      
+
     ParameterLabels:
       AthenaWorkgroupName:
         default: "Athena workgroup"
@@ -39,7 +39,7 @@ Metadata:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       GlueDataCatalogName:
         default: "Existing Glue Data Catalog"
-      
+
 Parameters:
   QuickSightUserName:
     Type: String
@@ -52,13 +52,13 @@ Parameters:
     Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "Required"
-  
+
   PAthenaDatabase:
     Type: "String"
     Default: "cid_crcd_database"
     Description: "The Athena/Glue database for the CRCD dashboard (Required)"
     MinLength: 1
-    # The name for an Athena database 
+    # The name for an Athena database
     # Max 255 characters cannot have the symbol '-' and must have lowercase character, '_' is accepted
     # This value is not meant to be changed by the user, but we'll add the allowed pattern anyway
     AllowedPattern: '^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]$'
@@ -66,7 +66,7 @@ Parameters:
 
   AthenaQueryResultBucketPrefix:
     Type: "String"
-    Default: "cid-crcd-athena-query-results" 
+    Default: "cid-crcd-athena-query-results"
     Description: "The Athena query result bucket for the workgroup, Account ID and Region will be added to the name by this tempalte (Required)"
     # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
     # that leaves 36 character for the prefix
@@ -95,50 +95,50 @@ Parameters:
 Rules:
   MandatoryQuickSightUser:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref QuickSightUserName
           - ''
         AssertDescription: "QuickSight user is required"
   MandatoryConfigLoggingBucket:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref ConfigLoggingBucketName
           - ''
         AssertDescription: "Config bucket name is required"
   MandatoryAthenaDatabase:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref PAthenaDatabase
           - ''
         AssertDescription: "Athena database is required"
   MandatoryAthenaQueryResultBucketPrefix:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref AthenaQueryResultBucketPrefix
           - ''
         AssertDescription: "Athena query result bucket is required"
   MandatoryAthenaWorkgroup:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref AthenaWorkgroupName
           - ''
         AssertDescription: "Athena workgroup is required"
   MandatoryAthenaTable:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref AthenaTableName
           - ''
         AssertDescription: "Athena table name is required"
   MandatoryGlueDataCatalog:
     Assertions:
-      - Assert: !Not 
-        - !Equals 
+      - Assert: !Not
+        - !Equals
           - !Ref GlueDataCatalogName
           - ''
         AssertDescription: "Glue Data Catalog name is required"
@@ -189,12 +189,12 @@ Resources:
 
   # Athena workgroup to execute CRCD queries with its own result bucket
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
-  AthenaWorkgroup: 
+  AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
     Properties:
       Name: !Sub '${AthenaWorkgroupName}'
       Description: 'Used by AWS Config Resource Compliance Dashboard (CRCD)'
-      RecursiveDeleteOption: True 
+      RecursiveDeleteOption: True
       WorkGroupConfiguration:
         EnforceWorkGroupConfiguration: true
         ResultConfiguration:
@@ -231,7 +231,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-quicksight-datasource-policy" 
+      ManagedPolicyName: "cid-crcd-quicksight-datasource-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
       PolicyDocument:
@@ -343,7 +343,7 @@ Resources:
         rules_to_suppress:
           - id: W28
             reason: "Policy names are as per our design"
-  
+
   IAMManagedPolicyLambdaS3AthenaQueryResults:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
@@ -473,9 +473,7 @@ Resources:
       Handler: "index.lambda_handler"
       ReservedConcurrentExecutions: 1
       Role:
-        Fn::GetAtt:
-        - "IAMRoleLambdaPartitionerConfig"
-        - "Arn"
+ !GetAtt IAMRoleLambdaPartitionerConfig.Arn
       FileSystemConfigs: []
       LoggingConfig:
         LogFormat: "Text"
@@ -645,33 +643,74 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName:
-        Fn::GetAtt:
-        - "LambdaFunctionPartitionerConfig"
-        - "Arn"
+ !GetAtt LambdaFunctionPartitionerConfig.Arn
       Action: "lambda:InvokeFunction"
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
       Principal: "s3.amazonaws.com"
       SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
 
 
-Outputs:  
+  GlueTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: cid_crcd_config
+        TableType: EXTERNAL_TABLE
+        StorageDescriptor:
+          Columns:
+            - Name: fileversion
+              Type: string
+            - Name: configsnapshotid
+              Type: string
+            - Name: configurationitems
+              Type: array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>>
+          Location: !Sub 's3://${ConfigLoggingBucketName}/'
+          InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
+          OutputFormat: 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
+          SerdeInfo:
+            SerializationLibrary: 'org.openx.data.jsonserde.JsonSerDe'
+            Parameters:
+              case.insensitive: 'false'
+              mapping.arn: 'ARN'
+              mapping.availabilityzone: 'availabilityZone'
+              mapping.awsaccountid: 'awsAccountId'
+              mapping.awsregion: 'awsRegion'
+              mapping.configsnapshotid: 'configSnapshotId'
+              mapping.configurationitemcapturetime: 'configurationItemCaptureTime'
+              mapping.configurationitems: 'configurationItems'
+              mapping.configurationitemstatus: 'configurationItemStatus'
+              mapping.configurationitemversion: 'configurationItemVersion'
+              mapping.configurationstateid: 'configurationStateId'
+              mapping.configurationstatemd5hash: 'configurationStateMd5Hash'
+              mapping.fileversion: 'fileVersion'
+              mapping.resourceid: 'resourceId'
+              mapping.resourcename: 'resourceName'
+              mapping.resourcetype: 'resourceType'
+              mapping.supplementaryconfiguration: 'supplementaryConfiguration'
+          Compressed: false
+          NumberOfBuckets: -1
+        PartitionKeys:
+          - Name: accountid
+            Type: string
+          - Name: dt
+            Type: string
+          - Name: region
+            Type: string
+
+Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRole:
     Description: "Name of the Role created for QuickSight"
     Value: !Ref IAMRoleQuickSightDataSource
-  
+
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaARN:
     Description: "ARN of the Lambda Partitioner function supporting CRCD Dashboard"
-    Value:
-      Fn::GetAtt:
-        - "LambdaFunctionPartitionerConfig"
-        - "Arn"
+    Value: !GetAtt LambdaFunctionPartitionerConfig.Arn
 
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaRoleARN:
     Description: "ARN of the execution role of the CRCD Lambda Partitioner function"
-    Value:
-      Fn::GetAtt:
-        - "IAMRoleLambdaPartitionerConfig"
-        - "Arn"
+    Value: !GetAtt IAMRoleLambdaPartitionerConfig.Arn

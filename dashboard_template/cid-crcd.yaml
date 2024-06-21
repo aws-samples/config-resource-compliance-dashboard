@@ -5700,54 +5700,7 @@ views:
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
          WHERE ("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance')
       )  b ON (b.RuleName = a.RuleName))
-  cid_crcd_config:
-    data: |-
-      CREATE EXTERNAL TABLE `cid_crcd_config`(
-        `fileversion` string COMMENT 'from deserializer',
-        `configsnapshotid` string COMMENT 'from deserializer',
-        `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
-      PARTITIONED BY (
-        `accountid` string,
-        `dt` string,
-        `region` string)
-      ROW FORMAT SERDE
-        'org.openx.data.jsonserde.JsonSerDe'
-      WITH SERDEPROPERTIES (
-        'case.insensitive'='false',
-        'mapping.arn'='ARN',
-        'mapping.availabilityzone'='availabilityZone',
-        'mapping.awsaccountid'='awsAccountId',
-        'mapping.awsregion'='awsRegion',
-        'mapping.configsnapshotid'='configSnapshotId',
-        'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
-        'mapping.configurationitems'='configurationItems',
-        'mapping.configurationitemstatus'='configurationItemStatus',
-        'mapping.configurationitemversion'='configurationItemVersion',
-        'mapping.configurationstateid'='configurationStateId',
-        'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
-        'mapping.fileversion'='fileVersion',
-        'mapping.resourceid'='resourceId',
-        'mapping.resourcename'='resourceName',
-        'mapping.resourcetype'='resourceType',
-        'mapping.supplementaryconfiguration'='supplementaryConfiguration')
-      STORED AS INPUTFORMAT
-        'org.apache.hadoop.mapred.TextInputFormat'
-      OUTPUTFORMAT
-        'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
-      LOCATION
-        '${s3path}'
-      TBLPROPERTIES (
-        'transient_lastDdlTime'='1713257487')
-    parameters:
-      s3path:
-        default: s3://aws-controltower-logs-{account_id}/
-        # CUSTOMIZATION - new description and global parameter
-        description: S3 Path of your centralized bucket containing Config data (end it with a forward slash)
-        global: True
   config_conformance_packs_compliance:
-    dependsOn:
-      views:
-      - cid_crcd_config
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_conformance_packs_compliance AS
       SELECT DISTINCT
@@ -5786,9 +5739,6 @@ views:
          WHERE (Rowrank = 1)
       )  a
   config_inventory_compliance:
-    dependsOn:
-      views:
-      - cid_crcd_config
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_compliance AS
       SELECT DISTINCT
@@ -5819,10 +5769,6 @@ views:
          WHERE (Rowrank = 1)
       )  a
   config_inventory_rds:
-    dependsOn:
-      views:
-      - cid_crcd_config
-    # CUSTOMIZATION - custom tags
     parameters:
       tag1:
         default: tag1
