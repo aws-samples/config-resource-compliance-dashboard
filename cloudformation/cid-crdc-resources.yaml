@@ -180,6 +180,12 @@ Resources:
         config:
           ignore_checks:
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl; standard Athena results setup
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "We accept Athena query result bucket has no access logging"
+          - id: W51
+            reason: "We accept Athena query result bucket has no bucket policy"
 
   # Athena workgroup to execute CRCD queries with its own result bucket
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
@@ -200,13 +206,13 @@ Resources:
     Type: AWS::IAM::Role
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
-    Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
     Properties:
+      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
       MaxSessionDuration: 3600
-      RoleName: !Sub "cid-crcd-quicksight-datasource-role"
+      RoleName: "cid-crcd-quicksight-datasource-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -214,13 +220,18 @@ Resources:
           Effect: "Allow"
           Principal:
             Service: "quicksight.amazonaws.com"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   IAMManagedPolicyQuickSightDataSource:
     Type: AWS::IAM::ManagedPolicy
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-quicksight-datasource-policy" 
+      ManagedPolicyName: "cid-crcd-quicksight-datasource-policy" 
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
       PolicyDocument:
@@ -248,15 +259,7 @@ Resources:
             Resource:
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaTable}/*"
-              # the views are also created as tables in Glue, for which I need to grant permission
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_conformance_packs_compliance/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_all/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_compliance/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_compliance_per_rule/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_ec2/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_rds/*"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/config_inventory_s3/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}/*"
           - Sid: "AccessAthenaDatabaseWorkgroup"
             Action:
               - "athena:ListDatabases"
@@ -269,9 +272,9 @@ Resources:
               - "athena:GetTableMetadata"
             Effect: "Allow"
             Resource:
-              # TODO athena database arn does not exist (I used the same for GLUE right above)...
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${PGlueDataCatalog}"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+              # TODO athena database arn does not exist (I used the same for GLUE right above)...
+              # REMOVED Athena permissions are for Athena resources - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${PAthenaWorkgroup}"
           - Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
             Action:
@@ -302,15 +305,17 @@ Resources:
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: 'W11'
+          - id: W13
             reason: "Need to use * for Lakeformation and Athena"
+          - id: W28
+            reason: "Policy names are as per our design"
 
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-glue-policy"
+      ManagedPolicyName: "cid-crcd-glue-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Glue permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -333,13 +338,18 @@ Resources:
           - "glue:BatchCreatePartition"
           Effect: "Allow"
           Sid: "GluePartitions"
-
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
+  
   IAMManagedPolicyLambdaS3AthenaQueryResults:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-s3-athenaqueryresults-policy"
+      ManagedPolicyName: "cid-crcd-s3-athenaqueryresults-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CRCD Lambda execution role"
       PolicyDocument:
@@ -356,13 +366,18 @@ Resources:
           - "s3:GetBucketLocation"
           Effect: "Allow"
           Sid: "S3AthenaQueryResults"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   IAMManagedPolicyLambdaS3ConfigSnapshotObject:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-s3-configsnapshotobject-policy"
+      ManagedPolicyName: "cid-crcd-s3-configsnapshotobject-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
@@ -379,13 +394,18 @@ Resources:
           - "s3:GetLifecycleConfiguration"
           Effect: "Allow"
           Sid: "S3ConfigSnapshotObject"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   IAMManagedPolicyLambdaCloudWatchLogs:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-cloudwatch-logs-policy"
+      ManagedPolicyName: "cid-crcd-cloudwatch-logs-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives CloudWatch Logs permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -399,13 +419,18 @@ Resources:
           - "logs:CreateLogGroup"
           Effect: "Allow"
           Sid: "CloudWatchLogGroup"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   IAMManagedPolicyLambdaAthena:
     Type: AWS::IAM::ManagedPolicy
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: !Sub "cid-crcd-athena-policy"
+      ManagedPolicyName: "cid-crcd-athena-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Athena permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -417,6 +442,11 @@ Resources:
           - "athena:GetQueryExecution"
           Effect: "Allow"
           Sid: "AthenaAccess"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   LambdaFunctionPartitionerConfig:
     Type: AWS::Lambda::Function
@@ -573,13 +603,18 @@ Resources:
                   if not is_query_running and query_state != 'SUCCEEDED':
                       raise AthenaException('Query failed')
               print('Query completed')
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: "Permission to write CloudWatch logs is given in IAMRoleLambdaPartitionerConfig"
 
   IAMRoleLambdaPartitionerConfig:
     Type: AWS::IAM::Role
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
-    Description: "CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
     Properties:
+      Description: "CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyLambdaAthena"
@@ -588,7 +623,7 @@ Resources:
       - Ref: "IAMManagedPolicyLambdaCloudWatchLogs"
       - Ref: "IAMManagedPolicyLambdaS3ConfigSnapshotObject"
       MaxSessionDuration: 3600
-      RoleName: !Sub "cid-crcd-lambda-partitioner-role"
+      RoleName: "cid-crcd-lambda-partitioner-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -597,6 +632,11 @@ Resources:
           Principal:
             Service: "lambda.amazonaws.com"
           Sid: "AllowLambdaAssumeRole"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
 
   # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
   LambdaInvocationPermissionLambdaPartitionerConfig:

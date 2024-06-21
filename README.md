@@ -247,7 +247,8 @@ Where:
 3. When prompted:
    - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CRCD)` dashboard
    - For each QuickSight dataset, choose `yes` to delete the dataset
-   - Accept the default values of the S3 Path for the Athena table.
+   - Accept the default values of the S3 Path for the Athena table
+   - Accept the default values of the four tags
    - For each Athena view, choose `yes` to delete the dataset
 
 1. On the same account, open CloudFormation and delete the template that installed the resources for the dashboard (make sure to empty the Amazon S3 bucket hosting the Athena Query results first)
