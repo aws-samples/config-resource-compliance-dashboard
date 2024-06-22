@@ -470,8 +470,12 @@ Resources:
         UpdateRuntimeOn: "Auto"
       Handler: "index.lambda_handler"
       ReservedConcurrentExecutions: 1
+<<<<<<< HEAD
       Role:
         !GetAtt IAMRoleLambdaPartitionerConfig.Arn
+=======
+      Role: !GetAtt IAMRoleLambdaPartitionerConfig.Arn
+>>>>>>> d184c1d1cd77833d21c008fe47bdaf3562b832a6
       FileSystemConfigs: []
       LoggingConfig:
         LogFormat: "Text"
@@ -640,8 +644,12 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
+<<<<<<< HEAD
       FunctionName:
         !GetAtt LambdaFunctionPartitionerConfig.Arn
+=======
+      FunctionName: !GetAtt LambdaFunctionPartitionerConfig.Arn
+>>>>>>> d184c1d1cd77833d21c008fe47bdaf3562b832a6
       Action: "lambda:InvokeFunction"
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
       Principal: "s3.amazonaws.com"
