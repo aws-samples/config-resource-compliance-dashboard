@@ -19,7 +19,7 @@ Metadata:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - AthenaWorkgroupName
-          - PAthenaDatabase
+          - AthenaDatabaseName
           - AthenaTableName
           - AthenaQueryResultBucketPrefix
           - GlueDataCatalogName
@@ -27,7 +27,7 @@ Metadata:
     ParameterLabels:
       AthenaWorkgroupName:
         default: "Athena workgroup"
-      PAthenaDatabase:
+      AthenaDatabaseName:
         default: "Athena database"
       AthenaQueryResultBucketPrefix:
         default: "Prefix of the Athena query results bucket"
@@ -53,7 +53,7 @@ Parameters:
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "Required"
 
-  PAthenaDatabase:
+  AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
     Description: "The Athena/Glue database for the CRCD dashboard (Required)"
@@ -111,7 +111,7 @@ Rules:
     Assertions:
       - Assert: !Not
         - !Equals
-          - !Ref PAthenaDatabase
+          - !Ref AthenaDatabaseName
           - ''
         AssertDescription: "Athena database is required"
   MandatoryAthenaQueryResultBucketPrefix:
@@ -149,7 +149,7 @@ Resources:
     Properties:
       DatabaseInput:
         Description: "Database for AWS Config Resource Compliance Dashboard (CRCD)"
-        Name: !Sub "${PAthenaDatabase}"
+        Name: !Sub "${AthenaDatabaseName}"
       # The AWS account ID for the account in which to create the catalog object.
       CatalogId: !Sub '${AWS::AccountId}'
 
@@ -207,7 +207,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the underlying S3 bucket that contains AWS Config snapshots"
+      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the S3 bucket that contains AWS Config snapshots"
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
@@ -258,8 +258,8 @@ Resources:
             Effect: "Allow"
             Resource:
               - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
-              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}/*"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabaseName}"
+              - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AthenaDatabaseName}/*"
           - Sid: "AccessAthenaDatabaseWorkgroup"
             Action:
               - "athena:ListDatabases"
@@ -273,8 +273,6 @@ Resources:
             Effect: "Allow"
             Resource:
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${GlueDataCatalogName}"
-              # TODO athena database arn does not exist (I used the same for GLUE right above)...
-              # REMOVED Athena permissions are for Athena resources - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroupName}"
           - Sid: "AllowReadAndWriteToAthenaQueryResultBucket"
             Action:
@@ -322,8 +320,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${PAthenaDatabase}/*"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${PAthenaDatabase}"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AthenaDatabaseName}/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AthenaDatabaseName}"
           - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog"
           Action:
           - "glue:UpdatePartition"
@@ -473,14 +471,14 @@ Resources:
       Handler: "index.lambda_handler"
       ReservedConcurrentExecutions: 1
       Role:
- !GetAtt IAMRoleLambdaPartitionerConfig.Arn
+        !GetAtt IAMRoleLambdaPartitionerConfig.Arn
       FileSystemConfigs: []
       LoggingConfig:
         LogFormat: "Text"
         # this is already by default LogGroup: "/aws/lambda/cid-crcd-config-snapshot-partitioner"
       Environment:
         Variables:
-          ATHENA_DATABASE_NAME: !Ref PAthenaDatabase
+          ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CONFIG_TABLE_NAME: !Ref AthenaTableName
@@ -643,12 +641,11 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName:
- !GetAtt LambdaFunctionPartitionerConfig.Arn
+        !GetAtt LambdaFunctionPartitionerConfig.Arn
       Action: "lambda:InvokeFunction"
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
       Principal: "s3.amazonaws.com"
       SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
-
 
   GlueTable:
     Type: AWS::Glue::Table
@@ -656,7 +653,7 @@ Resources:
       CatalogId: !Ref AWS::AccountId
       DatabaseName: !Ref GlueDatabase
       TableInput:
-        Name: cid_crcd_config
+        Name: !Ref AthenaTableName
         TableType: EXTERNAL_TABLE
         StorageDescriptor:
           Columns:
