@@ -5845,7 +5845,7 @@ views:
             , "configurationItem"."resourceCreationTime" "ResourceCreateTime"
             , "configurationItem"."resourceId" "ResourceId"
             , "configurationItem"."resourceName" "ResourceName"
-            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."arn", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
+            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."arn" ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
               (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -5908,7 +5908,7 @@ views:
             , "configurationItem"."tags" "AllTags"
             , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
             , "json_extract_scalar"("configurationItem"."configuration", '$.creationDate') "CreationDate"
-            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."resourceName", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
+            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."resourceName" ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
               (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -5969,7 +5969,7 @@ views:
             , "configurationItem"."configurationitemcapturetime" "LastConfigSnapshot"
             , "configurationItem"."resourcetype" "ResourceType"
             , "configurationItem"."arn" "Arn"
-            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."arn", YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
+            , ROW_NUMBER() OVER (PARTITION BY "configurationItem"."arn" ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
               (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -6045,7 +6045,7 @@ views:
             , "json_extract_scalar"("configurationItem"."configuration", '$.privateIpAddress') "PrivateIp"
             , "json_extract_scalar"("configurationItem"."configuration", '$.publicIpAddress') "PublicIp"
             , "json_extract_scalar"("configurationItem"."configuration", '$.state.name') "State"
-            , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"("configurationItem"."configuration", '$.instanceId'), YEAR(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")), MONTH(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
+            , ROW_NUMBER() OVER (PARTITION BY "json_extract_scalar"("configurationItem"."configuration", '$.instanceId') ORDER BY CAST(date_parse("dt", '%Y-%m-%d') AS "Date") DESC) Rowrank
             FROM
               (cid_crcd_config
             CROSS JOIN UNNEST("configurationitems") t (configurationItem))
