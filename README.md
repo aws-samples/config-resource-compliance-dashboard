@@ -56,7 +56,13 @@ Once you have decided the region, AWS resources supporting the dashboard (deploy
 ## Prerequisites
  
 1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config Configuration Snapshots to a centralized S3 bucket in the Log Archive account
-   1. If you do not have AWS Config enabled, follow [these instructions](https://aws.amazon.com/blogs/mt/managing-aws-organizations-accounts-using-aws-config-and-aws-cloudformation-stacksets/) to use AWS CloudFormation StackSets to enable AWS Config on all member accounts under organizational units in a single execution
+   1. You can use AWS CloudFormation StackSets to enable AWS Config on all member accounts under organizational units in a single execution:
+      1. Open CloudFormation in the AWS console
+      1. Select **StackSets** from the left menu and then click the **Create StackSet** button
+      1. On the **Choose a template** page, under **Prerequisite - Prepare template** select **Use a sample template**
+      1. This will reveal the **Select a sample template** section and the **Sample templates** drop down list
+      1. From the drop down list select **Enable AWS Config with central logging**
+      1. Follow instructions
 
 1. An AWS Account where you'll deploy the dashboard (the Dashboard Account)
 1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation
