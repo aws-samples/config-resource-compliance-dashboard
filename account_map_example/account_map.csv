@@ -1,8 +1,0 @@
-account_id,account_name,business_unit,team,cost_center
-111122223333,Main,BU1,team1,1234
-111122223333,Prod,BU2,team2,5678
-111122223333,Test,BU1,team2,1234
-111122223333,PreProd,BU3,team1,5678
-111122223333,Dev,BU1,team2,1234
-111122223333,Audit,BU3,team3,1234
-111122223333,Logs,BU2,team3,5678
