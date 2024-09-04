@@ -1,3 +1,13 @@
+# [2.0.1] - 2024-09-04
+## Added
+- Added Lambda Inventory to Configuration Items
+- Support for technical lifecycle management by listing current version of resources (RDS Engine, Lambda runtime, EC2 OS) that can go into deprecation support
+
+## Changed
+
+## Fixed
+N/A
+
 # [2.0.0] - 2024-05-01
 ## Added
 - CloudFormation scripts
