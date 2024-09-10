@@ -260,7 +260,7 @@ Where:
 1. Revert any manual change done during setup:
    - Amazon S3 Config Logging Bucket: remove the bucket policy statement that allows the Lambda Partitioner function to read objects
    - Amazon S3 Config Logging Bucket: remove the Event notification that triggered the  Lambda Partitioner function
-   - If you configured replication for the Config objects across accounts, remove the destination bucket and the replication configuration.
+   - If you configured replication for the Config objects across accounts, remove the destination bucket and the replication configuration
 
 # Additional Information
 
