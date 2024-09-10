@@ -12,7 +12,7 @@ The AWS Config Resource Compliance Dashboard (CRCD) shows the inventory of resou
 - Month-by-month evolution of the compliance status of your resources
 - Breakdown of compliance per service, account and region
 - Compliance of AWS Config Rules and Conformance Packs
-- Inventory of Amazon EC2, Amazon S3 and Amazon Relational Database Service (RDS) resources with filtering on account, region, customizable tags
+- Inventory of Amazon EC2, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, region, customizable tags
 - A deep dive on tagging compliance
 
 The dashboard uses these sources to get these insights:
@@ -171,7 +171,6 @@ Once object replication is configured, follow the instructions on the next parag
    - On the top right corner, click on `Actions`, and then `Upload file`
    - Select the `CID-Config.yaml` file under the `dashboard_template` directory and click on `Upload`
    - Deploy the dashboard running the command (replace first the following parameters):
-     - `--s3path` The full path of the Amazon S3 bucket that contains your AWS Config logs, eg: `s3://my-config-logs-bucket/` be sure it ends with a forward slash `/`
      - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template
      - `--tag1` The name of the first tag you use to categorize workloads
      - `--tag2` The name of the second tag you use to categorize workloads
@@ -181,7 +180,7 @@ Once object replication is configured, follow the instructions on the next parag
      - **Leave every other parameter to its default value**
 
     ```
-    cid-cmd deploy --resources 'cid-crcd.yaml' --s3path 'REPLACE-WITH-S3-CONFIG-BUCKET' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
+    cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
 1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`
 1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected)

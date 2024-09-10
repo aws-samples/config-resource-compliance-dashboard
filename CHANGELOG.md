@@ -1,12 +1,16 @@
-# [2.0.1] - 2024-09-04
+# [2.1.0] - 2024-09-10
 ## Added
-- Added Lambda Inventory to Configuration Items
-- Support for technical lifecycle management by listing current version of resources (RDS Engine, Lambda runtime, EC2 OS) that can go into deprecation support
+- About page
+- Lambda Inventory to Configuration Items
+- Support for technical lifecycle management by listing current version of resources (RDS Engine, Lambda runtime) that can be deprecated or enter extended support
 
 ## Changed
+- Interface improvements on Configuration Items
+- Account ID and Region consistently the first two columns of the inventory tables in Configuration Items
+- Updated installation instructions
 
 ## Fixed
-N/A
+- Removed reserved concurrency limitation on Lambda function
 
 # [2.0.0] - 2024-05-01
 ## Added
