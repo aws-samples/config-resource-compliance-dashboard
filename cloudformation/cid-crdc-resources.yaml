@@ -471,7 +471,6 @@ Resources:
       RuntimeManagementConfig:
         UpdateRuntimeOn: "Auto"
       Handler: "index.lambda_handler"
-      ReservedConcurrentExecutions: 1
       Role: !GetAtt IAMRoleLambdaPartitionerConfig.Arn
       FileSystemConfigs: []
       LoggingConfig:
