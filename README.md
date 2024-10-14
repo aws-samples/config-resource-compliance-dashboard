@@ -88,52 +88,51 @@ _You can skip this paragraph if you have AWS Config enabled._
 
 The solution leverages AWS Config data to build the visualizations on the dashboard. If you **do not** have AWS Config enabled, we strongly recommend that you build your strategy first, i.e. decide which accounts, regions and resources to monitor, what does "compliance" mean to your organization, which account is going to be delegated admin for AWS Config, and so on. Only when the AWS Config setup matches your needs, you should consider deploying this dashboard.
 
-### Control Tower and drift
+### AWS Control Tower and drift
 
-_TODO explain_
+If you enabled AWS Config in all accounts an regions via AWS Control Tower, certain pieces of the configuration of the dashboard will make changes to the Log Archive bucket and may introduce drift with the installation controlled by AWS Control Tower. 
+_TODO we are working on a solution_
+
 
 ### Deployment architecure 
-The most important decision is to whether you want to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
+The most important decision to make is to whether you want to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
 
 #### Log Archive account architecture
 | Pros  | Cons   | 
 |---|---|
-| Keep your logs secure in the Log Archive account  | Your security team must install and maintain the CRCD Dashboard resources, including users access to Quicksight  |
-| Avoid additional cost for data transfer and storing your data on the Dashboard account  | The CRCD Dashboard adds complexity in users management to possible Quicksight dashbaords that you already have deployed on the Log Archive account   |
-|   | Some steps of the configurations must be done manually (_TODO TBC_) to avoid causing drift in case you use Control tower  |
+| Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including users access to Quicksight. Alternatively, you have to share access to the Log Archive account to other teams that will manage these resouces.  |
+| Avoid additional cost for data transfer and storing your data on the Dashboard account.  | The CRCD Dashboard adds complexity in users management to possible Quicksight dashbaords that you already have deployed on the Log Archive account.  |
+|   | Some steps of the configurations must be done manually (_TODO WIP_) to avoid causing drift in case you use AWS Control Tower.  |
 
 
 #### Dashboard account architecture
 | Pros  | Cons   | 
 |---|---|
-| Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access  | Your security data will be copied to another AWS account  |
-| Limited number of resources deployed on Log Archive account| This installation may (_TODO TBC_) cause drift in case you use Control Tower |
-| | Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account |
-||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket|
+| Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
+| Limited number of resources deployed on Log Archive account.| This installation may (_TODO WIP_) cause drift in case you use AWS Control Tower. |
+| | Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
+||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
 
 
 ## Prerequisites
  
-1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config files to a centralized S3 bucket (the Log Archive bucket) in the Log Archive account
-1. An AWS Account where you'll deploy the dashboard (the Dashboard account)
-1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation
+1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config files to a centralized S3 bucket (the Log Archive bucket) in the Log Archive account.
+1. An AWS Account where you'll deploy the dashboard (the Dashboard account).
+1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation.
 1. Sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user:
-    1. Select **Enterprise** edition
-    2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer
-    3. **Use IAM federated identities and QuickSight-managed users**
-    4. Select the region where to deploy the dashboard. We recommend using the same region of your Amazon S3 bucket
-    5. Add an username and an e-mail where you'll receive notifications about failed QuickSight datasets updates
-    6. Use the **QuickSight-managed role (default)**
-    7. Don't modify the **Allow access and autodiscovery for these resources** section and click on **Finish**
-1. Ensure you have SPICE capacity left in the region where you're deploying the dashboard
+    1. Select **Enterprise** edition.
+    2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer.
+    3. **Use IAM federated identities and QuickSight-managed users**.
+    4. Select the region where to deploy the dashboard. We recommend using the same region of your Amazon S3 bucket.
+    5. Add an username and an e-mail where you'll receive notifications about failed QuickSight datasets updates.
+    6. Use the **QuickSight-managed role (default)**.
+    7. Don't modify the **Allow access and autodiscovery for these resources** section and click on **Finish**.
+1. Ensure you have SPICE capacity left in the region where you're deploying the dashboard.
 
 
 
 ## Deployment Instructions 
-
-_TODO describe and represent well separation between **data pipeline** and **dashboard** installation_
-
-The infrastructure needed to collect and process the data is defined in CloudFormation. The dashboard resources are defined in a template file that can be installed using the CID-CMD tool.
+The infrastructure needed to collect and process the data is defined in CloudFormation. The dashboard resources are defined in a template file that can be installed using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool.
 
 Regardless of the deployment of the deployment architecture of your choice, you will use the same YAML file for the CloudFormation template; specific input parameters to the template will determine what will be installed.
 
@@ -166,7 +165,7 @@ Follow instructions on one of the paragraphs below, depending on the architectur
 ### Installation on Log Archive account
 The installation process consists of two steps:
 1. Data pipeline resources for the dashboard, via CloudFormation stack
-1. Quicksight resources for the dashboard and the necessary Athena views, using the CID-CMD command line tool
+1. Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool
 
 ![CRCD](images/deployment-steps-log-archive-account.png "CRCD Dashboard: deployment steps on Log Archive account")
 
@@ -229,17 +228,37 @@ Stay logged into the AWS Management Console for your **Log Archive account**.
    - The datasets for this dashboard have all the `config_` prefix
    - Click on a Dataset, and then open the Refresh tab
    - Click on Add a new schedule, select Full refresh and a Frequency
+1. Visualize the dashboard:
+   - Navigate to QuickSight and then Dashboards
+   - Make sure you are in the correct region
+   - Click on the AWS Config Resource Compliance Dashboard (CRCD) dashboard
 
 
 #### Manual setup of S3 event notification
-_TODO_
+_You can skip this paragraph if you selected_ `yes` _on CloudFormation parameter_ `Configure S3 event notification` _at step 1 above._
+
+_TODO verify permissions in case of SNS_
+
+If you selected `no`, the necessary permissions have been deployed by CloudFormation already, now you must configure the Log Archive S3 bucket to trigger the Lambda Partitioner function when objects are added to the bucket. 
+
+The Lambda partitioner notifications from S3 have these constraints:
+1. All object create events
+1. All prefixes
+
+This may be a challenge depending on your current S3 event notification, since Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html) overlapping prefixes in two rules for the same event type.
+
+We recommend that you configure your event notification to an SNS topic (if not already):
+* If your bucket publishes events notifications to an SNS topic, you can subscribe the Lambda Partitioner function to the topic.
+* If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the Lambda Partitioner function to that SNS topic.
+
+Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html) to add a notification configuration to your bucket using an Amazon SNS topic.
 
 ### Installation on dedicated Dashboard account
 
 The installation process consists of three steps:
 1. On the Dashboard account: data pipeline resources for the dashboard, via CloudFormation stack
 1. On the Log Archive account: configure the S3 replication rule that will copy AWS Config files from the  Log Archive bucket to the Dashboard bucket, via CloudFormation stack
-1. On the Dashboard account: Quicksight resources for the dashboard and the necessary Athena views, using the CID-CMD command line tool
+1. On the Dashboard account: Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool
 
 ![CRCD](images/deployment-steps-dashboard-account.png "CRCD Dashboard: deployment steps on Dashboard account")
 
@@ -319,6 +338,24 @@ Log back into the AWS Management Console for your **Log Archive account**.
    - The datasets for this dashboard have all the `config_` prefix
    - Click on a Dataset, and then open the Refresh tab
    - Click on Add a new schedule, select Full refresh and a Frequency
+1. Visualize the dashboard:
+   - Navigate to QuickSight and then Dashboards
+   - Make sure you are in the correct region
+   - Click on the AWS Config Resource Compliance Dashboard (CRCD) dashboard
+
+#### Manual setup of S3 replication
+_You can skip this paragraph if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _at step 2 above._
+
+
+_TODO review, is the IAM role in the output of CFN? are permissions on the bucket created in case on no?_
+
+Log onto the Log Archive Account and open the Amazon S3 console. You can replicate AWS Config files from the centralized Log Archive bucket to the Dashboard bucket through an Amazon S3 Replication configuration, follow these [instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html). 
+* Specify the IAM role created by the CloudFormation template
+
+* _Once you create the replication configuration on the source bucket, write down the ARN of the IAM role created for the replication. Amazon S3 assumes this IAM role to replicate objects across accounts on your behalf._
+
+
+
 
 ### Installation on dedicated Dashboard account [OLD]
 
@@ -539,9 +576,6 @@ Where:
 * `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z
 * `RESOURCE-ID` identifies the resource affected by the ConfigHistory record, e.g. AWS::Lambda::Function
 * `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb
-
-
-
 
 # Security
 
