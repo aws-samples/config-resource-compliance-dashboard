@@ -32,7 +32,7 @@ Metadata:
       AthenaQueryResultBucketPrefix:
         default: "Prefix of the Athena query results bucket"
       AthenaTableName:
-        default: "Athena table for AWS Config data"
+        default: "Athena table for AWS Config compliance data"
       ConfigLoggingBucketName:
         default: "Name of the Amazon S3 bucket destination of AWS Config snapshots"
       QuickSightUserName:
@@ -514,6 +514,7 @@ Resources:
 
               event_object_key = None
               event_bucket_name = None
+              dataSource = None # this can be ConfigSnapshot or ConfigHistory
               found_event = False
 
               # Is this called directly by S3 event notification?
@@ -553,24 +554,33 @@ Resources:
                   return
               if LOGGING_ON:
                   print('match.groupdict() = ', match.groupdict())
+                  
               accountid = match.groupdict()['account_id']
               region = match.groupdict()['region']
               date = '{year}-{month}-{day}'.format(**match.groupdict())
+              if 'ConfigSnapshot' in event_object_key:
+                  dataSource = 'ConfigSnapshot'
+              elif 'ConfigHistory'  in event_object_key:
+                  dataSource = 'ConfigHistory'
+              else:
+                  # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
+                  print(f'ERROR: {event_object_key} is neither ConfigSnapshot nor ConfigHistory')
+                  raise
 
-              drop_partition(accountid, region, date)
-              add_partition(accountid, region, date, object_key_parent)
+              drop_partition(accountid, region, date, dataSource)
+              add_partition(accountid, region, date, object_key_parent, dataSource)
 
-          def add_partition(accountid, region, date, location):
+          def add_partition(accountid, region, date, location, dataSource):
               execute_query(f"""
                   ALTER TABLE {TABLE_NAME}
-                  ADD PARTITION (accountid='{accountid}', dt='{date}', region='{region}')
+                  ADD PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
                   LOCATION '{location}'
               """)
 
-          def drop_partition(accountid, region, date):
+          def drop_partition(accountid, region, date, dataSource):
               execute_query(f"""
                   ALTER TABLE {TABLE_NAME}
-                  DROP IF EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}')
+                  DROP IF EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
               """)
 
           def execute_query(query):
@@ -694,6 +704,9 @@ Resources:
             Type: string
           - Name: region
             Type: string
+          - Name: dataSource
+            Type: string
+
 
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
