@@ -1,6 +1,38 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
+# Data pipeline installs resources from S3 to the Athena table- Athena views and QuickSight resources are excluded
+#
+# The following use cases are supported
+# 1. deployment on Log Archive account (all in one account)
+#    In this case the AWS Config bucket is the source of logs, the Lambda is triggered from this bucket directly
+#
+# 2. deployment on Dashboard account 
+#    AWS Config logs are delivered to the Log Archive account, then replicated to the Dashboard account where all the resources related to the dashboard are deployed
+#
+#    2.1 - always start by running this template on the Dashboard account
+#    Create the S3 bucket for the copy of the logs
+#    Add permissions to the bucket to allow replication from the Log Archive Account
+#    Trigger the lambda function from the bucket created in the Dashboard account
+#
+#    2.2
+#    Run the Log Archive account to setup replication to the bucket created on 2.1
+#
+# 3. Deployment on a single account
+#    This is most likely the same as use case 1
+
+# The template requires these parameters, which must always be provided by users:
+# A: LogArchiveAccountId  X: LogArchiveBucketName
+# B: DashboardAccountId   Y: DashboardBucketName
+#
+# This is how this template determines what to install
+#    use case 1 if A=B and X=Y
+#    use case 2.1 if A!=B and X!=Y and current account is B
+#    use case 2.2 if A!=B and X!=Y and current account is A 
+#    use case 3 if A=B and X=Y
+
+# This way, all CRCD resources are mapped to the DashboardBucketName parameter
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -11,9 +43,18 @@ Metadata:
             - QuickSightUserName
       -
         Label:
-          default: "AWS Config Logging"
+          default: "AWS Config logging - where your AWS Config files are delivered"
         Parameters:
-          - ConfigLoggingBucketName
+          - LogArchiveAccountId
+          - LogArchiveBucketName
+      -
+        Label:
+          default: "CRCD Dashboard - where you deploy the dashboard and where its data is" 
+        Parameters:
+          - DashboardAccountId
+          - DashboardBucketName
+          - ConfigureS3EventNotificationToLambda
+          - ConfigureS3Replication
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -22,7 +63,9 @@ Metadata:
           - AthenaDatabaseName
           - AthenaTableName
           - AthenaQueryResultBucketPrefix
+          - LambdaPartitioningFunctionName
           - GlueDataCatalogName
+          - CrossAccountReplicationRole
 
     ParameterLabels:
       AthenaWorkgroupName:
@@ -32,26 +75,79 @@ Metadata:
       AthenaQueryResultBucketPrefix:
         default: "Prefix of the Athena query results bucket"
       AthenaTableName:
-        default: "Athena table for AWS Config compliance data"
-      ConfigLoggingBucketName:
-        default: "Name of the Amazon S3 bucket destination of AWS Config snapshots"
+        default: "Athena table for AWS Config data"
+      LogArchiveBucketName:
+        default: "Log Archive bucket"
       QuickSightUserName:
         default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       GlueDataCatalogName:
         default: "Existing Glue Data Catalog"
+      LambdaPartitioningFunctionName:
+        default: "AWS Lambda function that partitions AWS Config files"
+      LogArchiveAccountId: 
+        default: "Log Archive account ID"
+      DashboardBucketName:
+        default: "Dashboard bucket"
+      DashboardAccountId:
+        default: "Dashboard account ID"
+      ConfigureS3EventNotificationToLambda:
+        default: "Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file" 
+      ConfigureS3Replication:
+        default: "Configure cross-account replication of AWS Config files from Log Archive to Dashboard account"
+      CrossAccountReplicationRole:
+        default: "Name of the role used in cross-account replication of AWS Config files"
 
 Parameters:
   QuickSightUserName:
     Type: String
     MinLength: 1
     Default: "Replace with QuickSight user"
-    Description: See https://quicksight.aws.amazon.com/sn/admin#users
+    Description: "See https://quicksight.aws.amazon.com/sn/admin#users"
 
-  ConfigLoggingBucketName:
+  LogArchiveBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket that collects AWS Config data (Required)"
-    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-    ConstraintDescription: "Required"
+    Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)"
+    Default: ""
+    # \s*| allow the empty string in OR with the rest, so that the template can load with the default value without a failing validation before the user can insert the parameter
+    AllowedPattern: '^(\s*|[a-z0-9][a-z0-9-]{1,61}[a-z0-9])$'
+    ConstraintDescription: "The provided bucket name does not satisfy the Amazon S3 naming convention" # can be used to explain when the value fails the regex
+
+  LogArchiveAccountId:
+    Type: String
+    Default: ""
+    Description: "The number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)"
+    #AllowedPattern: '\d{12}'
+    AllowedPattern: '^(\s*|\d{12})$'
+    ConstraintDescription: "AWS account ID must be a 12-digit number"
+
+  DashboardAccountId:
+    Type: String
+    Default: ""
+    Description: "The number of the AWS account that contains the Amazon S3 bucket source of data for the CRCD dashboard and related data pipeline resources. Insert an existing AWS account ID that will be dedicated to the dashboard, or the Lor Archive account ID if you want to install the CRCD Dashboard in the same account where AWS Config files are collected (Required)"
+    #AllowedPattern: '\d{12}'
+    AllowedPattern: '^(\s*|\d{12})$'
+    ConstraintDescription: "AWS account ID must be a 12-digit number"
+
+  DashboardBucketName:
+    Type: "String"
+    Description: "Name of the Amazon S3 bucket that is used as source of data for the CRCD dashboard. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created; if you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again (Required)"
+    # AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    AllowedPattern: '^(\s*|[a-z0-9][a-z0-9-]{1,61}[a-z0-9])$'
+    Default: ""
+    ConstraintDescription: "The provided bucket name does not satisfy the Amazon S3 naming convention"
+
+  ConfigureS3EventNotificationToLambda:
+    Type: String
+    Description:  "Select 'no' if you are deploying the dashboard on your Log Archive account and already have an S3 object notification"
+    AllowedValues: ['<select>', 'yes', 'no']
+    Default: "<select>" # This value is used below, careful if you change it
+
+  ConfigureS3Replication:
+    Type: String
+    Description: "ONLY in case of installation on a dedicated Dashboard account. Select 'no' if you already have an S3 replication configurations on the Log Archive S3. Seleting 'yes' will OVERWRITE your existing S3 replication!"
+    AllowedValues: ['<select>', 'yes', 'no']
+    Default: "<select>" # This value is used below, careful if you change it
+  
 
   AthenaDatabaseName:
     Type: "String"
@@ -62,53 +158,149 @@ Parameters:
     # Max 255 characters cannot have the symbol '-' and must have lowercase character, '_' is accepted
     # This value is not meant to be changed by the user, but we'll add the allowed pattern anyway
     AllowedPattern: '^[a-z0-9][a-z0-9_]{0,253}[a-z0-9]$'
-    ConstraintDescription: "Required"
+    ConstraintDescription: "Required: Athena database"
 
   AthenaQueryResultBucketPrefix:
     Type: "String"
     Default: "cid-crcd-athena-query-results"
-    Description: "The Athena query result bucket for the workgroup, Account ID and Region will be added to the name by this tempalte (Required)"
+    Description: "The Athena query result bucket for the workgroup, account ID and region will be added to the name by this template (Required)"
     # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
     # that leaves 36 character for the prefix
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,33}[a-z0-9]$'
-    ConstraintDescription: "Required"
+    ConstraintDescription: "Required: Prefix of the Athena query results bucket"
 
   AthenaWorkgroupName:
     Type: "String"
     Default: "cid-crcd-dashboard"
     Description: "The Athena workgroup for the CRCD dashboard (Required)"
     MinLength: 1
-    ConstraintDescription: "Required"
+    ConstraintDescription: "Required: Athena workgroup"
 
   AthenaTableName:
     Type: "String"
     Default: "cid_crcd_config"
     Description: "The name that will be assigned to the Athena table that contains the AWS Config data for the dashboard (Required)"
     MinLength: 1
-    ConstraintDescription: "Required"
+    ConstraintDescription: "Required: Athena table for AWS Config data"
 
   GlueDataCatalogName:
     Type: "String"
     Default: "AwsDataCatalog"
     Description: "Name of the existing Glue Data Catalog (Required)"
     MinLength: 1
-    ConstraintDescription: "Required"
+    ConstraintDescription: "Required: Existing Glue Data Catalog"
+
+  LambdaPartitioningFunctionName:
+    Type: "String"
+    Default: "cid-crcd-config-file-partitioner"
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files"
+    Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)"
+  
+  CrossAccountReplicationRole: 
+    Type: "String"
+    # cannot concatenate with source bucket name as there is a limit on 64 characters for role names
+    # will use a fixed string
+    Default: "cid-crcd-s3replication-role-for-config-files" 
+    MinLength: 1
+    ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files"
+    Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)"
+
+Conditions:
+  IsLogArchiveAccountDeployment:
+    # use case 1
+    # Full deployment on the Log Archive account
+    Fn::And:
+      - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+      - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+      - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+  
+  IsDashboardAccountDeployment:
+    # use case 2.1
+    Fn::And:
+      - !Not [!Condition IsLogArchiveAccountDeployment]
+      - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
+      - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+      - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+  
+  IsS3ReplicationOnly:
+    # use case 2.2
+    # in the Log Archive installation there is a second cloudformation run where we configure only the S3 object replication
+    Fn::And:
+      - !Not [!Condition IsLogArchiveAccountDeployment]
+      - !Not [!Condition IsDashboardAccountDeployment]
+      - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+      - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+      - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+
+  IsConfigureS3EventNotificationToLambda:
+    # some customers that install on the Log Archive account may already have S3 notifications going to an SNS topic
+    # we must not override that - and users will have to do that manually later
+    # select yes from the parameters, and only in use cases 1 and 2.1, hence NOT in case 2.2
+    Fn::And:
+      - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
+      - !Not [!Condition IsS3ReplicationOnly]
+
+  # TODO this is a new bucket on the Dashboard account and it will always have the event notification!! this is always true in case of IsDashboardAccountDeployment
+  #IsConfigureS3EventNotificationToLambdaDashboardAccount:
+    # resources created in use case 2.1 with the lambda trigger
+  #  Fn::And:
+  #    - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
+  #    - !Condition IsDashboardAccountDeployment
+
+  IsConfigureS3EventNotificationToLambdaLogArchiveAccount:
+    # resources created in use case 1 with the lambda trigger
+    Fn::And:
+      - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
+      - !Condition IsLogArchiveAccountDeployment
+
+  IsCreateDashboardResources:
+    # resources that must be created in use case 1 or 2.1
+    # e.g. the lambda function, athena resources, glue table, ...
+    Fn::Or:
+      - !Condition IsLogArchiveAccountDeployment
+      - !Condition IsDashboardAccountDeployment
+
+  IsConfigureS3Replication:
+    # in step 2.2 users can bypass the creation of the S3 replication
+    Fn::And:
+      - !Condition IsS3ReplicationOnly
+      - !Equals [!Ref ConfigureS3Replication, 'yes']
 
 Rules:
-  MandatoryQuickSightUser:
+  MandatoryLogArchiveAccountId:
     Assertions:
       - Assert: !Not
         - !Equals
-          - !Ref QuickSightUserName
+          - !Ref LogArchiveAccountId
           - ''
-        AssertDescription: "QuickSight user is required"
-  MandatoryConfigLoggingBucket:
+        AssertDescription: "Log Archive account ID is required"
+
+  MandatoryLogArchiveBucketName:
+    Assertions:
+      - Assert: !Not
+         - !Equals
+          - !Ref LogArchiveBucketName
+          - ''
+        AssertDescription: "Log Archive bucket name is required"
+
+  MandatoryDashboardAccountId:
     Assertions:
       - Assert: !Not
         - !Equals
-          - !Ref ConfigLoggingBucketName
+          - !Ref DashboardAccountId
           - ''
-        AssertDescription: "Config bucket name is required"
+        AssertDescription: "Dashboard account ID is required"
+
+  MandatoryDashboardBucketName:
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref DashboardBucketName
+          - ''
+        AssertDescription: "Dashboard bucket name is required"
+
+
   MandatoryAthenaDatabase:
     Assertions:
       - Assert: !Not
@@ -122,7 +314,7 @@ Rules:
         - !Equals
           - !Ref AthenaQueryResultBucketPrefix
           - ''
-        AssertDescription: "Athena query result bucket is required"
+        AssertDescription: "Athena query result bucket prefix is required"
   MandatoryAthenaWorkgroup:
     Assertions:
       - Assert: !Not
@@ -145,9 +337,90 @@ Rules:
           - ''
         AssertDescription: "Glue Data Catalog name is required"
 
+  MandatoryLambdaPartitioningFunctionName:
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref LambdaPartitioningFunctionName
+          - ''
+        AssertDescription: "Lambda function name is required"
+  
+  MandatoryCrossAccountReplicationRole:
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref CrossAccountReplicationRole
+          - ''
+        AssertDescription: "Cross-account replication role name is required"
+
+  ValidationConfigureS3EventNotificationToLambda:
+    # must be selected in case 1 or 2.1
+    # The field is not considered in other use cases
+    RuleCondition: 
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions 1 or 2.1
+      Fn::Or:
+        - Fn::And:
+          - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+          - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+          - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+        - Fn::And:
+          - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
+          - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+          - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref ConfigureS3EventNotificationToLambda
+          - '<select>'
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Dashboard bucket and want to configure this manually."
+
+  ValidateConfigureS3Replication:
+    # Replication must be selected on use case 2.2
+    # The field is not considered in other use cases
+    RuleCondition:
+      # Cannot use !Condition IsS3ReplicationOnly, must replicate the conditions
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+        - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref ConfigureS3Replication
+          - '<select>'
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the Log Archive bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the Log Archive bucket and want to configure this manually."
+
+  ValidateQuickSightUser:
+    # must be selected in case 1 or 2.1
+    # The field is not considered in other use cases
+    RuleCondition: 
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions 1 or 2.1
+      Fn::Or:
+        - Fn::And:
+          - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+          - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+          - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+        - Fn::And:
+          - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
+          - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+          - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref QuickSightUserName
+          - ''
+        AssertDescription: "QuickSight user is required"
+
 Resources:
+
+  # ***********************************************************************************************************************************************
+  # ***********************************************************************************************************************************************
+  # Core CRCD resources to be installed on use case 1 and 2.1
+  # ***********************************************************************************************************************************************
+  # ***********************************************************************************************************************************************
   GlueDatabase:
     Type: AWS::Glue::Database
+    Condition: IsCreateDashboardResources
     Properties:
       DatabaseInput:
         Description: "Database for AWS Config Resource Compliance Dashboard (CRCD)"
@@ -157,6 +430,7 @@ Resources:
 
   AthenaQueryResultBucket:
     Type: AWS::S3::Bucket
+    Condition: IsCreateDashboardResources
     Properties:
       BucketName: !Sub '${AthenaQueryResultBucketPrefix}-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
@@ -193,6 +467,7 @@ Resources:
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
   AthenaWorkgroup:
     Type: AWS::Athena::WorkGroup
+    Condition: IsCreateDashboardResources
     Properties:
       Name: !Sub '${AthenaWorkgroupName}'
       Description: 'Used by AWS Config Resource Compliance Dashboard (CRCD)'
@@ -206,10 +481,11 @@ Resources:
 
   IAMRoleQuickSightDataSource:
     Type: AWS::IAM::Role
+    Condition: IsCreateDashboardResources
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the S3 bucket that contains AWS Config snapshots"
+      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the S3 bucket that contains AWS Config files"
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
@@ -230,12 +506,13 @@ Resources:
 
   IAMManagedPolicyQuickSightDataSource:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
       ManagedPolicyName: "cid-crcd-quicksight-datasource-policy"
       Path: "/"
-      Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the Config S3 bucket"
+      Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the S3 bucket source of AWS Config files"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -291,13 +568,13 @@ Resources:
               - !Sub "arn:${AWS::Partition}:s3:::${AthenaQueryResultBucket}/*"
           - Sid: "AllowListTheS3ConfigBucket"
             Resource:
-              - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
+              - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
             Action:
               - "s3:ListBucket"
             Effect: "Allow"
           - Sid: "AllowReadTheS3ConfigBucket"
             Resource:
-              - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
             Action:
               - "s3:GetObject"
               - "s3:GetObjectVersion"
@@ -312,6 +589,7 @@ Resources:
 
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -346,6 +624,7 @@ Resources:
 
   IAMManagedPolicyLambdaS3AthenaQueryResults:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -374,6 +653,7 @@ Resources:
 
   IAMManagedPolicyLambdaS3ConfigSnapshotObject:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -384,8 +664,8 @@ Resources:
         Version: "2012-10-17"
         Statement:
         - Resource:
-          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}/*"
-          - !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
+          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
+          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
           Action:
           - "s3:GetObject"
           - "s3:ListBucket"
@@ -393,7 +673,7 @@ Resources:
           - "s3:GetObjectVersion"
           - "s3:GetLifecycleConfiguration"
           Effect: "Allow"
-          Sid: "S3ConfigSnapshotObject"
+          Sid: "S3ConfigFileObject"
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -402,6 +682,7 @@ Resources:
 
   IAMManagedPolicyLambdaCloudWatchLogs:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -412,7 +693,7 @@ Resources:
         Version: "2012-10-17"
         Statement:
         # keep the log group name the same as the lambda function
-        - Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cid-crcd-config-snapshot-partitioner:*"
+        - Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${LambdaPartitioningFunctionName}:*"
           Action:
           - "logs:PutLogEvents"
           - "logs:CreateLogStream"
@@ -427,6 +708,7 @@ Resources:
 
   IAMManagedPolicyLambdaAthena:
     Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -450,11 +732,12 @@ Resources:
 
   LambdaFunctionPartitionerConfig:
     Type: AWS::Lambda::Function
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: "cid-crcd-config-snapshot-partitioner"
-      Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config Snapshots"
+      FunctionName: !Sub "${LambdaPartitioningFunctionName}" 
+      Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config files"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -617,17 +900,18 @@ Resources:
 
   IAMRoleLambdaPartitionerConfig:
     Type: AWS::IAM::Role
+    Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       Description: "CRCD Dashboard - Allows to add partitions to Athena and Glue, send logs to Cloudwatch, access Athena query results S3 bucket, receive objects from Config bucket. Each defined in separate policies"
       Path: "/"
       ManagedPolicyArns:
-      - Ref: "IAMManagedPolicyLambdaAthena"
-      - Ref: "IAMManagedPolicyLambdaGlue"
-      - Ref: "IAMManagedPolicyLambdaS3AthenaQueryResults"
-      - Ref: "IAMManagedPolicyLambdaCloudWatchLogs"
-      - Ref: "IAMManagedPolicyLambdaS3ConfigSnapshotObject"
+      - Ref: IAMManagedPolicyLambdaAthena
+      - Ref: IAMManagedPolicyLambdaGlue
+      - Ref: IAMManagedPolicyLambdaS3AthenaQueryResults
+      - Ref: IAMManagedPolicyLambdaCloudWatchLogs
+      - Ref: IAMManagedPolicyLambdaS3ConfigSnapshotObject
       MaxSessionDuration: 3600
       RoleName: "cid-crcd-lambda-partitioner-role"
       AssumeRolePolicyDocument:
@@ -644,20 +928,9 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
-  # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
-  LambdaInvocationPermissionLambdaPartitionerConfig:
-    Type: AWS::Lambda::Permission
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      FunctionName: !GetAtt LambdaFunctionPartitionerConfig.Arn
-      Action: "lambda:InvokeFunction"
-      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigLoggingBucketName}"
-      Principal: "s3.amazonaws.com"
-      SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
-
   GlueTable:
     Type: AWS::Glue::Table
+    Condition: IsCreateDashboardResources
     Properties:
       CatalogId: !Ref AWS::AccountId
       DatabaseName: !Ref GlueDatabase
@@ -672,7 +945,7 @@ Resources:
               Type: string
             - Name: configurationitems
               Type: array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>>
-          Location: !Sub 's3://${ConfigLoggingBucketName}/'
+          Location: !Sub 's3://${DashboardBucketName}/'
           InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
           OutputFormat: 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
           SerdeInfo:
@@ -707,19 +980,439 @@ Resources:
           - Name: dataSource
             Type: string
 
+  # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
+  # not needed if the S3 bucket does not send object notifications directly to lambda
+  LambdaInvocationPermissionLambdaPartitionerConfig:
+    Type: AWS::Lambda::Permission
+    Condition: IsConfigureS3EventNotificationToLambda
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      FunctionName: !GetAtt LambdaFunctionPartitionerConfig.Arn
+      Action: "lambda:InvokeFunction"
+      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
+      Principal: "s3.amazonaws.com"
+      SourceAccount: !Sub ${AWS::AccountId} # Source account is always the local account
+
+
+  # *********************************************************************************************************************************************************************
+  # *********************************************************************************************************************************************************************
+  # Resources on Dashboard account only
+  # Bucket for the copy of the AWS Config files
+  # Trigger configuration for the partitioner Lambda
+  # Permissions to receive files from the replication of the objects in the Log Archive account
+  # *********************************************************************************************************************************************************************
+  # *********************************************************************************************************************************************************************
+  
+  ConfigDataCollectionBucket:
+    Type: AWS::S3::Bucket
+    Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
+    Properties:
+      BucketName: !Ref DashboardBucketName
+      VersioningConfiguration:
+        Status: Enabled
+      NotificationConfiguration: # CloudFormation does not support the EventName/Id property for S3 NotificationConfiguration, it will get a random text
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            # Filter: is not required, and we trigger the lambda on all objects anyway
+            Function: !GetAtt LambdaFunctionPartitionerConfig.Arn
+
+#          - Fn::If:
+#            - IsConfigureS3EventNotificationToLambdaDashboardAccount # TODO this is a new bucket on the Dashboard account and it will always have the event notification!!
+#            - Event: 's3:ObjectCreated:*'
+#              # Filter: is not required, and we trigger the lambda on all objects anyway
+#              Function: !GetAtt LambdaFunctionPartitionerConfig.Arn
+#            - !Ref 'AWS::NoValue'
+
+  # Authorizing the replication configuration on the receiving side
+  ReplicationConfigurationDataCollection:
+    Type: AWS::S3::BucketPolicy
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
+    Properties:
+      Bucket: !Ref ConfigDataCollectionBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: "Replication permissions for objects"
+            Effect: "Allow"
+            Principal:
+              # The replication service role is always on the Log Archive account
+              # Since at this point the role does not exist yet, I can only grant permissions to the entire Log Archive account
+              AWS: !Ref LogArchiveAccountId
+            Action:
+            - "s3:ReplicateObject"
+            - "s3:ReplicateDelete"
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
+          - Sid: "Replication permissions on the bucket"
+            Effect: "Allow"
+            Principal:
+              # The replication service role is always on the Log Archive account
+              # Since at this point the role does not exist yet, I can only grant permissions to the entire Log Archive account
+              AWS: !Ref LogArchiveAccountId
+            Action:
+            - "s3:List*"
+            - "s3:GetBucketVersioning"
+            - "s3:PutBucketVersioning"
+            Resource: !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
+
+# *****************************************************************************************************************************************
+# *****************************************************************************************************************************************
+# S3 Replication Only Resources - use case 2.2
+# *****************************************************************************************************************************************
+# *****************************************************************************************************************************************
+
+  # Service role assumed by S3 when replicating files across accounts
+  ReplicationConfigurationConfigBucketRole:
+    Type: AWS::IAM::Role
+    Condition: IsS3ReplicationOnly
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: s3.amazonaws.com
+          Action: sts:AssumeRole
+      # the Path property is set to /service-role/, which will create the role as a service role.
+      # A service role is an IAM role that a service assumes to perform actions on your behalf. 
+      # TODO, in the manual configuration, a service role was not needed for the S3 replication to work, what is needed then?
+      Path: "/service-role/" 
+      RoleName: !Ref CrossAccountReplicationRole
+
+  # Policy for the S3 replication role: must give permissions to both buckets
+  ReplicationConfigurationConfigBucketPolicy:
+    Type: AWS::IAM::Policy
+    Condition: IsS3ReplicationOnly
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - s3:ListBucket
+          - s3:GetReplicationConfiguration
+          - s3:GetObjectVersionForReplication
+          - s3:GetObjectVersionAcl
+          - s3:GetObjectVersionTagging
+          - s3:GetObjectRetention
+          - s3:GetObjectLegalHold
+          Effect: Allow
+          Resource:
+          - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+          - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
+          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
+        - Action:
+          - s3:ReplicateObject
+          - s3:ReplicateDelete
+          - s3:ReplicateTags
+          - s3:ObjectOwnerOverrideToBucketOwner
+          Effect: Allow
+          Resource:
+          - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
+      PolicyName: !Sub "${CrossAccountReplicationRole}_policy"
+      Roles:
+        - !Ref ReplicationConfigurationConfigBucketRole
+
+  ConfigBucketReplicationConfiguration:
+    Type: Custom::ConfigBucketReplicationConfigurationLambda
+    Condition: IsConfigureS3Replication
+    Properties:
+      ServiceToken: !GetAtt ConfigBucketReplicationConfigurationLambda.Arn
+      SourceBucket: !Ref LogArchiveBucketName
+      DestinationBucket: !Ref DashboardBucketName
+      SourceAccountId: !Ref LogArchiveAccountId
+      DestinationAccountId: !Ref DashboardAccountId
+      ReplicationRoleArn: !GetAtt ReplicationConfigurationConfigBucketRole.Arn
+
+  ConfigBucketReplicationConfigurationLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: IsConfigureS3Replication
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3BucketReplicationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  # these were the permissions available on IAM console
+                  # "s3:PutReplicationConfiguration", "s3:GetReplicationConfiguration"
+                  # Put replication configuration has a requirement on iam:PassRole
+                  # To perform this operation, the user or role performing the action must have the iam:PassRole permission.
+                  # From: https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html
+                  - 'iam:PassRole'
+                  - 's3:PutReplicationConfiguration'
+                  - 's3:GetReplicationConfiguration'
+                  # TODO test also for deleting the bucket configuration, when the CFN is deleted
+                Resource: 
+                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+                  - !GetAtt ReplicationConfigurationConfigBucketRole.Arn
+
+  # Lambda triggered by CloudFormation
+  # to configure bucket replication on AWS Config Logging
+  ConfigBucketReplicationConfigurationLambda:
+    Type: AWS::Lambda::Function
+    Condition: IsConfigureS3Replication
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      FunctionName: "cid-crcd-support-configure-s3-replication"
+      Description: "Configures a cross-account replication on the AWS Config bucket"
+      Handler: index.lambda_handler
+      LoggingConfig:
+        LogFormat: "Text"
+        # this is already by default LogGroup: "/aws/lambda/cid-crcd-support-configure-s3-replication"
+      Role: !GetAtt ConfigBucketReplicationConfigurationLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+
+          def lambda_handler(event, context):
+            print("Request received:\n", json.dumps(event))
+              
+            # Get the necessary parameters from the event
+            params = event['ResourceProperties']
+            source_bucket_name = params['SourceBucket']
+            destination_bucket_name = params['DestinationBucket']
+            source_account_id = params['SourceAccountId']
+            destination_account_id = params['DestinationAccountId']
+            replication_role_arn = params['ReplicationRoleArn']
+            replication_rule_name = 'cid-crcd-dashboard-configfile-replication'
+              
+            s3 = boto3.client('s3')
+
+            if event['RequestType'] == 'Delete':
+              # Remove the replication configuration
+              try:
+                s3.delete_bucket_replication(Bucket=source_bucket_name)
+              except Exception as e:
+                send_response(event, context, 'FAILED', {'Error': str(e)})
+                return
+            else:
+              # Configure the replication
+                try:
+                  replication_configuration = {
+                    'Role': replication_role_arn,
+                    'Rules': [
+                      {
+                        'ID': replication_rule_name,
+                        'Status': 'Enabled',
+                        'Priority': 1,
+                        "DeleteMarkerReplication": {"Status": "Disabled"},
+                        "Filter": {"Prefix": ""},
+                        'Destination': {
+                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                          'Account': destination_account_id
+                        }
+                      }
+                    ]
+                  }
+                  
+                  s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=replication_configuration)
+                except Exception as e:
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  return
+              
+            send_response(event, context, 'SUCCESS', {})
+
+          def send_response(event, context, response_status, response_data):
+            response_body = json.dumps({
+              'Status': response_status,
+              'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+              'PhysicalResourceId': context.log_stream_name,
+              'StackId': event['StackId'],
+              'RequestId': event['RequestId'],
+              'LogicalResourceId': event['LogicalResourceId'],
+              'Data': response_data
+            })
+
+            response_url = event['ResponseURL']
+            
+            import urllib.request
+            req = urllib.request.Request(response_url, data=response_body.encode('utf-8'), method='PUT')
+            with urllib.request.urlopen(req) as f:
+              print(f.read())
+              print(f.info())
+
+      Timeout: 300
+      Runtime: python3.12
+
+                
+  # ********************************************************************************************************************************************************
+  # ********************************************************************************************************************************************************
+  # Use case 1 - other than the CRCD resources I have to configure the bucket notification from the Config Logging bucket
+  # ********************************************************************************************************************************************************
+  # ********************************************************************************************************************************************************
+  # Authorizing the notification configuration on the log archive bucket that already exists
+  ConfigBucketNotificationConfiguration:
+    Type: Custom::ConfigBucketNotificationConfigurationLambda
+    Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
+    DependsOn:
+    - LambdaInvocationPermissionLambdaPartitionerConfig
+    Properties:
+      ServiceToken: !GetAtt ConfigBucketNotificationConfigurationLambda.Arn
+      Bucket: !Ref LogArchiveBucketName
+      NotificationConfiguration:
+        LambdaFunctionConfigurations:
+        - Events: ['s3:ObjectCreated:*']
+          LambdaFunctionArn: !GetAtt LambdaFunctionPartitionerConfig.Arn
+
+  ConfigBucketNotificationConfigurationLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3BucketNotificationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutBucketNotification'
+                  - 's3:GetBucketNotification'
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+
+  # Lambda triggered by CloudFormation
+  # to configure bucket notification on AWS Config Logging
+  ConfigBucketNotificationConfigurationLambda:
+    Type: AWS::Lambda::Function
+    Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
+    Properties:
+      Description: "Configures a Lambda trigger on the Log Archive bucket (one-time execution)"
+      Handler: index.lambda_handler
+      Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+
+          def lambda_handler(event, context):
+              print("Request received:\n", json.dumps(event))
+              
+              # Get the necessary parameters from the event
+              params = event['ResourceProperties']
+              bucket_name = params['Bucket']
+              notification_config = params['NotificationConfiguration']
+              
+              s3 = boto3.client('s3')
+
+              if event['RequestType'] == 'Delete':
+                  # Remove the notification configuration when the cloud formation template is deleted
+                  # If the user selected YES on the cloud formation template, they confirmed there were no other notification configurations
+                  notification_config = {}
+              
+              try:
+                  # Configure the bucket notification
+                  s3.put_bucket_notification_configuration(
+                      Bucket=bucket_name,
+                      NotificationConfiguration=notification_config
+                  )
+                  
+                  # Send a successful response back to CloudFormation
+                  send_response(event, context, 'SUCCESS', {})
+              
+              except Exception as e:
+                  # Send a failed response back to CloudFormation
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+
+          def send_response(event, context, response_status, response_data):
+              response_body = json.dumps({
+                  'Status': response_status,
+                  'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+                  'PhysicalResourceId': context.log_stream_name,
+                  'StackId': event['StackId'],
+                  'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'],
+                  'Data': response_data
+              })
+
+              response_url = event['ResponseURL']
+              
+              import urllib.request
+              req = urllib.request.Request(response_url, data=response_body.encode('utf-8'), method='PUT')
+              with urllib.request.urlopen(req) as f:
+                  print(f.read())
+                  print(f.info())
+      Timeout: 30
+      Runtime: python3.12
+
 
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRole:
     Description: "Name of the Role created for QuickSight"
+    Condition: IsCreateDashboardResources
     Value: !Ref IAMRoleQuickSightDataSource
 
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaARN:
     Description: "ARN of the Lambda Partitioner function supporting CRCD Dashboard"
+    Condition: IsCreateDashboardResources
     Value: !GetAtt LambdaFunctionPartitionerConfig.Arn
 
   # Will be needed to allow S3 Config to trigger this lambda and to allow the lambda to access the bucket
   LambdaRoleARN:
     Description: "ARN of the execution role of the CRCD Lambda Partitioner function"
+    Condition: IsCreateDashboardResources
     Value: !GetAtt IAMRoleLambdaPartitionerConfig.Arn
+
+  ConditionIsConfigureS3EventNotificationToLambda: # TODO delete
+    Description: "Development parameter: user selected to create Lambda trigger from S3"
+    Value: !If [IsConfigureS3EventNotificationToLambda, 'true', 'false']
+
+  ConditionIsLogArchiveAccountDeployment: # TODO delete
+    # use case 1
+    Description: "Development parameter: use case 1, full deployment on Log Archive account"
+    Value: !If [IsLogArchiveAccountDeployment, 'true', 'false']
+    
+  ConditionIsDashboardAccountDeployment: # TODO delete
+    # use case 2.1
+    Description: "Development parameter: use case 2.1, first part of deployment on Dashboard account - new data collection bucket and all dashboard resources"
+    Value: !If [IsDashboardAccountDeployment, 'true', 'false']
+    
+  ConditionIsS3ReplicationOnly: # TODO delete
+    # Use case 2.2
+    Description: "Development parameter: use case 2.2, second part of deployment on Dashboard account - only the S3 replication configuration"
+    Value: !If [IsS3ReplicationOnly, 'true', 'false']
+
+  ConditionIsCreateDashboardResources: # TODO delete
+    # True on use case 1 or 2.1
+    Description: "Development parameter: create dashboard resources in use case 1 OR 2.1"
+    Value: !If [IsCreateDashboardResources, 'true', 'false']
+
+#  ConditionIsConfigureS3EventNotificationToLambdaDashboardAccount: # TODO delete
+#    # True on use case 2.1 with lambda trigger selected
+#    Description: "Development parameter: create lambda trigger resources on Dashboard account - use case 2.1"
+#    Value: !If [IsConfigureS3EventNotificationToLambdaDashboardAccount, 'true', 'false']
+
+  ConditionIsConfigureS3EventNotificationToLambdaLogArchiveAccount: # TODO delete
+    # True on use case 1 with lambda trigger selected
+    Description: "Development parameter: create lambda trigger resources on Log Archive account - use case 1"
+    Value: !If [IsConfigureS3EventNotificationToLambdaLogArchiveAccount, 'true', 'false']
+
+  ConditionIsConfigureS3Replication: # TODO delete
+    # True on use case 2.2 with s3 replication selected
+    Description: "Development parameter: create s3 replication configuration Log Archive account - use case 2.2"
+    Value: !If [IsConfigureS3Replication, 'true', 'false']

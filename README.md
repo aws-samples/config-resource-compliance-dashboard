@@ -88,11 +88,11 @@ _You can skip this paragraph if you have AWS Config enabled._
 
 The solution leverages AWS Config data to build the visualizations on the dashboard. If you **do not** have AWS Config enabled, we strongly recommend that you build your strategy first, i.e. decide which accounts, regions and resources to monitor, what does "compliance" mean to your organization, which account is going to be delegated admin for AWS Config, and so on. Only when the AWS Config setup matches your needs, you should consider deploying this dashboard.
 
-### AWS Control Tower and drift
+### AWS Control Tower considerations
 
-If you enabled AWS Config in all accounts an regions via AWS Control Tower, certain pieces of the configuration of the dashboard will make changes to the Log Archive bucket and may introduce drift with the installation controlled by AWS Control Tower. 
-_TODO we are working on a solution_
+If you enabled AWS Config in all accounts an regions via AWS Control Tower, it may be that AWS Control Tower created a Service Control Policy that denies adding or removing bucket policies on the Log Archive bucket. This is a control aimed at preventing any changes to the bucket, and will make deployment fail even if you run the CloudFormation script as administrator.
 
+However, the IAM role `AWSControlTowerExecution` is excluded by the Service Control Policy, and therefore can be used for Control Tower admin tasks. This role is available in all accounts of the organization, and can be assumed from the management account of your organization to execute the steps that require running a CloudFormation template on the Log Archive account.
 
 ### Deployment architecure 
 The most important decision to make is to whether you want to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
@@ -102,16 +102,16 @@ The most important decision to make is to whether you want to install the dashbo
 |---|---|
 | Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including users access to Quicksight. Alternatively, you have to share access to the Log Archive account to other teams that will manage these resouces.  |
 | Avoid additional cost for data transfer and storing your data on the Dashboard account.  | The CRCD Dashboard adds complexity in users management to possible Quicksight dashbaords that you already have deployed on the Log Archive account.  |
-|   | Some steps of the configurations must be done manually (_TODO WIP_) to avoid causing drift in case you use AWS Control Tower.  |
+|  If you use AWS Control Tower in your organization, this installation does not modify the policies on the Log Archive bucket. Therefore, you can deploy the dashboard as user/role of the Log Archive account and there is no need you to assume the `AWSControlTowerExecution` IAM role from the management account.  |  |
 
 
 #### Dashboard account architecture
 | Pros  | Cons   | 
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
-| Limited number of resources deployed on Log Archive account.| This installation may (_TODO WIP_) cause drift in case you use AWS Control Tower. |
+| Limited number of resources must be deployed on Log Archive account.| If you use AWS Control Tower in your organization, some steps of the configurations must be done by assuming the `AWSControlTowerExecution` IAM role from the management account. Obviously, this requires permissions to access the managment account. |
 | | Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
-||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
+||You will incur additional costs for the replication and storing of a copy of your data on another Amazon S3 bucket. |
 
 
 ## Prerequisites
@@ -119,6 +119,7 @@ The most important decision to make is to whether you want to install the dashbo
 1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config files to a centralized S3 bucket (the Log Archive bucket) in the Log Archive account.
 1. An AWS Account where you'll deploy the dashboard (the Dashboard account).
 1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation.
+1. If you use AWS Control Tower in your organization, some steps of the configurations must be done by assuming the `AWSControlTowerExecution` IAM role from the management account. Obviously, this requires permissions to access the managment account.
 1. Sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user:
     1. Select **Enterprise** edition.
     2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer.
@@ -142,22 +143,22 @@ Regardless of the deployment of the deployment architecture of your choice, you 
 
 These parameters specify information about your AWS Config setup. They never change depending on the architecture of your deployment.
 * Log Archive account ID
-  * This is always the number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files
+  * This is always the number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files.
 * Log Archive bucket
-  * This is always the name of the Amazon S3 bucket collecting AWS Config files
+  * This is always the name of the Amazon S3 bucket collecting AWS Config files.
 
 
 **Parameter group: CRCD Dashboard - where you deploy the dashboard and where its data is**
 
 These parameters define where you install your dashboard. It is your choice to specify the same values as above (for deployment on the Log Archive account), or a different AWS account ID and bucket name (if you chose to deploy on a dedicated dashboard account).
 * Dashboard account ID
-  * The number of the AWS account that contains the Amazon S3 bucket source of data for the CRCD dashboard and related data pipeline resources
+  * The number of the AWS account that contains the Amazon S3 bucket source of data for the CRCD dashboard and related data pipeline resources.
 * Dashboard bucket
-  * Name of the Amazon S3 bucket that is used as source of data for the CRCD dashboard
+  * Name of the Amazon S3 bucket that is used as source of data for the CRCD dashboard.
 * Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file
-  * More details below
+  * This depends on how you are going to install the CRCD dashboard. More details below.
 * Configure cross-account replication of AWS Config files from Log Archive to Dashboard account
-  * More details below
+  * This depends on how you are going to install the CRCD dashboard. More details below.
 
 
 Follow instructions on one of the paragraphs below, depending on the architecture of choice.
@@ -183,13 +184,11 @@ Log into the AWS Management Console for your **Log Archive account**.
    - `Dashboard account ID` Insert again the number of the AWS account where you are currently logged in. It is important to repeat the same value as `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment
    - `Dashboard bucket` Insert again the name of the Amazon S3 bucket that collects AWS Config data. It is important to repeat the same value as `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment
    - `Configure S3 event notification` Whenever a new AWS Config file is delivered to the Log Archive bucket, a lambda function must be called to create the corresponding partition on Amazon Athena. This leverages S3 event notifications which is configured by this template if you select `yes` here. There may be cases in which AWS customers already have configured event notifications on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below)
+     - TODO `yes` must be with assuming the role, but this is needed only because of the automation!!!!! if done manually, you can contfigure the trigger without changing the log archive bucket policy
    - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode
    - **Leave every other parameter to its default value**
 1. Run the template.
-1. Note down the following from the output of the CloudFormation template: _TODO check again_
-   - `LambdaARN`
-   - `LambdaRoleARN`
-   - `QuickSightDataSourceRole`
+1. Note down the output values of the CloudFormation template.
 
 ##### Step 2
 Stay logged into the AWS Management Console for your **Log Archive account**.
@@ -237,21 +236,19 @@ Stay logged into the AWS Management Console for your **Log Archive account**.
 #### Manual setup of S3 event notification
 _You can skip this paragraph if you selected_ `yes` _on CloudFormation parameter_ `Configure S3 event notification` _at step 1 above._
 
-_TODO verify permissions in case of SNS_
+If you selected `no`, you must configure the Log Archive S3 bucket event notification to trigger the Lambda Partitioner function when objects are added to the bucket. The necessary permissions for the Lambda function to access the Log Archive bucket have been deployed by CloudFormation already.
 
-If you selected `no`, the necessary permissions have been deployed by CloudFormation already, now you must configure the Log Archive S3 bucket to trigger the Lambda Partitioner function when objects are added to the bucket. 
-
-The Lambda partitioner notifications from S3 have these constraints:
+The S3 event notifications for this dashboard have these requirements:
 1. All object create events
 1. All prefixes
 
-This may be a challenge depending on your current S3 event notification, since Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html) overlapping prefixes in two rules for the same event type.
+This may be a challenge depending on your current S3 event notification setup, since Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html#notification-how-to-filtering-examples-invalid) overlapping prefixes in two rules for the same event type.
 
 We recommend that you configure your event notification to an SNS topic (if not already):
-* If your bucket publishes events notifications to an SNS topic, you can subscribe the Lambda Partitioner function to the topic.
-* If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the Lambda Partitioner function to that SNS topic.
+* If your bucket publishes events notifications to an SNS topic, you can [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) the Lambda Partitioner function to the topic.
+* If your bucket already sends event notifications to another Lambda function, you can change that notification to an SNS topic and [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) both your function and the Lambda Partitioner function to that SNS topic.
 
-Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/ways-to-add-notification-config-to-bucket.html) to add a notification configuration to your bucket using an Amazon SNS topic.
+Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-enable-disable-notification-intro.html) to add a notification configuration to your bucket using an Amazon SNS topic. Also, make sure that the Log Archive bucket is [granted permissions to publish event notification messages to your SNS topic](https://docs.aws.amazon.com/AmazonS3/latest/userguide/grant-destinations-permissions-to-s3.html).
 
 ### Installation on dedicated Dashboard account
 
@@ -280,10 +277,7 @@ Log into the AWS Management Console for your **Dashboard account**.
    - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode
    - **Leave every other parameter to its default value**
 1. Run the template.
-1. Note down the following from the output of the CloudFormation template: _TODO check again_
-   - `LambdaARN`
-   - `LambdaRoleARN`
-   - `QuickSightDataSourceRole`
+1. Note down the output values of the CloudFormation template.
 
 ##### Step 2
 Log into the AWS Management Console for your **Log Archive account**.
@@ -300,6 +294,7 @@ Log into the AWS Management Console for your **Log Archive account**.
      - Please notice that if you select `yes`, any existing S3 replication configuration will be overwritten!
    - **Leave every other parameter to its default value**
 1. Run the template.
+1. Note down the output values of the CloudFormation template.
 
 ##### Step 3
 Log back into the AWS Management Console for your **Log Archive account**.
