@@ -1,5 +1,6 @@
+# Dashboard template to install with CID-CMD tool
 dashboards:
-  CRCD 2.1.0:
+  CID-CRCD:
     dependsOn:
       datasets:
       - config_compliance
@@ -12,10 +13,29 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
-    name: crcd 2.1.0
-    dashboardId: crcd-2-1-0
+    # CUSTOMIZATION - descriptive name of the dashboard
+    name: "AWS Config Resource Compliance Dashboard (CRCD)"
+    dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
+    # CUSTOMIZATION - custom tags on the dashboard visual elements
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       AnalysisDefaults:
         DefaultNewSheetConfiguration:
@@ -12691,49 +12711,6 @@ views:
       INNER JOIN last_resource_event_m0 ev ON ((ev.ResourceType = cs.ResourceType) AND (ev.ConfigEventResourceId = cs.ResourceId) AND (ev.AccountId = cs.AccountId) AND (ev.Region = cs.Region)))
       WHERE (true AND (ev.Rowrank = 1))
       ORDER BY 1 DESC, 5 DESC, 4 DESC
-  cid_crcd_config:
-    data: |-
-      CREATE EXTERNAL TABLE `cid_crcd_config`(
-        `fileversion` string COMMENT 'from deserializer',
-        `configsnapshotid` string COMMENT 'from deserializer',
-        `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
-      PARTITIONED BY (
-        `accountid` string,
-        `dt` string,
-        `region` string,
-        `datasource` string)
-      ROW FORMAT SERDE
-        'org.openx.data.jsonserde.JsonSerDe'
-      WITH SERDEPROPERTIES (
-        'case.insensitive'='false',
-        'mapping.arn'='ARN',
-        'mapping.availabilityzone'='availabilityZone',
-        'mapping.awsaccountid'='awsAccountId',
-        'mapping.awsregion'='awsRegion',
-        'mapping.configsnapshotid'='configSnapshotId',
-        'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
-        'mapping.configurationitems'='configurationItems',
-        'mapping.configurationitemstatus'='configurationItemStatus',
-        'mapping.configurationitemversion'='configurationItemVersion',
-        'mapping.configurationstateid'='configurationStateId',
-        'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
-        'mapping.fileversion'='fileVersion',
-        'mapping.resourceid'='resourceId',
-        'mapping.resourcename'='resourceName',
-        'mapping.resourcetype'='resourceType',
-        'mapping.supplementaryconfiguration'='supplementaryConfiguration')
-      STORED AS INPUTFORMAT
-        'org.apache.hadoop.mapred.TextInputFormat'
-      OUTPUTFORMAT
-        'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
-      LOCATION
-        '${s3path}'
-      TBLPROPERTIES (
-      )
-    parameters:
-      s3path:
-        default: s3://aws-controltower-logs-{account_id}-eu-west-1/
-        description: S3 Path for cid_crcd_config table
   config_compliance_conformance_pack:
     dependsOn:
       views:
@@ -13062,6 +13039,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ec2 AS
       WITH
@@ -13077,10 +13072,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "json_extract_scalar"("configurationItem"."configuration", '$.instanceId') "InstanceId"
          , "configurationItem"."tags"['Name'] "TagName"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationTime"
          , CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "LaunchTime"
@@ -13139,6 +13134,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory AS
       WITH
@@ -13150,10 +13163,10 @@ views:
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "configurationItem"."resourcetype" "ResourceType"
          , "configurationItem"."arn" "Arn"
@@ -13183,6 +13196,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_s3 AS
       WITH
@@ -13196,10 +13227,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."resourceName" "ConfigEventResourceName"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "json_extract_scalar"("configurationItem"."configuration", '$.name') "BucketName"
          , CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationDate"
@@ -13232,6 +13263,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_ebs AS
       WITH
@@ -13245,10 +13294,10 @@ views:
          , "configurationItem"."resourceName" "ResourceName"
          , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "PartitionDate"
          , "configurationItem"."tags"['Name'] "TagName"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."resourcecreationtime" "CreationTime"
@@ -13603,6 +13652,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_rds AS
       WITH
@@ -13615,10 +13682,10 @@ views:
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
          , "configurationItem"."arn" "Arn"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "json_extract_scalar"("configurationItem"."configuration", '$.dbiResourceId') "DatabaseResourceID"
          , "json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceArn') "DatabaseInstanceArn"
@@ -13715,6 +13782,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW ${athena_database_name}.config_inventory_lambda AS
       WITH
@@ -13727,10 +13812,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
-         , "configurationItem"."tags"['CostCenter'] "TAG1"
-         , "configurationItem"."tags"['Application'] "TAG2"
-         , "configurationItem"."tags"['Environment'] "TAG3"
-         , "configurationItem"."tags"['Owner'] "TAG4"
+         , "configurationItem"."tags"['{tag1}'] "TAG1"
+         , "configurationItem"."tags"['{tag2}'] "TAG2"
+         , "configurationItem"."tags"['{tag3}'] "TAG3"
+         , "configurationItem"."tags"['{tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."resourceCreationTime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationTime"
          , "json_extract_scalar"("configurationItem"."configuration", '$.functionArn') "FunctionArn"
