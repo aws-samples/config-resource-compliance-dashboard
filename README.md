@@ -352,7 +352,9 @@ Log onto the Log Archive Account and open the Amazon S3 console. You can replica
 
 ## Destroy resources
 
-In order to destroy the dashboard, you need to:
+In order to destroy the dashboard, you need to follow the steps below, depending on your deployment type.
+
+### All deployment types
 
 1. Log into the AWS Console of the account where you have deployed the dashboard. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
 1. Open AWS CloudShell in the region where you have deployed the dashboard.
@@ -373,15 +375,24 @@ Where:
    - Accept the default values of the four tags.
    - For each Athena view, choose `yes` to delete the dataset.
 
-1. On the same account, open CloudFormation and delete the template that installed the resources for the dashboard (make sure to empty the Amazon S3 bucket hosting the Athena Query results first).
+
+### Installation on Log Archive or standalone account
+1. Log into the AWS Console of the account where you have deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified both in the `Log Archive account ID` and the `Dashboard account ID` parameters of the CloudFormation template.
+1. Open the S3 console and empty the Amazon S3 bucket hosting the Athena Query results. Its name is on the output of the CloudFormation stack.
+1. On the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
 1. Revert any manual change done on this account during setup.
 
-If you deployed the dashboard on a standalone AWS account or in the Log Archive account you have completed. If you installed the dashboard in a dedicated Dashboard account, you now need to:
+### Installation on dedicated Dashboard account
 
 1. Log into the AWS Console of the Log Archive account. This is the AWS account ID that you specified in the `Log Archive account ID` parameter of the CloudFormation template.
-1. Open CloudFormation and delete the template that installed the resources for the dashboard. Be sure you are in the correct region.
+1. Open CloudFormation and delete the stack that installed the resources for the dashboard. Be sure you are in the correct region.
 1. Revert any manual change done on this account during setup.
 
+1. Log into the AWS Console of the account where you have deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
+1. Open the S3 console and empty the Amazon S3 bucket hosting the Athena Query results. Its name is on the output of the CloudFormation stack.
+1. Empty the Dashboard bucket, as well. This bucket contains a copy of the AWS Config files from the Log Archive account. Its name is on the output of the CloudFormation stack.
+1. On the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
+1. Revert any manual change done on this account during setup.
 
 # Additional Information
 

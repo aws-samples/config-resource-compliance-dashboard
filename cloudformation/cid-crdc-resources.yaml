@@ -1020,9 +1020,11 @@ Resources:
   # *********************************************************************************************************************************************************************
   # *********************************************************************************************************************************************************************
   
-  ConfigDataCollectionBucket:
+  DashboardBucket:
     Type: AWS::S3::Bucket
     Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
     DependsOn:
     - LambdaInvocationPermissionLambdaPartitionerConfig
     Properties:
@@ -1056,7 +1058,7 @@ Resources:
     UpdateReplacePolicy: Delete
     Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
     Properties:
-      Bucket: !Ref ConfigDataCollectionBucket
+      Bucket: !Ref DashboardBucket
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1380,7 +1382,7 @@ Resources:
               with urllib.request.urlopen(req) as f:
                   print(f.read())
                   print(f.info())
-      Timeout: 30
+      Timeout: 60
       Runtime: python3.12
 
 
@@ -1403,47 +1405,56 @@ Outputs:
     Condition: IsCreateDashboardResources
     Value: !GetAtt IAMRoleLambdaPartitionerConfig.Arn
 
+  # must be emptied before deleting the stack
+  AthenaQueryResultBucketName:
+    Description: "Name of the Amazon S3 bucket used by Athena."
+    Condition: IsCreateDashboardResources
+    Value: !GetAtt AthenaQueryResultBucket
+
+  # must be emptied before deleting the stack
+  # 'DashboardBucketName' is used already, so adding something at the end
+  DashboardBucketNameOutput:
+    Description: "Name of the Amazon S3 bucket created in the Dashboard account (only in case of deployment on dedicated Dashboard account)."
+    Condition: IsDashboardAccountDeployment
+    Value: !GetAtt DashboardBucket
+    
   # Will be needed to manually configure replication
   ReplicationRoleArn:
     Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files"
     Condition: IsS3ReplicationOnly
     Value: !Ref ReplicationConfigurationConfigBucketRole
 
-  ConditionIsConfigureS3EventNotificationToLambda: # TODO delete
-    Description: "Development parameter: user selected to create Lambda trigger from S3"
-    Value: !If [IsConfigureS3EventNotificationToLambda, 'true', 'false']
+  # these are great for development 
+#  ConditionIsConfigureS3EventNotificationToLambda:
+#    Description: "Development parameter: user selected to create Lambda trigger from S3"
+#    Value: !If [IsConfigureS3EventNotificationToLambda, 'true', 'false'#]
 
-  ConditionIsLogArchiveAccountDeployment: # TODO delete
-    # use case 1
-    Description: "Development parameter: use case 1, full deployment on Log Archive account"
-    Value: !If [IsLogArchiveAccountDeployment, 'true', 'false']
-    
-  ConditionIsDashboardAccountDeployment: # TODO delete
-    # use case 2.1
-    Description: "Development parameter: use case 2.1, first part of deployment on Dashboard account - new data collection bucket and all dashboard resources"
-    Value: !If [IsDashboardAccountDeployment, 'true', 'false']
-    
-  ConditionIsS3ReplicationOnly: # TODO delete
-    # Use case 2.2
-    Description: "Development parameter: use case 2.2, second part of deployment on Dashboard account - only the S3 replication configuration"
-    Value: !If [IsS3ReplicationOnly, 'true', 'false']
+#  ConditionIsLogArchiveAccountDeployment: 
+#    # use case 1
+#    Description: "Development parameter: use case 1, full deployment on Log Archive account"
+#    Value: !If [IsLogArchiveAccountDeployment, 'true', 'false']
+#    
+#  ConditionIsDashboardAccountDeployment: 
+#    # use case 2.1
+#    Description: "Development parameter: use case 2.1, first part of deployment on Dashboard account - new data collection bucket and all dashboard resources"
+#    Value: !If [IsDashboardAccountDeployment, 'true', 'false']
+#    
+#  ConditionIsS3ReplicationOnly: 
+#    # Use case 2.2
+#    Description: "Development parameter: use case 2.2, second part of deployment on Dashboard account - only the S3 replication configuration"
+#    Value: !If [IsS3ReplicationOnly, 'true', 'false'#]
 
-  ConditionIsCreateDashboardResources: # TODO delete
-    # True on use case 1 or 2.1
-    Description: "Development parameter: create dashboard resources in use case 1 OR 2.1"
-    Value: !If [IsCreateDashboardResources, 'true', 'false']
+#  ConditionIsCreateDashboardResources:
+#    # True on use case 1 or 2.1
+#    Description: "Development parameter: create dashboard resources in use case 1 OR 2.1"
+#    Value: !If [IsCreateDashboardResources, 'true', 'false'#]
 
-#  ConditionIsConfigureS3EventNotificationToLambdaDashboardAccount: # TODO delete
-#    # True on use case 2.1 with lambda trigger selected
-#    Description: "Development parameter: create lambda trigger resources on Dashboard account - use case 2.1"
-#    Value: !If [IsConfigureS3EventNotificationToLambdaDashboardAccount, 'true', 'false']
+#  ConditionIsConfigureS3EventNotificationToLambdaLogArchiveAccount: 
+#    # True on use case 1 with lambda trigger selected
+#    Description: "Development parameter: create lambda trigger resources on Log Archive account - use case 1"
+#    Value: !If [IsConfigureS3EventNotificationToLambdaLogArchiveAccount, 'true', 'false'#]
 
-  ConditionIsConfigureS3EventNotificationToLambdaLogArchiveAccount: # TODO delete
-    # True on use case 1 with lambda trigger selected
-    Description: "Development parameter: create lambda trigger resources on Log Archive account - use case 1"
-    Value: !If [IsConfigureS3EventNotificationToLambdaLogArchiveAccount, 'true', 'false']
-
-  ConditionIsConfigureS3Replication: # TODO delete
-    # True on use case 2.2 with s3 replication selected
-    Description: "Development parameter: create s3 replication configuration Log Archive account - use case 2.2"
-    Value: !If [IsConfigureS3Replication, 'true', 'false']
+#  ConditionIsConfigureS3Replication: 
+#    # True on use case 2.2 with s3 replication selected
+#    Description: "Development parameter: create s3 replication configuration Log Archive account - use case 2.2"
+#    Value: !If [IsConfigureS3Replication, 'true', 'false']
