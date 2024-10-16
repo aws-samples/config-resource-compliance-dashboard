@@ -8296,7 +8296,7 @@ dashboards:
                 ColumnName: tag1
                 DataSetIdentifier: config_inventory_all
             SourceParameterName: CITag1
-            Title: {tag1} (tag)
+            Title: ${tag1} (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -8313,7 +8313,7 @@ dashboards:
                 ColumnName: tag2
                 DataSetIdentifier: config_inventory_all
             SourceParameterName: CITag2
-            Title: {tag2} (tag)
+            Title: ${tag2} (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -8330,7 +8330,7 @@ dashboards:
                 ColumnName: tag3
                 DataSetIdentifier: config_inventory_all
             SourceParameterName: CITag3
-            Title: {tag3} (tag)
+            Title: ${tag3} (tag)
             Type: MULTI_SELECT
         - Dropdown:
             DisplayOptions:
@@ -8347,7 +8347,7 @@ dashboards:
                 ColumnName: tag4
                 DataSetIdentifier: config_inventory_all
             SourceParameterName: CITag4
-            Title: {tag4} (tag)
+            Title: ${tag4} (tag)
             Type: MULTI_SELECT
         SheetId: 86dc1f04-5935-4156-870b-ecf6e5729925
         TextBoxes:
@@ -8779,7 +8779,7 @@ dashboards:
               Visibility: VISIBLE
             Title:
               FormatText:
-                RichText: <visual-title>Resources by {tag4} (tag)</visual-title>
+                RichText: <visual-title>Resources by ${tag4} (tag)</visual-title>
               Visibility: VISIBLE
             VisualId: 5e919a73-9fc0-4a83-9c36-f7ba44245ad4
         - BarChartVisual:
@@ -8849,7 +8849,7 @@ dashboards:
               Visibility: VISIBLE
             Title:
               FormatText:
-                RichText: <visual-title>Resources by {tag3} (tag)</visual-title>
+                RichText: <visual-title>Resources by ${tag3} (tag)</visual-title>
               Visibility: VISIBLE
             VisualId: b0b2b1c8-9f5e-4cef-8385-b93048a01781
         - BarChartVisual:
@@ -8919,7 +8919,7 @@ dashboards:
               Visibility: VISIBLE
             Title:
               FormatText:
-                RichText: <visual-title>Resources by {tag2} (tag)</visual-title>
+                RichText: <visual-title>Resources by ${tag2} (tag)</visual-title>
               Visibility: VISIBLE
             VisualId: ad39daa8-52ad-4cb1-adf2-424584edc14e
         - TableVisual:
@@ -8934,13 +8934,13 @@ dashboards:
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.region.2.1711365033167
                 - CustomLabel: Bucket Name
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.bucketname.1.1711365029334
-                - CustomLabel: {tag1} (tag)
+                - CustomLabel: ${tag1} (tag)
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag1.3.1711365043301
-                - CustomLabel: {tag2} (tag)
+                - CustomLabel: ${tag2} (tag)
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag2.4.1711365047118
-                - CustomLabel: {tag3} (tag)
+                - CustomLabel: ${tag3} (tag)
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag3.5.1711365049768
-                - CustomLabel: {tag4} (tag)
+                - CustomLabel: ${tag4} (tag)
                   FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag4.6.1711365052602
               FieldWells:
                 TableAggregatedFieldWells:
@@ -9021,13 +9021,13 @@ dashboards:
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.engineversion.3.1714400251993
                 - CustomLabel: Resource Name
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.resourcename.4.1714400263897
-                - CustomLabel: {tag1} (tag)
+                - CustomLabel: ${tag1} (tag)
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.tag1.5.1714400277672
-                - CustomLabel: {tag2} (tag)
+                - CustomLabel: ${tag2} (tag)
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.tag2.6.1714400282208
-                - CustomLabel: {tag3} (tag)
+                - CustomLabel: ${tag3} (tag)
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.tag3.7.1714400285958
-                - CustomLabel: {tag4} (tag)
+                - CustomLabel: ${tag4} (tag)
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.tag4.8.1714400289667
                 - CustomLabel: User Name
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.username.9.1714400303792
@@ -9215,7 +9215,7 @@ dashboards:
               Visibility: VISIBLE
             Title:
               FormatText:
-                RichText: <visual-title>Resources by {tag1} (tag)</visual-title>
+                RichText: <visual-title>Resources by ${tag1} (tag)</visual-title>
               Visibility: VISIBLE
             VisualId: 58d63a10-f4ba-4fd4-b3ef-f5a7fa60e137
         - BarChartVisual:
@@ -9336,13 +9336,13 @@ dashboards:
                   FieldId: f8912a68-5eb4-4643-b49c-df7806da3972.multiattachenabled.11.1726652139590
                 - CustomLabel: Name (tag)
                   FieldId: 8d8641c7-f7a8-46cb-994e-94d0a861b501.tagname.17.1726654185076
-                - CustomLabel: {tag1} (tag)
+                - CustomLabel: ${tag1} (tag)
                   FieldId: 7559c02f-c409-4dc7-9be9-1a7c6350cb67.tag1.13.1726652798934
-                - CustomLabel: {tag2} (tag)
+                - CustomLabel: ${tag2} (tag)
                   FieldId: 7559c02f-c409-4dc7-9be9-1a7c6350cb67.tag2.14.1726652799745
-                - CustomLabel: {tag3} (tag)
+                - CustomLabel: ${tag3} (tag)
                   FieldId: 7559c02f-c409-4dc7-9be9-1a7c6350cb67.tag3.15.1726652800526
-                - CustomLabel: {tag4} (tag)
+                - CustomLabel: ${tag4} (tag)
                   FieldId: 7559c02f-c409-4dc7-9be9-1a7c6350cb67.tag4.16.1726652801498
               FieldWells:
                 TableAggregatedFieldWells:
@@ -9569,14 +9569,14 @@ dashboards:
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.publicip.6.1727795530697
                 - CustomLabel: Name (tag)
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tagname.7.1727795545097
-                - CustomLabel: {tag1} (tag)
+                - CustomLabel: ${tag1} (tag)
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag1.8.1727795545760
                   Width: 127px
-                - CustomLabel: {tag2} (tag)
+                - CustomLabel: ${tag2} (tag)
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag2.9.1727795546426
-                - CustomLabel: {tag3} (tag)
+                - CustomLabel: ${tag3} (tag)
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag3.10.1727795547195
-                - CustomLabel: {tag4} (tag)
+                - CustomLabel: ${tag4} (tag)
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag4.11.1727795547993
                 - CustomLabel: IPv6
                   FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.ipv6address.12.1727795581757
@@ -9779,13 +9779,13 @@ dashboards:
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.memorysize.9.1727879753600
                 - CustomLabel: Timeout (sec)
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.timeout.10.1727879786783
-                - CustomLabel: {tag1} (tag)
+                - CustomLabel: ${tag1} (tag)
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.tag1.4.1727879681823
-                - CustomLabel: {tag2} (tag)
+                - CustomLabel: ${tag2} (tag)
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.tag2.5.1727879682517
-                - CustomLabel: {tag3} (tag)
+                - CustomLabel: ${tag3} (tag)
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.tag3.6.1727879683151
-                - CustomLabel: {tag4} (tag)
+                - CustomLabel: ${tag4} (tag)
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.tag4.7.1727879683851
                 - CustomLabel: Last Modified
                   FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.lastmodified.8.1727879736826
@@ -13070,10 +13070,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "json_extract_scalar"("configurationItem"."configuration", '$.instanceId') "InstanceId"
          , "configurationItem"."tags"['Name'] "TagName"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationTime"
          , CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "LaunchTime"
@@ -13161,10 +13161,10 @@ views:
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "configurationItem"."resourcetype" "ResourceType"
          , "configurationItem"."arn" "Arn"
@@ -13225,10 +13225,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."resourceName" "ConfigEventResourceName"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "json_extract_scalar"("configurationItem"."configuration", '$.name') "BucketName"
          , CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationDate"
@@ -13292,10 +13292,10 @@ views:
          , "configurationItem"."resourceName" "ResourceName"
          , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "PartitionDate"
          , "configurationItem"."tags"['Name'] "TagName"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."resourcecreationtime" "CreationTime"
@@ -13680,10 +13680,10 @@ views:
          , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
          , "configurationItem"."arn" "Arn"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , "json_extract_scalar"("configurationItem"."configuration", '$.dbiResourceId') "DatabaseResourceID"
          , "json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceArn') "DatabaseInstanceArn"
@@ -13810,10 +13810,10 @@ views:
          , "configurationItem"."arn" "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
-         , "configurationItem"."tags"['{tag1}'] "TAG1"
-         , "configurationItem"."tags"['{tag2}'] "TAG2"
-         , "configurationItem"."tags"['{tag3}'] "TAG3"
-         , "configurationItem"."tags"['{tag4}'] "TAG4"
+         , "configurationItem"."tags"['${tag1}'] "TAG1"
+         , "configurationItem"."tags"['${tag2}'] "TAG2"
+         , "configurationItem"."tags"['${tag3}'] "TAG3"
+         , "configurationItem"."tags"['${tag4}'] "TAG4"
          , "configurationItem"."tags" "AllTags"
          , CAST(parse_datetime("configurationItem"."resourceCreationTime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "CreationTime"
          , "json_extract_scalar"("configurationItem"."configuration", '$.functionArn') "FunctionArn"

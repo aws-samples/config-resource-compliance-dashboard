@@ -114,6 +114,7 @@ The most important decision to make is to whether you want to install the dashbo
 ||You will incur additional costs for the replication and storing of a copy of your data on another Amazon S3 bucket. |
 
 
+
 ## Prerequisites
  
 1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config files to a centralized S3 bucket (the Log Archive bucket) in the Log Archive account.
@@ -162,6 +163,8 @@ These parameters define where you install your dashboard. It is your choice to s
 
 
 Follow instructions on one of the paragraphs below, depending on the architecture of choice.
+### Installation on standalone account
+Follow the installation instructions for the Log Archive account below.
 
 ### Installation on Log Archive account
 The installation process consists of two steps:
@@ -169,6 +172,8 @@ The installation process consists of two steps:
 1. Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool
 
 ![CRCD](images/deployment-steps-log-archive-account.png "CRCD Dashboard: deployment steps on Log Archive account")
+
+
 
 #### Deployment Steps
 **At every step, make sure you are in the region where both your Log Archive bucket and Amazon QuickSight are deployed.**
@@ -184,7 +189,6 @@ Log into the AWS Management Console for your **Log Archive account**.
    - `Dashboard account ID` Insert again the number of the AWS account where you are currently logged in. It is important to repeat the same value as `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment
    - `Dashboard bucket` Insert again the name of the Amazon S3 bucket that collects AWS Config data. It is important to repeat the same value as `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment
    - `Configure S3 event notification` Whenever a new AWS Config file is delivered to the Log Archive bucket, a lambda function must be called to create the corresponding partition on Amazon Athena. This leverages S3 event notifications which is configured by this template if you select `yes` here. There may be cases in which AWS customers already have configured event notifications on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below)
-     - TODO `yes` must be with assuming the role, but this is needed only because of the automation!!!!! if done manually, you can contfigure the trigger without changing the log archive bucket policy
    - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode
    - **Leave every other parameter to its default value**
 1. Run the template.
