@@ -234,12 +234,21 @@ Conditions:
       - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
 
   IsConfigureS3EventNotificationToLambda:
-    # some customers that install on the Log Archive account may already have S3 notifications going to an SNS topic
+    # some customers that install on the Log Archive account may already have S3 notifications
     # we must not override that - and users will have to do that manually later
-    # select yes from the parameters, and only in use cases 1 and 2.1, hence NOT in case 2.2
-    Fn::And:
-      - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
-      - !Not [!Condition IsS3ReplicationOnly]
+    # case 1: user must select yes from the parameters
+    # case 2.1: this is always true, since we create our own bucket in the dashboard account
+    # case 2.2: NEVER
+    Fn::Or:
+      - !Condition IsDashboardAccountDeployment
+      - Fn::And:
+        - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
+        - !Condition IsLogArchiveAccountDeployment  
+
+
+#    Fn::And:
+#      - !Equals [!Ref ConfigureS3EventNotificationToLambda, 'yes']
+#      - !Not [!Condition IsS3ReplicationOnly]
 
   # TODO this is a new bucket on the Dashboard account and it will always have the event notification!! this is always true in case of IsDashboardAccountDeployment
   #IsConfigureS3EventNotificationToLambdaDashboardAccount:
@@ -353,26 +362,33 @@ Rules:
           - ''
         AssertDescription: "Cross-account replication role name is required"
 
-  ValidationConfigureS3EventNotificationToLambda:
-    # must be selected in case 1 or 2.1
+  ValidateConfigureS3EventNotificationToLambda:
+    # must be selected in case 1 (and 3)
+    # for use case 2.1 this is TRUE by default, we are going to create our own bucket with the event notification
     # The field is not considered in other use cases
     RuleCondition: 
-      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions 1 or 2.1
-      Fn::Or:
-        - Fn::And:
-          - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
-          - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
-          - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
-        - Fn::And:
-          - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
-          - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
-          - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions 1
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+        - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+
+# TODO delete
+#      Fn::Or:
+#        - Fn::And:
+#          - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+#          - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+#          - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+#        - Fn::And:
+#          - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
+#          - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+#          - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
     Assertions:
       - Assert: !Not
         - !Equals
           - !Ref ConfigureS3EventNotificationToLambda
           - '<select>'
-        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Dashboard bucket and want to configure this manually."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Log Archive bucket and want to configure this manually."
 
   ValidateConfigureS3Replication:
     # Replication must be selected on use case 2.2
@@ -1007,6 +1023,8 @@ Resources:
   ConfigDataCollectionBucket:
     Type: AWS::S3::Bucket
     Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
+    DependsOn:
+    - LambdaInvocationPermissionLambdaPartitionerConfig
     Properties:
       BucketName: !Ref DashboardBucketName
       VersioningConfiguration:
@@ -1015,6 +1033,13 @@ Resources:
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
             # Filter: is not required, and we trigger the lambda on all objects anyway
+            Filter:
+              S3Key:
+                  Rules:
+                    - Name: prefix
+                      Value: ""
+                    - Name: suffix
+                      Value: ""
             Function: !GetAtt LambdaFunctionPartitionerConfig.Arn
 
 #          - Fn::If:
@@ -1362,7 +1387,7 @@ Resources:
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRole:
-    Description: "Name of the Role created for QuickSight"
+    Description: "Name of the IAM role created for QuickSight"
     Condition: IsCreateDashboardResources
     Value: !Ref IAMRoleQuickSightDataSource
 
@@ -1377,6 +1402,12 @@ Outputs:
     Description: "ARN of the execution role of the CRCD Lambda Partitioner function"
     Condition: IsCreateDashboardResources
     Value: !GetAtt IAMRoleLambdaPartitionerConfig.Arn
+
+  # Will be needed to manually configure replication
+  ReplicationRoleArn:
+    Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files"
+    Condition: IsS3ReplicationOnly
+    Value: !Ref ReplicationConfigurationConfigBucketRole
 
   ConditionIsConfigureS3EventNotificationToLambda: # TODO delete
     Description: "Development parameter: user selected to create Lambda trigger from S3"

@@ -50,7 +50,7 @@ Tag compliance collects the results of AWS Config Managed Rule [required-tags](h
 
 
 ## Architecture
-The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver configuration files to a centralized S3 bucket on a dedicated Log Archive account. 
+The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver files to a centralized S3 bucket on a dedicated Log Archive account. 
 
 There are two possible ways to deploy the CRCD dashboard on AWS Organizations. You can utilize the same Log Archive account where your AWS Config configuration files are delivered; in this case the architecture would look like this.
 
@@ -90,9 +90,12 @@ The solution leverages AWS Config data to build the visualizations on the dashbo
 
 ### AWS Control Tower considerations
 
-If you enabled AWS Config in all accounts an regions via AWS Control Tower, it may be that AWS Control Tower created a Service Control Policy that denies adding or removing bucket policies on the Log Archive bucket. This is a control aimed at preventing any changes to the bucket, and will make deployment fail even if you run the CloudFormation script as administrator.
+If you enabled AWS Config in all accounts and regions via AWS Control Tower, it may be that AWS Control Tower created a Service Control Policy that denies adding or removing bucket policies on the Log Archive bucket. This is a control aimed at preventing any changes to this very important bucket. However, the IAM role `AWSControlTowerExecution` is exempted by the Service Control Policy, and therefore can be used for Control Tower admin tasks. This role is available in all accounts of the organization, and can be assumed from the management account of your organization to perform operations that are denied even to the administrator of the account.
 
-However, the IAM role `AWSControlTowerExecution` is excluded by the Service Control Policy, and therefore can be used for Control Tower admin tasks. This role is available in all accounts of the organization, and can be assumed from the management account of your organization to execute the steps that require running a CloudFormation template on the Log Archive account.
+Our deployment does not need to add policies to the Log Archive bucket, and we were able to install the dashboard using a _local_ user/role. You may have more stringent Service Control Policies on the Log Archive bucket. In that case we recommend assuming the `AWSControlTowerExecution` IAM role from the management account to perform the deployment of the dashboard.
+
+Read more about the `AWSControlTowerExecution` IAM role in the [documentation](https://docs.aws.amazon.com/controltower/latest/userguide/awscontroltowerexecution.html).
+
 
 ### Deployment architecure 
 The most important decision to make is to whether you want to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
@@ -102,14 +105,13 @@ The most important decision to make is to whether you want to install the dashbo
 |---|---|
 | Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including users access to Quicksight. Alternatively, you have to share access to the Log Archive account to other teams that will manage these resouces.  |
 | Avoid additional cost for data transfer and storing your data on the Dashboard account.  | The CRCD Dashboard adds complexity in users management to possible Quicksight dashbaords that you already have deployed on the Log Archive account.  |
-|  If you use AWS Control Tower in your organization, this installation does not modify the policies on the Log Archive bucket. Therefore, you can deploy the dashboard as user/role of the Log Archive account and there is no need you to assume the `AWSControlTowerExecution` IAM role from the management account.  |  |
 
 
 #### Dashboard account architecture
 | Pros  | Cons   | 
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
-| Limited number of resources must be deployed on Log Archive account.| If you use AWS Control Tower in your organization, some steps of the configurations must be done by assuming the `AWSControlTowerExecution` IAM role from the management account. Obviously, this requires permissions to access the managment account. |
+| Limited number of resources must be deployed on Log Archive account.| |
 | | Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
 ||You will incur additional costs for the replication and storing of a copy of your data on another Amazon S3 bucket. |
 
@@ -120,7 +122,6 @@ The most important decision to make is to whether you want to install the dashbo
 1. AWS Config enabled in the accounts and regions you want to track, setup the delivery of AWS Config files to a centralized S3 bucket (the Log Archive bucket) in the Log Archive account.
 1. An AWS Account where you'll deploy the dashboard (the Dashboard account).
 1. IAM Role or IAM User with permissions to deploy the infrastructure using CloudFormation.
-1. If you use AWS Control Tower in your organization, some steps of the configurations must be done by assuming the `AWSControlTowerExecution` IAM role from the management account. Obviously, this requires permissions to access the managment account.
 1. Sign up for [Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/signing-up.html) and create a user:
     1. Select **Enterprise** edition.
     2. Paginated Reports are not required for the CRCD dashboard. On the **Get Paginated Report add-on** choose the option you prefer.
@@ -143,33 +144,34 @@ Regardless of the deployment of the deployment architecture of your choice, you 
 **Parameter group: AWS Config logging - where your AWS Config files are delivered**
 
 These parameters specify information about your AWS Config setup. They never change depending on the architecture of your deployment.
-* Log Archive account ID
+* `Log Archive account ID`
   * This is always the number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files.
-* Log Archive bucket
+* `Log Archive bucket`
   * This is always the name of the Amazon S3 bucket collecting AWS Config files.
 
 
 **Parameter group: CRCD Dashboard - where you deploy the dashboard and where its data is**
 
 These parameters define where you install your dashboard. It is your choice to specify the same values as above (for deployment on the Log Archive account), or a different AWS account ID and bucket name (if you chose to deploy on a dedicated dashboard account).
-* Dashboard account ID
+* `Dashboard account ID`
   * The number of the AWS account that contains the Amazon S3 bucket source of data for the CRCD dashboard and related data pipeline resources.
-* Dashboard bucket
+* `Dashboard bucket`
   * Name of the Amazon S3 bucket that is used as source of data for the CRCD dashboard.
-* Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file
+* `Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file`
   * This depends on how you are going to install the CRCD dashboard. More details below.
-* Configure cross-account replication of AWS Config files from Log Archive to Dashboard account
+* `Configure cross-account replication of AWS Config files from Log Archive to Dashboard account`
   * This depends on how you are going to install the CRCD dashboard. More details below.
 
 
 Follow instructions on one of the paragraphs below, depending on the architecture of choice.
+
 ### Installation on standalone account
-Follow the installation instructions for the Log Archive account below.
+Follow the same installation instructions for the Log Archive account.
 
 ### Installation on Log Archive account
 The installation process consists of two steps:
-1. Data pipeline resources for the dashboard, via CloudFormation stack
-1. Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool
+1. Data pipeline resources for the dashboard, via CloudFormation stack.
+1. Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool.
 
 ![CRCD](images/deployment-steps-log-archive-account.png "CRCD Dashboard: deployment steps on Log Archive account")
 
@@ -182,15 +184,15 @@ The installation process consists of two steps:
 Log into the AWS Management Console for your **Log Archive account**.
 
 1. Open the CloudFormation console and upload the template file `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
-   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`
-   - `User name of QuickSight user` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users)
-   - `Log Archive account ID` The number of the AWS account where you are currently logged in
-   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data
-   - `Dashboard account ID` Insert again the number of the AWS account where you are currently logged in. It is important to repeat the same value as `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment
-   - `Dashboard bucket` Insert again the name of the Amazon S3 bucket that collects AWS Config data. It is important to repeat the same value as `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment
-   - `Configure S3 event notification` Whenever a new AWS Config file is delivered to the Log Archive bucket, a lambda function must be called to create the corresponding partition on Amazon Athena. This leverages S3 event notifications which is configured by this template if you select `yes` here. There may be cases in which AWS customers already have configured event notifications on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below)
-   - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode
-   - **Leave every other parameter to its default value**
+   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`.
+   - `User name of QuickSight user` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users).
+   - `Log Archive account ID` The number of the AWS account where you are currently logged in.
+   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data.
+   - `Dashboard account ID` Insert again the number of the AWS account where you are currently logged in. It is important to repeat the same value as `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment.
+   - `Dashboard bucket` Insert again the name of the Amazon S3 bucket that collects AWS Config data. It is important to repeat the same value as `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment.
+   - `Configure S3 event notification` Whenever a new AWS Config file is delivered to the Log Archive bucket, a lambda function must be called to create the corresponding partition on Amazon Athena. This leverages S3 event notifications which is configured by this template if you select `yes` here. There may be cases in which AWS customers already have configured event notifications on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below).
+   - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode.
+   - **Leave every other parameter to its default value**.
 1. Run the template.
 1. Note down the output values of the CloudFormation template.
 
@@ -199,8 +201,8 @@ Stay logged into the AWS Management Console for your **Log Archive account**.
 
 
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-   - Navigate to the AWS Management Console and open AWS CloudShell. Be sure to be in the correct region
-   - The tool requires Python 3
+   - Navigate to the AWS Management Console and open AWS CloudShell. Be sure to be in the correct region.
+   - The tool requires Python 3.
    - Make sure you have the latest pip package installed:
     ```
     python3 -m ensurepip --upgrade
@@ -209,42 +211,42 @@ Stay logged into the AWS Management Console for your **Log Archive account**.
     ```
     pip3 install --upgrade cid-cmd
     ```
-   - On the top right corner, click on `Actions`, and then `Upload file`
-   - Select the `cid-crcd.yaml` file under the `dashboard_template` directory and click on `Upload`
+   - On the top right corner, click on `Actions`, and then `Upload file`.
+   - Select the `cid-crcd.yaml` file under the `dashboard_template` directory and click on `Upload`.
    - Deploy the dashboard running the command (replace first the following parameters):
-     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template
-     - `--tag1` The name of the first tag you use to categorize workloads
-     - `--tag2` The name of the second tag you use to categorize workloads
-     - `--tag3` The name of the third tag you use to categorize workloads
-     - `--tag4` The name of the fourth tag you use to categorize workloads
-     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`
-     - **Leave every other parameter to its default value**
+     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template.
+     - `--tag1` The name of the first tag you use to categorize workloads.
+     - `--tag2` The name of the second tag you use to categorize workloads.
+     - `--tag3` The name of the third tag you use to categorize workloads.
+     - `--tag4` The name of the fourth tag you use to categorize workloads.
+     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`.
+     - **Leave every other parameter to its default value**.
 
     ```
     cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
-1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`
-1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected)
-1. When asked `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you
-1. Enable Refresh Schedule on Datasets. This will refresh the data in QuickSight with the frequency you specify:
-   - Navigate to QuickSight and then Datasets
-   - The datasets for this dashboard have all the `config_` prefix
-   - Click on a Dataset, and then open the Refresh tab
-   - Click on Add a new schedule, select Full refresh and a Frequency
+1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
+1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected).
+1. When asked `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you.
+1. By default, the data sets for this CRCD dashbaord are refreshed once a day. Optionally, you can configure the Refresh Schedule in QuickSight with the frequency you specify:
+   - Navigate to QuickSight and then Datasets.
+   - All the datasets for this dashboard have `config_` as prefix.
+   - Click on a Dataset, and then open the Refresh tab.
+   - Click on Add a new schedule, select Full refresh and a frequency.
 1. Visualize the dashboard:
-   - Navigate to QuickSight and then Dashboards
-   - Make sure you are in the correct region
-   - Click on the AWS Config Resource Compliance Dashboard (CRCD) dashboard
+   - Navigate to QuickSight and then Dashboards.
+   - Make sure you are in the correct region.
+   - Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
 
 #### Manual setup of S3 event notification
 _You can skip this paragraph if you selected_ `yes` _on CloudFormation parameter_ `Configure S3 event notification` _at step 1 above._
 
-If you selected `no`, you must configure the Log Archive S3 bucket event notification to trigger the Lambda Partitioner function when objects are added to the bucket. The necessary permissions for the Lambda function to access the Log Archive bucket have been deployed by CloudFormation already.
+If you selected `no`, you must configure the Log Archive S3 bucket event notification to trigger the Lambda Partitioner function when objects are added to the bucket. The necessary permissions for the Lambda function to access the Log Archive bucket have been deployed by CloudFormation already, and you can find the ARN of the Lambda Partitioner function in the output values of the CloudFormation template.
 
 The S3 event notifications for this dashboard have these requirements:
-1. All object create events
-1. All prefixes
+1. All object create events.
+1. All prefixes.
 
 This may be a challenge depending on your current S3 event notification setup, since Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html#notification-how-to-filtering-examples-invalid) overlapping prefixes in two rules for the same event type.
 
@@ -257,9 +259,9 @@ Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguid
 ### Installation on dedicated Dashboard account
 
 The installation process consists of three steps:
-1. On the Dashboard account: data pipeline resources for the dashboard, via CloudFormation stack
-1. On the Log Archive account: configure the S3 replication rule that will copy AWS Config files from the  Log Archive bucket to the Dashboard bucket, via CloudFormation stack
-1. On the Dashboard account: Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool
+1. On the Dashboard account: data pipeline resources for the dashboard, via CloudFormation stack.
+1. On the Log Archive account: configure the S3 replication rule that will copy AWS Config files from the  Log Archive bucket to the Dashboard bucket, via CloudFormation stack.
+1. On the Dashboard account: Quicksight resources for the dashboard and the necessary Athena views, using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool.
 
 ![CRCD](images/deployment-steps-dashboard-account.png "CRCD Dashboard: deployment steps on Dashboard account")
 
@@ -271,15 +273,15 @@ The installation process consists of three steps:
 Log into the AWS Management Console for your **Dashboard account**.
 
 1. Open the CloudFormation console and upload the template file `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
-   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`
-   - `User name of QuickSight user` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users)
-   - `Log Archive account ID` The number of the Log Archive account. Notice this in NOT where you are currently logged in
-   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data
-   - `Dashboard account ID` Insert the number of the AWS account where you are currently logged in. It is important that this is different than the value in `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment
-   - `Dashboard bucket` Insert the name of the Amazon S3 bucket that will collect AWS Config data. This bucket will be created by the CloudFormation template. It is important that this is different than the value in `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment
-   - `Configure S3 event notification` Leave it at the default value. This parameter is ignored in this deployment mode
-   - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode
-   - **Leave every other parameter to its default value**
+   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`.
+   - `User name of QuickSight user` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users).
+   - `Log Archive account ID` The number of the Log Archive account. Notice this in NOT where you are currently logged in.
+   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data.
+   - `Dashboard account ID` Insert the number of the AWS account where you are currently logged in. It is important that this is different than the value in `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment.
+   - `Dashboard bucket` Insert the name of the Amazon S3 bucket that will collect AWS Config data on the Dashboard account. This bucket will be created by the CloudFormation template, so you can choose any name for you bucket. It is important that this is different than the value in `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment.
+   - `Configure S3 event notification` Leave it at the default value. This parameter is ignored in this deployment mode.
+   - `Configure cross-account replication` Leave it at the default value. This parameter is ignored in this deployment mode.
+   - **Leave every other parameter to its default value**.
 1. Run the template.
 1. Note down the output values of the CloudFormation template.
 
@@ -287,26 +289,25 @@ Log into the AWS Management Console for your **Dashboard account**.
 Log into the AWS Management Console for your **Log Archive account**.
 
 1. Open the CloudFormation console and upload the template file `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
-   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`
-   - `User name of QuickSight user` Leave it at the default value. This parameter is ignored in this deployment mode
-   - `Log Archive account ID` The number of the AWS account where you are currently logged in
-   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data
-   - `Dashboard account ID` Insert the number of the Dashboard account used at Step 1. Notice this in NOT where you are currently logged in. It is important that this is different than the value in `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment
-   - `Dashboard bucket` Insert the name of the Amazon S3 bucket that will collect AWS Config data. Insert the bucket name that you specified in this field at Step 1. It is important that this is different than the value in `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment
-   - `Configure S3 event notification` Leave it at the default value. This parameter is ignored in this deployment mode
-   - `Configure cross-account replication` Select `yes` to let the template configure S3 replication from the Log Archive bucket to the Dashboard bucket. There may be cases in which AWS customers already have configured S3 replication on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below)
+   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`.
+   - `User name of QuickSight user` Leave it at the default value. This parameter is ignored in this deployment mode.
+   - `Log Archive account ID` The number of the AWS account where you are currently logged in.
+   - `Log Archive bucket` Name of the Amazon S3 bucket that collects AWS Config data.
+   - `Dashboard account ID` Insert the number of the Dashboard account used at Step 1. Notice this in NOT where you are currently logged in. It is important that this is different than the value in `Log Archive account ID` for the CloudFormation template to deploy the resources for this deployment.
+   - `Dashboard bucket` Insert the bucket name that you specified in this field at Step 1. It is important that this is different than the value in `Log Archive bucket` for the CloudFormation template to deploy the resources for this deployment.
+   - `Configure S3 event notification` Leave it at the default value. This parameter is ignored in this deployment mode.
+   - `Configure cross-account replication` Select `yes` to let the template configure S3 replication from the Log Archive bucket to the Dashboard bucket. There may be cases in which AWS customers already have configured S3 replication on the Log Archive bucket; in this case select `no` and then you'll have to manually configure this part (more details below).
      - Please notice that if you select `yes`, any existing S3 replication configuration will be overwritten!
-   - **Leave every other parameter to its default value**
+   - **Leave every other parameter to its default value**.
 1. Run the template.
 1. Note down the output values of the CloudFormation template.
 
 ##### Step 3
 Log back into the AWS Management Console for your **Log Archive account**.
 
-
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-   - Navigate to the AWS Management Console and open AWS CloudShell. Be sure to be in the correct region
-   - The tool requires Python 3
+   - Navigate to the AWS Management Console and open AWS CloudShell. Be sure to be in the correct region.
+   - The tool requires Python 3.
    - Make sure you have the latest pip package installed:
     ```
     python3 -m ensurepip --upgrade
@@ -315,206 +316,46 @@ Log back into the AWS Management Console for your **Log Archive account**.
     ```
     pip3 install --upgrade cid-cmd
     ```
-   - On the top right corner, click on `Actions`, and then `Upload file`
-   - Select the `cid-crcd.yaml` file under the `dashboard_template` directory and click on `Upload`
+   - On the top right corner, click on `Actions`, and then `Upload file`.
+   - Select the `cid-crcd.yaml` file under the `dashboard_template` directory and click on `Upload`.
    - Deploy the dashboard running the command (replace first the following parameters):
-     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template
-     - `--tag1` The name of the first tag you use to categorize workloads
-     - `--tag2` The name of the second tag you use to categorize workloads
-     - `--tag3` The name of the third tag you use to categorize workloads
-     - `--tag4` The name of the fourth tag you use to categorize workloads
-     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`
-     - **Leave every other parameter to its default value**
+     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template.
+     - `--tag1` The name of the first tag you use to categorize workloads.
+     - `--tag2` The name of the second tag you use to categorize workloads.
+     - `--tag3` The name of the third tag you use to categorize workloads.
+     - `--tag4` The name of the fourth tag you use to categorize workloads.
+     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`.
+     - **Leave every other parameter to its default value**.
 
     ```
     cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
-1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`
-1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected)
-1. When asked `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you
-1. Enable Refresh Schedule on Datasets. This will refresh the data in QuickSight with the frequency you specify:
-   - Navigate to QuickSight and then Datasets
-   - The datasets for this dashboard have all the `config_` prefix
-   - Click on a Dataset, and then open the Refresh tab
-   - Click on Add a new schedule, select Full refresh and a Frequency
+1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
+1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected).
+1. When asked `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you.
+1. By default, the data sets for this CRCD dashbaord are refreshed once a day. Optionally, you can configure the Refresh Schedule in QuickSight with the frequency you specify:
+   - Navigate to QuickSight and then Datasets.
+   - All the datasets for this dashboard have `config_` as prefix.
+   - Click on a Dataset, and then open the Refresh tab.
+   - Click on Add a new schedule, select Full refresh and a frequency.
 1. Visualize the dashboard:
-   - Navigate to QuickSight and then Dashboards
-   - Make sure you are in the correct region
-   - Click on the AWS Config Resource Compliance Dashboard (CRCD) dashboard
+   - Navigate to QuickSight and then Dashboards.
+   - Make sure you are in the correct region.
+   - Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
 #### Manual setup of S3 replication
 _You can skip this paragraph if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _at step 2 above._
 
-
-_TODO review, is the IAM role in the output of CFN? are permissions on the bucket created in case on no?_
-
 Log onto the Log Archive Account and open the Amazon S3 console. You can replicate AWS Config files from the centralized Log Archive bucket to the Dashboard bucket through an Amazon S3 Replication configuration, follow these [instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html). 
-* Specify the IAM role created by the CloudFormation template
-
-* _Once you create the replication configuration on the source bucket, write down the ARN of the IAM role created for the replication. Amazon S3 assumes this IAM role to replicate objects across accounts on your behalf._
-
-
-
-
-### Installation on dedicated Dashboard account [OLD]
-
-Follow this optional step if you want to install the AWS Config Resource Compliance Dashboard (CRCD) on a Dashboard Account separated from the Log Archive account. In this case, the architecture of the solution is below.
-
-![CRCD](images/Architecture-DedicatedDasboardAccount.png "CRCD Dashboard, deployment on AWS Organization")
-
-**Skip to the next paragraph to install the dashboard directly on the Log Archive account.**
-
-For this scenario it is necessary to configure object replication from the centralized Amazon S3 Config bucket in the Log Archive account (the source bucket), to an Amazon S3 bucket that you will create in the Dashboard Account (the destination bucket).
-
-Log onto the Dashboard Account, open the Amazon S3 console and create an Amazon S3 bucket in the region where you will deploy the dashboard, make sure to activate versioning. From now on, this will be called the **Data Collection Bucket**. 
-
-Now log onto the Log Archive Account and open the Amazon S3 console. You can replicate AWS Config files from the centralized Amazon S3 Config bucket to the Data Collection Bucket through an Amazon S3 Replication configuration, follow the instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html). Once you create the replication configuration on the source bucket, write down the ARN of the IAM role created for the replication. Amazon S3 assumes this IAM role to replicate objects across accounts on your behalf.
-
-After you created the Replication Configuration, you need to modify the Bucket Policy of the Data Collection Bucket in the destination account to allow the source account to replicate S3 objects. 
-
-Replace `SOURCE_ACCOUNT_REPLICATION_ROLE_ARN` and `DESTINATION_BUCKET_ARN` in the policy below with the corresponding values, and add the policy to the Data Collection Bucket using the AWS Console.
-
-```
-{
-    "Version":"2012-10-17",
-    "Id":"",
-    "Statement":[
-      {
-         "Sid": "HTTPSOnly",
-         "Effect": "Deny",
-         "Principal": "*",
-         "Action": "s3:*",
-         "Resource": [
-             "DESTINATION_BUCKET_ARN/*",
-             "DESTINATION_BUCKET_ARN"
-         ],
-         "Condition": {
-             "Bool": {
-                 "aws:SecureTransport": "false"
-             }
-         }
-      },
-      {
-         "Sid":"Set permissions for objects",
-         "Effect":"Allow",
-         "Principal":{
-            "AWS":"SOURCE_ACCOUNT_REPLICATION_ROLE_ARN"
-         },
-         "Action":["s3:ReplicateObject", "s3:ReplicateDelete"],
-         "Resource":"DESTINATION_BUCKET_ARN/*"
-      },
-      {
-         "Sid":"Set permissions on bucket",
-         "Effect":"Allow",
-         "Principal":{
-            "AWS":"SOURCE_ACCOUNT_REPLICATION_ROLE_ARN"
-         },
-         "Action":["s3:List*", "s3:GetBucketVersioning", "s3:PutBucketVersioning"],
-         "Resource":"DESTINATION_BUCKET_ARN"
-      }
-    ]
- }
-```
-
-You can follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html) for that.
-
-Once object replication is configured, follow the instructions on the next paragraph. In your case, the Amazon S3 bucket will always be the Data Collection Bucket.
-
-## Deployment Steps [OLD]
-
-1. At every step, make sure you are in the region where both your central Config Amazon S3 bucket Amazon QuickSight are deployed.
-1. Open the CloudFormation console and upload the template file `cloudformation/cid-crcd-resources.yaml`. Specify these parameters:
-   - `Stack name` This is up to you, but we recommend to call it `cid-crcd-resources`
-   - `QuickSightUser` User name of QuickSight user (as displayed in QuickSight admin panel), see [here](https://quicksight.aws.amazon.com/sn/admin#users)
-   - `ConfigLoggingBucket` Name of the Amazon S3 bucket that collects AWS Config data
-   - **Leave every other parameter to its default value**
-1. Run the template.
-1. Write down the following from the output of the CloudFormation template:
-   - `LambdaARN`
-   - `LambdaRoleARN`
-   - `QuickSightDataSourceRole`
-1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
-   - Navigate to the AWS Console and open AWS CloudShell. Be sure to be in the correct region
-   - The tool requires Python 3
-   - Make sure you have the latest pip package installed:
-    ```
-    python3 -m ensurepip --upgrade
-    ```
-   - Install the CID-CMD tool running the following command:
-    ```
-    pip3 install --upgrade cid-cmd
-    ```
-   - On the top right corner, click on `Actions`, and then `Upload file`
-   - Select the `CID-Config.yaml` file under the `dashboard_template` directory and click on `Upload`
-   - Deploy the dashboard running the command (replace first the following parameters):
-     - `--quicksight-datasource-role` The value of the output `QuickSightDataSourceRole` from the CloudFormation template
-     - `--tag1` The name of the first tag you use to categorize workloads
-     - `--tag2` The name of the second tag you use to categorize workloads
-     - `--tag3` The name of the third tag you use to categorize workloads
-     - `--tag4` The name of the fourth tag you use to categorize workloads
-     - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`
-     - **Leave every other parameter to its default value**
-
-    ```
-    cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
-    ```
-1. During installation the CID-CMD tool will ask you `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, you already have a datasource called `CID-CMD-Athena`. Select it, otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`
-1. When asked `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected)
-1. When asked `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you
-1. Enable Refresh Schedule on Datasets. This will refresh the data in QuickSight with the frequency you specify:
-   - Navigate to QuickSight and then Datasets
-   - The datasets for this dashboard have all the `config_` prefix
-   - Click on a Dataset, and then open the Refresh tab
-   - Click on Add a new schedule, select Full refresh and a Frequency
-
-1. Configure the Config S3 bucket to trigger the Lambda Partitioner function when objects are added to the bucket and allow the same function permission to read objects:
-   - Enable a Lambda event notification [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enable-event-notifications.html#enable-event-notifications-sns-sqs-lam) so that the Lambda Partitioner function will be called every time a new Config Snapshot is available. Use the following parameters:
-     - Name = `cid-crcd-deliver-config-snapshot`
-     - Event types = `All object create events`
-     - Destination = `Lambda function`
-     - Click on `Choose from your Lambda functions` and select the lambda function `cid-crcd-config-snapshot-partitioner` from the drop down list
-     - Alternatively, select `Enter Lambda function ARN` and enter the value of the output `LambdaARN` returned by the CloudFormation script on the `Lambda function` field
-   - Add the following statement to the bucket policy [follow these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/add-bucket-policy.html):
-     - Replace `LAMBDA-PARTITIONER-RULE-ARN` with the output `LambdaRoleARN` returned by the CloudFormation script
-     - Replace `YOUR-CONFIG-BUCKET` with the name of the Config S3 bucket
-
-    ```
-        {
-            "Sid": "Lambda Partitioner access for CRCD dashboard",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "LAMBDA-PARTITIONER-ROLE-ARN"
-            },
-            "Action": [
-				"s3:GetBucketLocation",
-				"s3:GetObject",
-				"s3:ListBucket",
-				"s3:GetObjectVersion"
-			],
-            "Resource": [
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET",
-                "arn:aws:s3:::YOUR-CONFIG-BUCKET/*"
-            ]
-        }
-    ```
-
-> The code in the Lambda Partitioner function supports this advanced scenario.
-> * If your bucket publishes events notifications to an SNS topic, you can subscribe the Lambda Partitioner function to the topic.
-> * If your bucket already sends event notifications to a lambda function, you can change that notification to an SNS topic and subscribe your function and the Lambda Partitioner function to that SNS topic.
-
-
-
-1. Visualize the dashboard:
-   - Navigate to QuickSight and then Dashboards
-   - Make sure you are in the correct region
-   - Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard
+* Specify the IAM role created by the CloudFormation template at step 2, this is reported in the output values of the CloudFormation template itself.
 
 
 ## Destroy resources
 
 In order to destroy the dashboard, you need to:
 
-1. Navigate to the AWS Console and open AWS CloudShell in the region where you have deployed the dashboard
+1. Log into the AWS Console of the account where you have deployed the dashboard. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
+1. Open AWS CloudShell in the region where you have deployed the dashboard.
 1. Delete the dashboard by executing the following command:
 
 ```
@@ -523,20 +364,24 @@ cid-cmd delete --resources cid-crcd.yaml
 
 Where:
 
-* `cid-crcd.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed)
+* `cid-crcd.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed).
 
-3. When prompted:
-   - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CRCD)` dashboard
-   - For each QuickSight dataset, choose `yes` to delete the dataset
-   - Accept the default values of the S3 Path for the Athena table
-   - Accept the default values of the four tags
-   - For each Athena view, choose `yes` to delete the dataset
+4. When prompted:
+   - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CRCD)` dashboard.
+   - For each QuickSight dataset, choose `yes` to delete the dataset.
+   - Accept the default values of the S3 Path for the Athena table.
+   - Accept the default values of the four tags.
+   - For each Athena view, choose `yes` to delete the dataset.
 
-1. On the same account, open CloudFormation and delete the template that installed the resources for the dashboard (make sure to empty the Amazon S3 bucket hosting the Athena Query results first)
-1. Revert any manual change done during setup:
-   - Amazon S3 Config Logging Bucket: remove the bucket policy statement that allows the Lambda Partitioner function to read objects
-   - Amazon S3 Config Logging Bucket: remove the Event notification that triggered the  Lambda Partitioner function
-   - If you configured replication for the Config objects across accounts, remove the destination bucket and the replication configuration
+1. On the same account, open CloudFormation and delete the template that installed the resources for the dashboard (make sure to empty the Amazon S3 bucket hosting the Athena Query results first).
+1. Revert any manual change done on this account during setup.
+
+If you deployed the dashboard on a standalone AWS account or in the Log Archive account you have completed. If you installed the dashboard in a dedicated Dashboard account, you now need to:
+
+1. Log into the AWS Console of the Log Archive account. This is the AWS account ID that you specified in the `Log Archive account ID` parameter of the CloudFormation template.
+1. Open CloudFormation and delete the template that installed the resources for the dashboard. Be sure you are in the correct region.
+1. Revert any manual change done on this account during setup.
+
 
 # Additional Information
 
@@ -546,9 +391,9 @@ The dashboard uses these sources to get the inventory of resources and their com
 
 
 The solution supports the following ways of activating AWS Config:
-1. manual setup on standalone AWS accounts
-1. deployment by AWS Control Tower on AWS Organizations
-1. AWS Config configuration history and configuration snapshot files
+1. manual setup on standalone AWS accounts.
+1. deployment by AWS Control Tower on AWS Organizations.
+1. AWS Config configuration history and configuration snapshot files.
 
 These two options have different ways of structuring the prefixes of the AWS Config files on Amazon S3. They are defined below, and the Lambda Partitioner function supports all of them.
 
@@ -568,13 +413,13 @@ These two options have different ways of structuring the prefixes of the AWS Con
 `AWS-ORGANIZATION-ID/AWSLogs/ACCOUNT-ID/Config/REGION/YYYY/MM/DD/ConfigHistory/ACCOUNT-ID_Config_REGION_ConfigHistory_RESOURCE-ID_TIMESTAMP.json.gz`
 
 Where:
-* `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization
-* `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234
-* `REGION` identifies an AWS region, e.g. us-east-1
-* `YYYY/MM/DD` represents a date, e.g. 2024/04/18
-* `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z
-* `RESOURCE-ID` identifies the resource affected by the ConfigHistory record, e.g. AWS::Lambda::Function
-* `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb
+* `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization.
+* `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234.
+* `REGION` identifies an AWS region, e.g. us-east-1.
+* `YYYY/MM/DD` represents a date, e.g. 2024/04/18.
+* `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z.
+* `RESOURCE-ID` identifies the resource affected by the ConfigHistory record, e.g. AWS::Lambda::Function.
+* `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb.
 
 # Security
 
