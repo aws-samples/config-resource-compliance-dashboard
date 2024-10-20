@@ -111,8 +111,7 @@ The most important decision to make is to whether you want to install the dashbo
 | Pros  | Cons   | 
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
-| Limited number of resources must be deployed on Log Archive account.| |
-| | Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
+| Limited number of resources must be deployed on Log Archive account.| Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
 ||You will incur additional costs for the replication and storing of a copy of your data on another Amazon S3 bucket. |
 
 

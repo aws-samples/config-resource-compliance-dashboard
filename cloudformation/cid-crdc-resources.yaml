@@ -732,7 +732,6 @@ Resources:
     Properties:
       FunctionName: !Sub "${LambdaPartitioningFunctionName}" 
       Description: "CRCD Dashboard - Lambda function that adds partitions when there are new AWS Config files"
-      ReservedConcurrentExecutions: 0
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -1014,6 +1013,15 @@ Resources:
               SSEAlgorithm: AES256
       VersioningConfiguration:
         Status: Enabled
+      AccessControl: BucketOwnerFullControl
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
       NotificationConfiguration: # CloudFormation does not support the EventName/Id property for S3 NotificationConfiguration, it will get a random text
         LambdaConfigurations:
           - Event: 's3:ObjectCreated:*'
@@ -1181,7 +1189,6 @@ Resources:
     Properties:
       FunctionName: "cid-crcd-support-configure-s3-replication"
       Description: "Configures a cross-account replication on the AWS Config bucket"
-      ReservedConcurrentExecutions: 0
       Handler: index.lambda_handler
       LoggingConfig:
         LogFormat: "Text"
@@ -1327,7 +1334,6 @@ Resources:
       Description: "Configures a Lambda trigger on the Log Archive bucket (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
-      ReservedConcurrentExecutions: 0
       Timeout: 120
       Runtime: python3.12
       MemorySize: 128
