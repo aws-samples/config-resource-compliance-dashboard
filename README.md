@@ -5,34 +5,34 @@
 ![CRCD](images/compliance-1.png "CRCD Dashboard, Compliance tab")
 ![CRCD](images/compliance-2.png "CRCD Dashboard, Compliance tab")
 
+The AWS Config Resource Compliance Dashboard (CRCD) shows the inventory of your AWS resources, along with their compliance status, across multiple AWS accounts and regions by leveraging your AWS Config data.
 
-The AWS Config Resource Compliance Dashboard (CRCD) collects your AWS Config data to show the inventory of your AWS resources, along with their compliance status, running across multiple AWS accounts and regions.
+
 
 ### Advantages
-The AWS Config Resource Compliance Dashboard (CRCD) delivers:
 
 #### A simplified Configuration Management Database (CMDB) experience in AWS
-Avoid investment in a dedicated external CMDB system or third-party tools and access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each aacount and region. Filter resources by account, region, custom tags and IP address. Plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
+Avoid investment in a dedicated external CMDB system or third-party tools. Access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each account and region. Filter resources by account, region, custom tags and IP address. Plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
 
-#### Compliance
-Track compliance of your AWS Config rules and conformance packs per service, region, account, resource. Identify non compliant resources and establish a process of continuous compliance review. Verify that your tagging strategy is consistently applied.
+#### Compliance tracking
+Track compliance of your AWS Config rules and conformance packs per service, region, account, resource. Identify resources that require compliance remediation and establish a process for continuous compliance review. Verify that your tagging strategy is consistently applied across accounts and regions.
 
-#### Security
-The CRCD dashboard is a tool for security teams to establish a compliance practice and offers visibility over security compliance to field teams, without having them access AWS Config service or dedicated security tooling accounts.
+
+#### Security visibility
+The CRCD dashboard helps security teams establish a compliance practice and offers visibility over security compliance to field teams, without them accessing AWS Config service or dedicated security tooling accounts.
 
 
 ### Dashboard features
 
-The AWS Config Resource Compliance Dashboard (CRCD) delivers the following.
-
 #### AWS Config compliance
-- At a glance status of how many resources and AWS Config rules are compliant or non-compliant
-- Month-by-month evolution of the compliance status of your resources and AWS Config rules
-- Breakdown of compliance per service, account and region
-- Compliance tracking of AWS Config rules and conformance packs
+- At-a-glance status of compliant and non-compliant resources and AWS Config rules
+- Month-by-month compliance trend for resources and AWS Config rules
+- Compliance breakdown by service, account, and region
+- Compliance tracking for AWS Config rules and conformance packs
 
 #### Custom tags support
 Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, region, customizable tags.
+
 
 ![CRCD](images/ec2-inventory.png "CRCD Dashboard, Configuration Items")
 
@@ -43,30 +43,32 @@ The dashboard allows filtering of resources by the custom tags that you use to c
 The AWS Config [inventory dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) is replicated here, so that you can share it without granting access to the AWS Config console.
 
 #### Tag compliance
-Tag compliance collects the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can activate this rule as many times as needed, just give it a name that starts with `required-tags`.
+Tag compliance collects the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can activate this rule as many times as needed, as long as you give it a name that starts with `required-tags`.
 
 ![CRCD](images/tag-compliance-summary.png "CRCD Dashboard, Tag Compliance")
 
 
 
 ## Architecture
-The solution can be deployed in standalone AWS accounts and AWS accounts that are member of an AWS Organization. In both cases, AWS Config is configured to deliver files to a centralized S3 bucket on a dedicated Log Archive account. 
+The AWS Config Resource Compliance Dashboard (CRCD) solution can be deployed in standalone AWS accounts or AWS accounts that are members of an AWS Organization. In both cases, AWS Config is configured to deliver configuration files to a centralized Amazon S3 bucket in a dedicated Log Archive account.
 
-There are two possible ways to deploy the CRCD dashboard on AWS Organizations. You can utilize the same Log Archive account where your AWS Config configuration files are delivered; in this case the architecture would look like this.
+There are two possible ways to deploy the CRCD dashboard on AWS Organizations. 
+
+1. **Utilize the Log Archive Account** You can deploy the dashboard resources in the same Log Archive account where your AWS Config configuration files are delivered. The architecture would look like this:
 
 
 ![CRCD](images/architecture-log-archive-account.png "CRCD Dashboard: deployment on AWS Organization, Log Archive account")
 
-Alternatively, you can create a separate Dashboard account to deploy the dashboard resources. In this case, objects from the Log Archive bucket in the Log Archive account are replicated to another bucket in the Dashboard account.
+2. **Separate Dashboard Account** Alternatively, you can create a separate Dashboard account to deploy the dashboard resources. In this case, objects from the Log Archive bucket in the Log Archive account are replicated to another bucket in the Dashboard account.
 
 
 ![CRCD](images/architecture-dashboard-account.png "CRCD Dashboard: deployment on AWS Organization, dedicated Dashboard account")
 
-You can also deploy the dashboard on a standalone account that has AWS Config enabled. This may be useful for proof of concept or to test out the CRCD Dashboard. In this case, all resources are deployed on the same AWS account.
+You can also deploy the dashboard in a standalone account with AWS Config enabled. This option may be useful for proof of concept or testing purposes. In this case, all resources are deployed within the same AWS account.
 
-An Amazon Athena table is used to extract data from AWS Config files delivered to Amazon S3. Whenever there's a new object in the bucket, the Lambda Partitioner function is triggered. This function checks if the object is an AWS Config configuration snapshot or configuration history file, and adds a new partition to the corresponding Athena table with the new data. If the object is neither a configuration snapshot nor configuration history file, the function ignores it. 
+An Amazon Athena table is used to extract data from the AWS Config configuration files delivered to Amazon S3. Whenever a new object is added to the bucket, the Lambda Partitioner function is triggered. This function checks if the object is an AWS Config configuration snapshot or configuration history file. If it is, the function adds a new partition to the corresponding Athena table with the new data. If the object is neither a configuration snapshot nor configuration history file, the function ignores it.
 
-The solution provides Athena views, which are SQL queries that extract data from Amazon S3 using the schema defined in the previously mentioned table. Finally, you can visualize the data in a QuickSight dashboard that use these views through Amazon QuickSight datasets.
+The solution provides Athena views, which are SQL queries that extract data from Amazon S3 using the schema defined in the Athena table. Finally, you can visualize the data in a QuickSight dashboard that uses these views through Amazon QuickSight datasets.
 
 For more information on how the Lambda Partitioner function recognizes AWS Config files, see [Amazon S3 prefixes for AWS Config objects](README.md#amazon-s3-prefixes-for-aws-config-objects).
 
@@ -76,35 +78,43 @@ For more information on how the Lambda Partitioner function recognizes AWS Confi
 ### Regional considerations
 **Data transfer costs will incur when Amazon Athena queries an Amazon S3 bucket across regions.**
 
-To avoid cross-region data transfer, Amazon Quicksight and the Amazon S3 bucket that contains AWS Config files must be deployed in the same region. 
-
-If you have already deployed either one of the resources, the other must use the same region. If you haven't deployed anything yet, you can chose a region of your preference. If you have deployed both resources in different regions, we strongly recommend making changes so that both are in the same region.
-
-Once you have decided the region, AWS resources supporting the dashboard (deployed via CloudFormation) must be deployed in the same region.
+* To avoid cross-region data transfer, Amazon QuickSight and the Amazon S3 bucket containing AWS Config files must be deployed in the same region.
+* If you have already deployed either resource, the other must use the same region. If you haven't deployed anything yet, you can choose a region of your preference.
+* If you have deployed both resources in different regions, we strongly recommend making changes so that both are in the same region.
+* Once you have decided on the region, deploy AWS resources supporting the dashboard (via CloudFormation) in the same region.
 
 
 ### AWS Config considerations
 _You can skip this paragraph if you have AWS Config enabled._
 
-The solution leverages AWS Config data to build the visualizations on the dashboard. If you **do not** have AWS Config enabled, we strongly recommend that you build your strategy first, i.e. decide which accounts, regions and resources to monitor, what does "compliance" mean to your organization, which account is going to be delegated admin for AWS Config, and so on. Only when the AWS Config setup matches your needs, you should consider deploying this dashboard.
+* The solution leverages AWS Config data to build the visualizations on the dashboard. If you **do not** have AWS Config enabled, we strongly recommend building your strategy first:
+  * Decide which accounts, regions, and resources to monitor.
+  * Define what "compliance" means to your organization.
+  * Identify the account that will be delegated as the admin for AWS Config.
+
+* Only when the AWS Config setup matches your needs should you consider deploying this dashboard.
 
 ### AWS Control Tower considerations
 
-If you enabled AWS Config in all accounts and regions via AWS Control Tower, it may be that AWS Control Tower created a Service Control Policy that denies adding or removing bucket policies on the Log Archive bucket. This is a control aimed at preventing any changes to this very important bucket. However, the IAM role `AWSControlTowerExecution` is exempted by the Service Control Policy, and therefore can be used for Control Tower admin tasks. This role is available in all accounts of the organization, and can be assumed from the management account of your organization to perform operations that are denied even to the administrator of the account.
+* If you enabled AWS Config in all accounts and regions via AWS Control Tower, it may have created a Service Control Policy that denies adding or removing bucket policies on the Log Archive bucket. This control aims to prevent changes to this important bucket.
+* However, the IAM role `AWSControlTowerExecution` is exempted by the Service Control Policy and can be used for Control Tower admin tasks. This role is available in all accounts of the organization and can be assumed from the management account to perform operations denied to account administrators.
+* Our deployment does not need to add policies to the Log Archive bucket, and we were able to install the dashboard using a local user/role. You may have more stringent Service Control Policies on the Log Archive bucket.
+* In that case, we recommend assuming the `AWSControlTowerExecution` IAM role from the management account to perform the deployment of the dashboard.
 
-Our deployment does not need to add policies to the Log Archive bucket, and we were able to install the dashboard using a _local_ user/role. You may have more stringent Service Control Policies on the Log Archive bucket. In that case we recommend assuming the `AWSControlTowerExecution` IAM role from the management account to perform the deployment of the dashboard.
+
+
 
 Read more about the `AWSControlTowerExecution` IAM role in the [documentation](https://docs.aws.amazon.com/controltower/latest/userguide/awscontroltowerexecution.html).
 
 
 ### Deployment architecure 
-The most important decision to make is to whether you want to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
+The most important decision is whether to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
 
 #### Log Archive account architecture
 | Pros  | Cons   | 
 |---|---|
-| Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including users access to Quicksight. Alternatively, you have to share access to the Log Archive account to other teams that will manage these resouces.  |
-| Avoid additional cost for data transfer and storing your data on the Dashboard account.  | The CRCD Dashboard adds complexity in users management to possible Quicksight dashbaords that you already have deployed on the Log Archive account.  |
+| Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including user access to QuickSight. Alternatively, you have to share access to the Log Archive account with other teams that will manage these resources. |
+| Avoid additional cost for data transfer and storing data on the Dashboard account.  | The CRCD Dashboard adds complexity in user management if you already have QuickSight dashboards deployed in the Log Archive account. |
 
 
 #### Dashboard account architecture
@@ -112,7 +122,7 @@ The most important decision to make is to whether you want to install the dashbo
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
 | Limited number of resources must be deployed on Log Archive account.| Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
-||You will incur additional costs for the replication and storing of a copy of your data on another Amazon S3 bucket. |
+||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
 
 
 
