@@ -231,19 +231,19 @@ Stay logged into the AWS Management Console for your **Log Archive account**.
     cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
 
-1. The CID-CMD tool will prompt you to select a datasource: `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, select the existing datasource `CID-CMD-Athena`. Otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
+1. The CID-CMD tool will prompt you to select a datasource: `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)`. If you have installed other CID/CUDOS dashboards, select the existing datasource `CID-CMD-Athena`. Otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
 1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected).
 1. When prompted `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you.
 
 ###### Configure dataset refresh schedule (optional)
 By default, the datasets for the CRCD dashboard are refreshed once a day. You can optionally configure the Refresh Schedule in QuickSight with a different frequency:
-1. Navigate to QuickSight and then Datasets.
+1. Navigate to QuickSight and then `Datasets`.
 1. All the datasets for this dashboard have the prefix `config_`.
-1. Click on a dataset, and then open the Refresh tab.
-1. Click on `Add a new schedule`, select `Full refresh`, and choose the desired frequency.
+1. Click on a dataset, and then open the `Refresh` tab.
+1. Click on `ADD NEW SCHEDULE`, select `Full refresh`, and choose the desired frequency.
 
 ###### Visualize the dashboard
-1. Navigate to QuickSight and then Dashboards.
+1. Navigate to QuickSight and then `Dashboards`.
 1. Ensure you are in the correct region.
 1. Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
@@ -334,26 +334,26 @@ Log back into the AWS Management Console for your **Log Archive account**.
      - `--tag3` The name of the third tag you use to categorize workloads.
      - `--tag4` The name of the fourth tag you use to categorize workloads.
      - Notice that tag parameters are case sensitive and cannot be empty. If you do not use a tag, pass a short default value, e.g. `--tag4 'tag4'`.
-     - **Leave every other parameter to its default value**.
+     - Leave all other parameters at their default value.
 
     ```
     cid-cmd deploy --resources 'cid-crcd.yaml' --quicksight-datasource-role 'REPLACE-WITH-CLOUDFORMATION-OUTPUT' --tag1 'REPLACE_WITH_CUSTOM_TAG_1' --tag2 'REPLACE_WITH_CUSTOM_TAG_2' --tag3 'REPLACE_WITH_CUSTOM_TAG_3' --tag4 'REPLACE_WITH_CUSTOM_TAG_4' --dashboard-id 'cid-crcd' --athena-database 'cid_crcd_database'  --athena-workgroup 'cid-crcd-dashboard'
     ```
-1. The CID-CMD tool will prompt you to select a datasource: `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)` If you have installed other CID/CUDOS dashboards, select the existing datasource `CID-CMD-Athena`. Otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
+1. The CID-CMD tool will prompt you to select a datasource: `[quicksight-datasource-id] Please choose DataSource (Select the first one if not sure): (Use arrow keys)`. If you have installed other CID/CUDOS dashboards, select the existing datasource `CID-CMD-Athena`. Otherwise select `CID-CMD-Athena <CREATE NEW DATASOURCE>`.
 1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.: (Use arrow keys)` select the time zone for dataset scheduled refresh in your region (it is already preselected).
 1. When prompted `[share-with-account] Share this dashboard with everyone in the account?: (Use arrow keys)` select the option that works for you.
 
 
 ###### Configure dataset refresh schedule (optional)
-By default, the data sets for the CRCD dashboard are refreshed once a day. You can optionally configure the Refresh Schedule in QuickSight with a different frequency:
-1. Navigate to QuickSight and then Datasets.
+By default, the datasets for the CRCD dashboard are refreshed once a day. You can optionally configure the Refresh Schedule in QuickSight with a different frequency:
+1. Navigate to QuickSight and then `Datasets`.
 1. All the datasets for this dashboard have the prefix `config_`.
-1. Click on a dataset, and then open the Refresh tab.
-1. Click on `Add a new schedule`, select `Full refresh`, and choose the desired frequency.
+1. Click on a dataset, and then open the `Refresh` tab.
+1. Click on `ADD NEW SCHEDULE`, select `Full refresh`, and choose the desired frequency.
 
 
 ###### Visualize the dashboard
-1. Navigate to QuickSight and then Dashboards.
+1. Navigate to QuickSight and then `Dashboards`.
 1. Ensure you are in the correct region.
 1. Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
@@ -364,49 +364,47 @@ Log onto the Log Archive Account and open the Amazon S3 console. You can replica
 * Specify the IAM role created by the CloudFormation template at step 2, as reported in the output values of the CloudFormation template.
 
 
-## Destroy resources
+## Destroy dashboard resources
 
-In order to destroy the dashboard, you need to follow the steps below, depending on your deployment type.
+Follow these steps to destroy the dashboard, based on your deployment type.
 
 ### All deployment types
 
-1. Log into the AWS Console of the account where you have deployed the dashboard. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
-1. Open AWS CloudShell in the region where you have deployed the dashboard.
-1. Delete the dashboard by executing the following command:
+1. Log into the AWS Console of the account where you deployed the dashboard. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
+1. Open AWS CloudShell in the region where the dashboard is deployed.
+1. Execute the following command to delete the dashboard:
 
 ```
 cid-cmd delete --resources cid-crcd.yaml
 ```
 
-Where:
-
-* `cid-crcd.yaml` is the template file provided in `dashboard_template` directory (upload it to CloudShell if needed).
+* `cid-crcd.yaml` is the template file provided in the `dashboard_template` directory. Upload it to CloudShell if needed.
 
 4. When prompted:
    - Select the `[cid-crcd] AWS Config Resource Compliance Dashboard (CRCD)` dashboard.
    - For each QuickSight dataset, choose `yes` to delete the dataset.
-   - Accept the default values of the S3 Path for the Athena table.
-   - Accept the default values of the four tags.
+   - Accept the default values for the S3 Path for the Athena table.
+   - Accept the default values for the four tags.
    - For each Athena view, choose `yes` to delete the dataset.
 
 
 ### Installation on Log Archive or standalone account
-1. Log into the AWS Console of the account where you have deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified both in the `Log Archive account ID` and the `Dashboard account ID` parameters of the CloudFormation template.
-1. Open the S3 console and empty the Amazon S3 bucket hosting the Athena Query results. Its name is on the output of the CloudFormation stack.
-1. On the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
-1. Revert any manual change done on this account during setup.
+1. Log into the AWS Console of the account where you deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified both in the `Log Archive account ID` and the `Dashboard account ID` parameters of the CloudFormation template.
+1. Open the S3 console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
+1. In the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
+1. Revert any manual change made on this account during setup.
 
 ### Installation on dedicated Dashboard account
 
 1. Log into the AWS Console of the Log Archive account. This is the AWS account ID that you specified in the `Log Archive account ID` parameter of the CloudFormation template.
-1. Open CloudFormation and delete the stack that installed the resources for the dashboard. Be sure you are in the correct region.
-1. Revert any manual change done on this account during setup.
+1. Open CloudFormation and delete the stack that installed the resources for the dashboard.
+1. Revert any manual change made on this account during setup.
 
-1. Log into the AWS Console of the account where you have deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
-1. Open the S3 console and empty the Amazon S3 bucket hosting the Athena Query results. Its name is on the output of the CloudFormation stack.
-1. Empty the Dashboard bucket, as well. This bucket contains a copy of the AWS Config files from the Log Archive account. Its name is on the output of the CloudFormation stack.
-1. On the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
-1. Revert any manual change done on this account during setup.
+1. Log into the AWS Console of the account where you deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
+1. Open the S3 console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
+1. Empty the Dashboard bucket, as well. This bucket contains a copy of the AWS Config files from the Log Archive account. The bucket name is in the CloudFormation stack output.
+1. In the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
+1. Revert any manual change made on this account during setup.
 
 # Additional Information
 
@@ -416,13 +414,12 @@ The dashboard uses these sources to get the inventory of resources and their com
 
 
 The solution supports the following ways of activating AWS Config:
-1. manual setup on standalone AWS accounts.
-1. deployment by AWS Control Tower on AWS Organizations.
-1. AWS Config configuration history and configuration snapshot files.
+1. Manual setup on standalone AWS accounts.
+1. Deployment by AWS Control Tower on AWS Organizations.
 
-These two options have different ways of structuring the prefixes of the AWS Config files on Amazon S3. They are defined below, and the Lambda Partitioner function supports all of them.
+These options have different ways of structuring the prefixes of the AWS Config files on Amazon S3. They are defined below, and the Lambda Partitioner function supports all of them.
 
-**Verify that your setup is compatible with the Amazon S3 prefixes.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config files and will discard them. As a consequence, your Athena table will be empty.
+**Verify that your setup is compatible with these Amazon S3 prefixes.** If not, the Lambda Partitioner function will not be able to recognize objects as valid AWS Config files and will discard them. As a consequence, your Athena table will be empty.
 
 
 ### Supported AWS Config prefixes on Amazon S3
