@@ -202,6 +202,7 @@ Parameters:
     ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files"
     Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)"
 
+
 Conditions:
   IsLogArchiveAccountDeployment:
     # use case 1
@@ -580,6 +581,178 @@ Resources:
             reason: "Need to use * for Lakeformation and Athena"
           - id: W28
             reason: "Policy names are as per our design"
+
+
+  # ----------------------------------------------------------------------------------------------------------
+  # CID resources for QuickSight data export 
+  # coming from CID dashboards, we will keep naming consistent with that project
+  # ----------------------------------------------------------------------------------------------------------
+  SourceS3:
+    Type: AWS::S3::Bucket
+    Condition: IsCreateDashboardResources
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketName: !Sub cid-${AWS::AccountId}-data-local
+
+      ## Uncomment following lines to enable bucket logging if needed. Please be careful with the cost of logging.
+      # LoggingConfiguration:
+      #   DestinationBucketName: REPLACE_WITH_YOUR_LOGGING_BUCKET
+      #   LogFilePrefix: REPLACE_WITH_YOUR_PREFIX
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256 ## Use AWS managed KMS
+              ## If you need Customer managed KMS key, yoy can do that using following parameters:
+              # SSEAlgorithm: aws:kms
+              # KMSMasterKeyID: "REPLACE_WITH_YOUR_KEY_ARN"
+      AccessControl: BucketOwnerFullControl
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+# TODO Not sure replication configuration is needed for CID-CRCD
+#      ReplicationConfiguration:
+#        Role: !GetAtt ReplicationRole.Arn
+#        Rules:
+#          - Destination:
+#              Bucket: !Sub "arn:${AWS::Partition}:s3:::${ResourcePrefix}-${DestinationAccountId}-data-exports"
+#              StorageClass: STANDARD
+#            Id: ReplicateCUR2Data
+#            Prefix: !Sub "cur2/${AWS::AccountId}/${ResourcePrefix}-cur2/data/"  # Hardcoded export name
+#            Status: Enabled
+#          - Destination:
+#              Bucket: !Sub "arn:${AWS::Partition}:s3:::${ResourcePrefix}-${DestinationAccountId}-data-exports"
+#              StorageClass: STANDARD
+#            Id: ReplicateFOCUSData
+#            Prefix: !Sub "focus/${AWS::AccountId}/${ResourcePrefix}-focus/data/" # Hardcoded export name
+#            Status: Enabled
+#          - Destination:
+#              Bucket: !Sub "arn:${AWS::Partition}:s3:::${ResourcePrefix}-${DestinationAccountId}-data-exports"
+#              StorageClass: STANDARD
+#            Id: ReplicateCOHData
+#            Prefix: !Sub "coh/${AWS::AccountId}/${ResourcePrefix}-coh/data/" # Hardcoded export name
+#            Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: Object&Version Expiration
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 32 # 1 month
+            ExpirationInDays: 64 # 2 months
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: 'W35'
+            reason: "Data buckets would generate too much logs"
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W3045 # Need to use AccessControl for replication
+
+  SourceS3BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Condition: IsCreateDashboardResources
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Bucket: !Ref SourceS3
+      PolicyDocument:
+        Id: AllowBillingReadAndWrite
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowTLS12Only
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}'
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}/*'
+            Condition:
+              NumericLessThan:
+                s3:TlsVersion: 1.2
+          - Sid: AllowOnlyHTTPS
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}'
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}/*'
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          - Sid: AllowBillingReadAndWrite
+            Effect: Allow
+            Principal:
+              Service: bcm-data-exports.amazonaws.com
+            Action:
+              - s3:GetBucketAcl
+              - s3:GetBucketPolicy
+              - s3:PutObject
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}'
+              - !Sub 'arn:${AWS::Partition}:s3:::${SourceS3}/*'
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  IAMManagedPolicyQuickSightDataExportsReadAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
+    Properties:
+      ManagedPolicyName: cidDataExportsReadAccess 
+      Description: 'Policy for QuickSight to allow DataExports access'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowGlue
+            Effect: Allow
+            Action:
+              - glue:GetPartition
+              - glue:GetPartitions
+              - glue:GetDatabase
+              - glue:GetDatabases
+              - glue:GetTable
+              - glue:GetTables
+            Resource:
+              - !Sub arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:catalog
+              - Fn::Join:
+                - ''
+                - - !Sub arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/
+                  - !Join [ '_', !Split [ '-', 'cid_data_export' ] ] # replace '-' to '_'
+                  - '/*'
+              - Fn::Join:
+                - ''
+                - - !Sub arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/
+                  - !Join [ '_', !Split [ '-', 'cid_data_export' ] ] # replace '-' to '_'
+# TODO these are referring to a destination account that I don't know what is...
+#          - Sid: AllowListBucket
+#            Effect: Allow
+#            Action: s3:ListBucket
+#            Resource:
+#              - !Sub arn:${AWS::Partition}:s3:::cid-${DestinationAccountId}-data-exports
+#          - Sid: AllowReadBucket
+#            Effect: Allow
+#            Action:
+#              - s3:GetObject
+#              - s3:GetObjectVersion
+#            Resource:
+#              - !Sub arn:${AWS::Partition}:s3:::cid-${DestinationAccountId}-data-exports/*
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: 'W28'
+            reason: "Need an explicit name for reference"
+
+  # ----------------------------------------------------------------------------------------------------------
+  # End of: CID resources for QuickSight data export
+  # ----------------------------------------------------------------------------------------------------------
 
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
