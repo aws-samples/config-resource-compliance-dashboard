@@ -818,13 +818,13 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
-  IAMManagedPolicyLambdaS3ConfigSnapshotObject:
+  IAMManagedPolicyLambdaS3ConfigObject:
     Type: AWS::IAM::ManagedPolicy
     Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-s3-configsnapshotobject-policy"
+      ManagedPolicyName: "cid-crcd-s3-configfile-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
@@ -925,7 +925,7 @@ Resources:
       FileSystemConfigs: []
       LoggingConfig:
         LogFormat: "Text"
-        # this is already by default LogGroup: "/aws/lambda/cid-crcd-config-snapshot-partitioner"
+        # this is already by default LogGroup: "/aws/lambda/{LambdaPartitioningFunctionName}"
       Environment:
         Variables:
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
@@ -951,6 +951,7 @@ Resources:
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
+          # ConfigHistory files are the same, just with "ConfigHistory" instead of "ConfigSnapshot"
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
           athena = boto3.client('athena')
@@ -1078,7 +1079,7 @@ Resources:
       - Ref: IAMManagedPolicyLambdaGlue
       - Ref: IAMManagedPolicyLambdaS3AthenaQueryResults
       - Ref: IAMManagedPolicyLambdaCloudWatchLogs
-      - Ref: IAMManagedPolicyLambdaS3ConfigSnapshotObject
+      - Ref: IAMManagedPolicyLambdaS3ConfigObject
       MaxSessionDuration: 3600
       RoleName: "cid-crcd-lambda-partitioner-role"
       AssumeRolePolicyDocument:
@@ -1147,7 +1148,7 @@ Resources:
           - Name: dataSource
             Type: string
 
-  # Allows the S3 bucket that contains the Config Snapshots to invoke the lambda function
+  # Allows the S3 bucket that contains the Config files to invoke the lambda function
   # not needed if the S3 bucket does not send object notifications directly to lambda
   LambdaInvocationPermissionLambdaPartitionerConfig:
     Type: AWS::Lambda::Permission
