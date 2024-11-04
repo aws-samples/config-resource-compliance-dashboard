@@ -1362,7 +1362,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: "cid-crcd-support-configure-s3-replication"
-      Description: "Configures a cross-account replication on the AWS Config bucket"
+      Description: "Configures a cross-account replication on the AWS Config bucket (one-time execution)"
       Handler: index.lambda_handler
       LoggingConfig:
         LogFormat: "Text"

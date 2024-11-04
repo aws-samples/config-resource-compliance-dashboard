@@ -195,7 +195,9 @@ Log into the AWS Management Console for your **Log Archive account**.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Enter the same value as the `Log Archive account ID`. 
    - `Dashboard bucket` Enter the same value as the `Log Archive bucket`.
-   - `Configure S3 event notification` Select `yes` to configure S3 event notifications. This will trigger a Lambda function to create the corresponding partition on Amazon Athena, when a new AWS Config file is delivered to the Log Archive bucket. If you have already configured event notifications on the Log Archive bucket, select `no`. You'll have to manually configure S3 event noptifications (more details below).
+   - `Configure S3 event notification` Select `yes` to configure S3 event notifications. This will trigger the **Partitioner** Lambda function, which will create the corresponding partition on Amazon Athena, when a new AWS Config file is delivered to the Log Archive bucket. Select `no` if you have already configured event notifications on the Log Archive bucket. You'll have to manually configure S3 event noptifications (more details below). 
+     - The S3 event notification configuration is performed by an ad-hoc Lambda function (**Configure bucket notification** in the diagram above) that will be called by the CloudFormation template automatically. 
+     - The **Configure bucket notification** function will return an error (and the entire stack will fail) if you have already configured event notifications on the Log Archive bucket. In this case you must select `no` and run the stack again.
    - `Configure cross-account replication` Leave at the default value. This parameter is ignored in this deployment mode.
    - Leave all other parameters at their default value.
 1. Run the CloudFormation template.
@@ -306,10 +308,12 @@ Log into the AWS Management Console for your **Log Archive account**.
    - `Dashboard bucket` Insert the bucket name that you specified in this field at Step 1.
    - `Configure S3 event notification` Leave at the default value. This parameter is ignored in this deployment mode.
    - `Configure cross-account replication` Select `yes` to configure S3 replication from the Log Archive bucket to the Dashboard bucket. If you already have configured S3 replication on the Log Archive bucket, select `no`. You'll have to manually configure S3 replication (more details below).
-     - Please notice that if you select `yes`, any existing S3 replication configuration will be overwritten!
+     - The S3 replication configuration is performed by an ad-hoc Lambda function (**Configure bucket replication** in the diagram above) that will be called by the CloudFormation template automatically. 
+     - Please notice that if you select `yes`, and you have existing S3 replication configurations, the **Configure bucket replication** function will return an error and the entire stack will fail. In this case you must select `no` and run the stack again.
    - Leave all other parameters at their default value.
 1. Run the CloudFormation template.
 1. Note down the output values of the CloudFormation template.
+
 
 ##### Step 3
 Log back into the AWS Management Console for your **Log Archive account**.
