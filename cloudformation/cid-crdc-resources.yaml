@@ -932,6 +932,11 @@ Resources:
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CONFIG_TABLE_NAME: !Ref AthenaTableName
+          # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
+          # Pass 0 to skip the record
+          # Pass 1 to partition the record
+          PARTITION_CONFIG_SNAPSHOT_RECORDS: 0
+          PARTITION_CONFIG_HISTORY_RECORDS: 1
       Code:
         ZipFile: |
           import re
@@ -947,11 +952,18 @@ Resources:
           ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
           LOGGING_ON = False  # enables additional logging to CloudWatch
 
+          # Partitioning of ConfigSnapshot and ConfigHistory records is enabled from parameters
+          # Pass 0 to skip the record
+          # Pass 1 to partition the record
+          PARTITION_ENABLED = 1
+          PARTITION_DISABLED = 0
+          PARTITION_CONIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONIG_SNAPSHOT_RECORDS']
+          PARTITION_CONIG_HISTORY_RECORDS = os.environ['PARTITION_CONIG_HISTORY_RECORDS']
+
           # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-          # ConfigHistory files are the same, just with "ConfigHistory" instead of "ConfigSnapshot"
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
           athena = boto3.client('athena')
@@ -967,6 +979,10 @@ Resources:
               event_bucket_name = None
               dataSource = None # this can be ConfigSnapshot or ConfigHistory
               found_event = False
+
+              # deciding what is enabled
+              isPartitionConfigSnapshot = (PARTITION_CONIG_SNAPSHOT_RECORDS == PARTITION_ENABLED)
+              isPartitionConfigHistory = (PARTITION_CONIG_HISTORY_RECORDS == PARTITION_ENABLED)
 
               # Is this called directly by S3 event notification?
               try:
@@ -990,7 +1006,10 @@ Resources:
                       # key doesn't exist
                       print('This is not an SNS event either!!')
                       # at this point I cannot continue
-                      raise
+                      return {
+                          'statusCode': 200,
+                          'body': 'Function was called with an unsupported event type.'
+                      }
 
               if LOGGING_ON:
                   print('This is the object key', event_object_key)
@@ -1002,7 +1021,10 @@ Resources:
               match  = re.match(PATTERN, event_object_key)
               if not match:
                   print(f'ERROR: Cannot match {event_object_key}. Cannot proceed.')
-                  return
+                  return {
+                      'statusCode': 200,
+                      'body': 'Object key is not supported, this is not an AWS Config file.'
+                  }
               if LOGGING_ON:
                   print('match.groupdict() = ', match.groupdict())
                   
@@ -1011,12 +1033,31 @@ Resources:
               date = '{year}-{month}-{day}'.format(**match.groupdict())
               if 'ConfigSnapshot' in event_object_key:
                   dataSource = 'ConfigSnapshot'
+
+                  # If not enabled, I can return
+                  if not isPartitionConfigSnapshot:
+                      print(f'SKIPPING: {event_object_key} is a ConfigSnapshot. These records are disabled in the function\'s environment variables.')
+                      return {
+                          'statusCode': 200,
+                          'body': 'ConfigSnapshot files are disabled in the function\'s environment variables.'
+                      }
               elif 'ConfigHistory'  in event_object_key:
                   dataSource = 'ConfigHistory'
+
+                  # If not enabled, I can return
+                  if not isPartitionConfigHistory:
+                      print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
+                      return {
+                          'statusCode': 200,
+                          'body': 'ConfigHistory files are disabled in the function\'s environment variables.'
+                      }
               else:
                   # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
                   print(f'ERROR: {event_object_key} is neither ConfigSnapshot nor ConfigHistory')
-                  raise
+                  return {
+                      'statusCode': 200,
+                      'body': 'Object key is not supported, this is not an AWS Config file.'
+                  }
 
               drop_partition(accountid, region, date, dataSource)
               add_partition(accountid, region, date, object_key_parent, dataSource)
@@ -1341,8 +1382,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  # these were the permissions available on IAM console
-                  # "s3:PutReplicationConfiguration", "s3:GetReplicationConfiguration"
+                  # these are the permissions: s3:PutReplicationConfiguration, s3:GetReplicationConfiguration
                   # Put replication configuration has a requirement on iam:PassRole
                   # To perform this operation, the user or role performing the action must have the iam:PassRole permission.
                   # From: https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html

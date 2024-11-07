@@ -11360,7 +11360,7 @@ dashboards:
         - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>CRCD v2.1.0</b>\n\
             \  </inline>\n  <br/>\n  <inline font-size=\"20px\">Config Resource Compliance\
             \ Dashboard</inline>\n  <br/>\n  <br/>\n  <inline font-size=\"16px\">Created\
-            \ by: Luca Casarini, Iakov Gan</inline>\n  <br/>\n  <inline font-size=\"14px\"\
+            \ by: Luca Casarini</inline>\n  <br/>\n  <inline font-size=\"14px\"\
             >Powered by: Amazon QuickSight, Amazon Athena, Amazon S3, AWS Lambda</inline>\n\
             \  <br/>\n  <br/>\n  <inline font-size=\"14px\">Learn more about AWS Cloud Intelligence\
             \ Dashboards (CID) on\_</inline>\n  <inline font-size=\"14px\">\n    <a href=\"\
