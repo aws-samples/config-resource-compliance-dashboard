@@ -1402,7 +1402,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: "cid-crcd-support-configure-s3-replication"
-      Description: "Configures a cross-account replication on the AWS Config bucket (one-time execution)"
+      Description: "CRCD Dashboard - Configures a cross-account replication on the AWS Config bucket (one-time execution)"
       Handler: index.lambda_handler
       LoggingConfig:
         LogFormat: "Text"
@@ -1427,6 +1427,7 @@ Resources:
         ZipFile: |
           import json
           import boto3
+          from botocore.exceptions import ClientError
 
           def lambda_handler(event, context):
             print("Request received:\n", json.dumps(event))
@@ -1450,29 +1451,45 @@ Resources:
                 send_response(event, context, 'FAILED', {'Error': str(e)})
                 return
             else:
-              # Configure the replication
-                try:
-                  replication_configuration = {
-                    'Role': replication_role_arn,
-                    'Rules': [
-                      {
-                        'ID': replication_rule_name,
-                        'Status': 'Enabled',
-                        'Priority': 1,
-                        "DeleteMarkerReplication": {"Status": "Disabled"},
-                        "Filter": {"Prefix": ""},
-                        'Destination': {
-                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
-                          'Account': destination_account_id
-                        }
-                      }
-                    ]
-                  }
-                  
-                  s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=replication_configuration)
-                except Exception as e:
+              # Check if replication configuration already exists
+              # CRCD dashboard will not override any existing S3 replication configuration
+              try:
+                existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
+                if 'ReplicationConfiguration' in existing_config:
+                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}"
+                  print(error_message)
+
+                  # This will make the CloudFormation template fail
+                  send_response(event, context, 'FAILED', {'Error': error_message})
+                  return
+              except ClientError as e:
+                if e.response['Error']['Code'] != 'ReplicationConfigurationNotFoundError':
                   send_response(event, context, 'FAILED', {'Error': str(e)})
                   return
+              
+              # Configure the replication
+              try:
+                replication_configuration = {
+                  'Role': replication_role_arn,
+                  'Rules': [
+                    {
+                      'ID': replication_rule_name,
+                      'Status': 'Enabled',
+                      'Priority': 1,
+                      "DeleteMarkerReplication": {"Status": "Disabled"},
+                      "Filter": {"Prefix": ""},
+                      'Destination': {
+                        'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                        'Account': destination_account_id
+                      }
+                    }
+                  ]
+                }
+
+                s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=replication_configuration)
+              except Exception as e:
+                send_response(event, context, 'FAILED', {'Error': str(e)})
+                return
               
             send_response(event, context, 'SUCCESS', {})
 
@@ -1494,7 +1511,7 @@ Resources:
             with urllib.request.urlopen(req) as f:
               print(f.read())
               print(f.info())
-
+              
                 
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
@@ -1510,10 +1527,15 @@ Resources:
     Properties:
       ServiceToken: !GetAtt ConfigBucketNotificationConfigurationLambda.Arn
       Bucket: !Ref LogArchiveBucketName
+      # this is needed so that the Lambda function deletes only S3 notification configurations if they have this name
+      # passing it here and as part of NotificationConfiguration so that I do not have to hard-code this string on the Lambda code 
+      EventNotificationName: "CRCDPartitionerTrigger"
       NotificationConfiguration:
         LambdaFunctionConfigurations:
         - Events: ['s3:ObjectCreated:*']
           LambdaFunctionArn: !GetAtt LambdaFunctionPartitionerConfig.Arn
+          # this is needed so that the Lambda function deletes only S3 notification configurations if they have this name
+          Id: "CRCDPartitionerTrigger"
 
   ConfigBucketNotificationConfigurationLambdaRole:
     Type: AWS::IAM::Role
@@ -1544,11 +1566,14 @@ Resources:
   ConfigBucketNotificationConfigurationLambda:
     Type: AWS::Lambda::Function
     Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
     Properties:
-      Description: "Configures a Lambda trigger on the Log Archive bucket (one-time execution)"
+      FunctionName: "cid-crcd-support-configure-s3-event-notification"
+      Description: "CRCD Dashboard - Configures the Log Archive bucket S3 event notification to trigger the CRCD Lambda Partitioner function (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
-      Timeout: 120
+      Timeout: 300
       Runtime: python3.12
       MemorySize: 128
       EphemeralStorage:
@@ -1569,19 +1594,81 @@ Resources:
           import boto3
 
           def lambda_handler(event, context):
+              
               print("Request received:\n", json.dumps(event))
               
               # Get the necessary parameters from the event
               params = event['ResourceProperties']
               bucket_name = params['Bucket']
+              notification_event_name = params['EventNotificationName']
               notification_config = params['NotificationConfiguration']
-              
+
+
               s3 = boto3.client('s3')
 
+              if event['RequestType'] == 'Create':
+                  # Check for existing notification configuration
+                  # The CRCD Dashboard will not overwrite existing event notifications, and this function will fail
+                  try:
+                      existing_config = s3.get_bucket_notification_configuration(Bucket=bucket_name)
+                      if has_notifications(existing_config):
+                          # If there's an existing configuration, fail the Lambda function
+                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. Cannot proceed."
+                          print(error_message)
+                          print(f"Existing S3 event configuration: {existing_config}")
+                          send_response(event, context, 'FAILED', {'Error': error_message})
+                          return  # Exit the function early
+                  except Exception as e:
+                      error_message = f"Error checking existing configuration: {str(e)}"
+                      print(error_message)
+                      send_response(event, context, 'FAILED', {'Error': error_message})
+                      return  # Exit the function early
+
               if event['RequestType'] == 'Delete':
-                  # Remove the notification configuration when the cloud formation template is deleted
-                  # If the user selected YES on the cloud formation template, they confirmed there were no other notification configurations
-                  notification_config = {}
+                  # Must check if the current event notification is the one from CRCD, only in that case it will be deleted
+                  # Will cycle to all notification configurations and delete only the one pertaining to CRCD
+                  try:
+                      existing_config = s3.get_bucket_notification_configuration(Bucket=bucket_name)
+
+                      # Initialize new configuration
+                      new_notification_config = {
+                          'LambdaFunctionConfigurations': [],
+                          'QueueConfigurations': [],
+                          'TopicConfigurations': []
+                      }
+                      
+                      # Flag to check if we found and removed the matching configuration
+                      config_removed = False
+
+                      # Iterate through all types of configurations
+                      # There could be non overlapping event notifications out of the bucket
+                      for config_type in ['LambdaFunctionConfigurations', 'QueueConfigurations', 'TopicConfigurations']:
+                          for config in existing_config.get(config_type, []):
+                              if config.get('Id') == notification_event_name:
+                                  config_removed = True
+                                  print(f"Removing CRCD configuration with Id: {notification_event_name}")
+                              else:
+                                  print(f"Found non-CRCD configuration: {config.get('Id')}")
+                                  new_notification_config[config_type].append(config)
+
+                      # Remove empty lists from the new_notification_config
+                      # e.g. 'TopicConfigurations' if none were found
+                      new_notification_config = {k: v for k, v in new_notification_config.items() if v}
+
+                      if not config_removed:
+                          print(f"No matching event notification found for {notification_event_name}. No changes made.")
+                          send_response(event, context, 'SUCCESS', {})
+                          return
+
+                      # Update notification_config to be used in put_bucket_notification_configuration
+                      notification_config = new_notification_config
+                      
+                  except Exception as e:
+                      error_message = f"Error processing existing configuration: {str(e)}"
+                      print(error_message)
+                      send_response(event, context, 'FAILED', {'Error': error_message})
+                      return
+
               
               try:
                   # Configure the bucket notification
@@ -1596,6 +1683,12 @@ Resources:
               except Exception as e:
                   # Send a failed response back to CloudFormation
                   send_response(event, context, 'FAILED', {'Error': str(e)})
+
+          def has_notifications(config):
+              # Check if the configuration has any S3 notifications as indicated by the types below
+              # pass the outcome of s3.get_bucket_notification_configuration
+              notification_types = ['TopicConfigurations', 'QueueConfigurations', 'LambdaFunctionConfigurations']
+              return any(config.get(type_) for type_ in notification_types)
 
           def send_response(event, context, response_status, response_data):
               response_body = json.dumps({
