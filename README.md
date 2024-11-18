@@ -5,7 +5,7 @@
 ![CRCD](images/compliance-1.png "CRCD Dashboard, Compliance tab")
 ![CRCD](images/compliance-2.png "CRCD Dashboard, Compliance tab")
 
-The AWS Config Resource Compliance Dashboard (CRCD) shows the inventory of your AWS resources, along with their compliance status, across multiple AWS accounts and regions by leveraging your AWS Config data.
+The Amazon Web Services (AWS) Config Resource Compliance Dashboard (CRCD) shows the inventory of your AWS resources, along with their compliance status, across multiple AWS accounts and regions by leveraging your AWS Config data.
 
 
 
@@ -108,7 +108,7 @@ The output of the CLI command should look like this:
 
 Configuration **snapshot** delivery is a key feature of AWS Config's delivery channel. It provides a comprehensive view of all currently active recorded configuration items within a customer's AWS account. In contrast, AWS Config delivers a configuration **history** file to the S3 bucket specified in the delivery channel every 6 hours. This file contains changes detected for each resource type since the last history file was delivered. 
 
-If you only collect configuration history files, you know about a resource and its compliance status only when a change happens to it. On the other hand, by delivering AWS Config snapshot files frequently, you will ensure regular, daily updates of the account's resource configurations, allowing for consistent monitoring and compliance checks. This is why the preferred way to collect data for the dashboard is to have `configSnapshotDeliveryProperties` configured on your delivery channel with a delivery frequency of 24 hours. This is a prerequisite for the AWS Config Resource Compliance Dashboard. We recommend you run the CLI command above to verify your environemnts are compliant.
+If you only collect configuration history files, you know about a resource and its compliance status only when a change happens to it. On the other hand, by delivering AWS Config snapshot files frequently, you will ensure regular, daily updates of the account's resource configurations, allowing for consistent monitoring and compliance checks. This is why the preferred way to collect data for the dashboard is to have `configSnapshotDeliveryProperties` configured on your delivery channel with a delivery frequency of 24 hours. This is a prerequisite for the AWS Config Resource Compliance Dashboard. We recommend you run the CLI command above to verify your environments are compliant.
 
 AWS Control Tower configures the AWS Config delivery channel with a 24-hour delivery frequency for configuration snapshot files.
 
@@ -176,7 +176,7 @@ The most important decision is whether to install the dashboard on a dedicated D
 | Pros  | Cons   | 
 |---|---|
 | Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including user access to QuickSight. Alternatively, you have to share access to the Log Archive account with other teams that will manage these resources. |
-| Avoid additional cost for data transfer and storing data on the Dashboard account.  | The CRCD Dashboard adds complexity in user management if you already have QuickSight dashboards deployed in the Log Archive account. |
+| Avoid cost for data transfer and storing data on the Dashboard account.  | The CRCD Dashboard adds complexity in user management if you already have QuickSight dashboards deployed in the Log Archive account. |
 || If you already have S3 object notification configured on your Config bucket, a part of the CRCD installation must be done manually. |
 
 #### Dashboard account architecture
@@ -184,7 +184,7 @@ The most important decision is whether to install the dashboard on a dedicated D
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
 | Limited number of resources must be deployed on Log Archive account.| Control Tower default installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
-||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
+||You will incur costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
 ||If you already have S3 replication configured on your Log Archive bucket, a part of the CRCD installation must be done manually. |
 
 
@@ -269,7 +269,7 @@ Log into the AWS Management Console for your **Log Archive account**.
 1. Note down the output values of the CloudFormation template.
 
 ##### Step 2
-Stay logged into the AWS Management Console for your **Log Archive account**.
+Remain logged into the AWS Management Console for your **Log Archive account**.
 
 
 1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
@@ -513,7 +513,7 @@ Where:
 * `RANDOM` is a sequence of random character, e.g. a970aeff-cb3d-4c4e-806b-88fa14702hdb.
 
 ### Partitioning AWS Config files
-The Lambda Partitionig function has environment variables that activate the partitioning of AWS Config configuration history and configuration snapshot files separately. The parameters are called:
+The Lambda Partitioning function has environment variables that activate the partitioning of AWS Config configuration history and configuration snapshot files separately. The parameters are called:
 * `PARTITION_CONFIG_SNAPSHOT_RECORDS`
 * `PARTITION_CONFIG_HISTORY_RECORDS`
 
