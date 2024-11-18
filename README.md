@@ -177,15 +177,15 @@ The most important decision is whether to install the dashboard on a dedicated D
 |---|---|
 | Keep your logs secure in the Log Archive account.  | Your security team must install and maintain the CRCD Dashboard resources, including user access to QuickSight. Alternatively, you have to share access to the Log Archive account with other teams that will manage these resources. |
 | Avoid additional cost for data transfer and storing data on the Dashboard account.  | The CRCD Dashboard adds complexity in user management if you already have QuickSight dashboards deployed in the Log Archive account. |
-
+|| If you already have S3 object notification configured on your Config bucket, a part of the CRCD installation must be done manually. |
 
 #### Dashboard account architecture
 | Pros  | Cons   | 
 |---|---|
 | Allow your DevOps or external teams independence in installing and maintaining the dashboard, as well as regulating user access.  | Your security data will be copied to another AWS account.  |
-| Limited number of resources must be deployed on Log Archive account.| Some Control Tower installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
+| Limited number of resources must be deployed on Log Archive account.| Control Tower default installations may collect AWS Config and AWS CloudTrail on the same bucket. This means that all your security logs will be replicated to another account. |
 ||You will incur additional costs for the replication and storing a copy of your data on another Amazon S3 bucket. |
-
+||If you already have S3 replication configured on your Log Archive bucket, a part of the CRCD installation must be done manually. |
 
 
 ## Prerequisites

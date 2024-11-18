@@ -1444,19 +1444,43 @@ Resources:
             s3 = boto3.client('s3')
 
             if event['RequestType'] == 'Delete':
-              # Remove the replication configuration
+              # Remove the CRCD replication configuration
+              # Get the current replication configuration
               try:
-                s3.delete_bucket_replication(Bucket=source_bucket_name)
-              except Exception as e:
-                send_response(event, context, 'FAILED', {'Error': str(e)})
-                return
+                existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
+                # print("Existing replication configuration:\n", json.dumps(existing_config))
+
+                if 'ReplicationConfiguration' in existing_config:
+                  rules = existing_config['ReplicationConfiguration']['Rules']
+                  # Filter out the rule with the specified name
+                  new_rules = [rule for rule in rules if rule['ID'] != replication_rule_name]
+                  if len(new_rules) < len(rules):
+                    if new_rules:
+                      # Update the replication configuration with the remaining rules
+                      new_config = existing_config['ReplicationConfiguration']
+                      new_config['Rules'] = new_rules
+                      s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=new_config)
+                    else:
+                      # If no rules remain, delete the entire replication configuration
+                      s3.delete_bucket_replication(Bucket=source_bucket_name)
+                    print(f"Replication rule '{replication_rule_name}' deleted successfully.")
+                  else:
+                    print(f"Replication rule '{replication_rule_name}' not found.")
+                else:
+                  print("No replication configuration found.")
+              except ClientError as e:
+                if e.response['Error']['Code'] == 'ReplicationConfigurationNotFoundError':
+                  print("No replication configuration found.")
+                else:
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  return
             else:
               # Check if replication configuration already exists
               # CRCD dashboard will not override any existing S3 replication configuration
               try:
                 existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
                 if 'ReplicationConfiguration' in existing_config:
-                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}"
+                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}. CRCD dashboard installation cannot proceed."
                   print(error_message)
 
                   # This will make the CloudFormation template fail
@@ -1511,7 +1535,6 @@ Resources:
             with urllib.request.urlopen(req) as f:
               print(f.read())
               print(f.info())
-              
                 
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
@@ -1613,7 +1636,7 @@ Resources:
                       existing_config = s3.get_bucket_notification_configuration(Bucket=bucket_name)
                       if has_notifications(existing_config):
                           # If there's an existing configuration, fail the Lambda function
-                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. Cannot proceed."
+                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. CRCD dashboard installation cannot proceed."
                           print(error_message)
                           print(f"Existing S3 event configuration: {existing_config}")
                           send_response(event, context, 'FAILED', {'Error': error_message})
