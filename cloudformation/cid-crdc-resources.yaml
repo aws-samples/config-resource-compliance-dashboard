@@ -143,7 +143,6 @@ Parameters:
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
   
-
   AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
@@ -933,10 +932,11 @@ Resources:
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CONFIG_TABLE_NAME: !Ref AthenaTableName
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
+          # By default: ConfigSnapshot are enabled and ConfigHistory are disabled 
           # Pass 0 to skip the record
           # Pass 1 to partition the record
-          PARTITION_CONFIG_SNAPSHOT_RECORDS: 0
-          PARTITION_CONFIG_HISTORY_RECORDS: 1
+          PARTITION_CONFIG_SNAPSHOT_RECORDS: 1
+          PARTITION_CONFIG_HISTORY_RECORDS: 0
       Code:
         ZipFile: |
           import re
@@ -955,10 +955,10 @@ Resources:
           # Partitioning of ConfigSnapshot and ConfigHistory records is enabled from parameters
           # Pass 0 to skip the record
           # Pass 1 to partition the record
-          PARTITION_ENABLED = 1
-          PARTITION_DISABLED = 0
-          PARTITION_CONIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONIG_SNAPSHOT_RECORDS']
-          PARTITION_CONIG_HISTORY_RECORDS = os.environ['PARTITION_CONIG_HISTORY_RECORDS']
+          PARTITION_ENABLED = '1'
+          PARTITION_DISABLED = '0'
+          PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
+          PARTITION_CONFIG_HISTORY_RECORDS = os.environ['PARTITION_CONFIG_HISTORY_RECORDS']
 
           # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
@@ -981,8 +981,8 @@ Resources:
               found_event = False
 
               # deciding what is enabled
-              isPartitionConfigSnapshot = (PARTITION_CONIG_SNAPSHOT_RECORDS == PARTITION_ENABLED)
-              isPartitionConfigHistory = (PARTITION_CONIG_HISTORY_RECORDS == PARTITION_ENABLED)
+              isPartitionConfigSnapshot = (PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED)
+              isPartitionConfigHistory = (PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED)
 
               # Is this called directly by S3 event notification?
               try:
