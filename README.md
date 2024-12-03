@@ -261,7 +261,6 @@ Log into the AWS Management Console for your **Log Archive account**.
 
 1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
-   - `User name of QuickSight user` Enter the user name as displayed in the QuickSight admin panel, refer to the [documentation](https://quicksight.aws.amazon.com/sn/admin#users).
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Enter the same value as the `Log Archive account ID`. 
@@ -278,7 +277,7 @@ Log into the AWS Management Console for your **Log Archive account**.
 Remain logged into the AWS Management Console for your **Log Archive account**.
 
 
-1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
+1. Deploy the QuickSight dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
    - Navigate to the AWS Management Console and open AWS CloudShell. Ensure to be in the correct region.
    - The tool requires Python 3.
    - Install the latest pip package:
@@ -385,7 +384,6 @@ Log into the AWS Management Console for your **Dashboard account**.
 
 1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
-   - `User name of QuickSight user` Enter the user name as displayed in the QuickSight admin panel, refer to the [documentation](https://quicksight.aws.amazon.com/sn/admin#users).
    - `Log Archive account ID` Enter the AWS account ID of the Log Archive account. Notice this in NOT where you are currently logged in.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Enter the AWS account ID where you are currently logged in.
@@ -401,7 +399,6 @@ Log into the AWS Management Console for your **Log Archive account**.
 
 1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
-   - `User name of QuickSight user` Leave at the default value. This parameter is ignored in this deployment mode.
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Insert the number of the Dashboard account used at Step 1. 
@@ -418,7 +415,7 @@ Log into the AWS Management Console for your **Log Archive account**.
 ##### Step 3
 Log back into the AWS Management Console for your **Log Archive account**.
 
-1. Deploy QuickSight Dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
+1. Deploy the QuickSight dashboard using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) tool:
    - Navigate to the AWS Management Console and open AWS CloudShell. Ensure to be in the correct region.
    - The tool requires Python 3.
    - Install the latest pip package:

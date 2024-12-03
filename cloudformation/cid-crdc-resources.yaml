@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
-# Data pipeline installs resources from S3 to the Athena table- Athena views and QuickSight resources are excluded
+# Data pipeline installs resources from S3 to the Athena table. Athena views and QuickSight resources are not installed by this template
 #
 # The following use cases are supported
 # 1. deployment on Log Archive account (all in one account)
@@ -36,11 +36,6 @@ Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      -
-        Label:
-          default: "QuickSight"
-        Parameters:
-            - QuickSightUserName
       -
         Label:
           default: "AWS Config logging - where your AWS Config files are delivered"
@@ -78,8 +73,6 @@ Metadata:
         default: "Athena table for AWS Config data"
       LogArchiveBucketName:
         default: "Log Archive bucket"
-      QuickSightUserName:
-        default: "User name of QuickSight user (as displayed in QuickSight admin panel)"
       GlueDataCatalogName:
         default: "Existing Glue Data Catalog"
       LambdaPartitioningFunctionName:
@@ -98,10 +91,6 @@ Metadata:
         default: "Name of the role used in cross-account replication of AWS Config files"
 
 Parameters:
-  QuickSightUserName:
-    Type: "String"
-    Default: "<Replace with QuickSight user>" # This value is used below, careful if you change it
-    Description: "See https://quicksight.aws.amazon.com/sn/admin#users"
 
   LogArchiveBucketName:
     Type: "String"
@@ -301,6 +290,7 @@ Rules:
           - !Ref AthenaDatabaseName
           - ''
         AssertDescription: "Athena database is required"
+  
   MandatoryAthenaQueryResultBucketPrefix:
     Assertions:
       - Assert: !Not
@@ -308,6 +298,7 @@ Rules:
           - !Ref AthenaQueryResultBucketPrefix
           - ''
         AssertDescription: "Athena query result bucket prefix is required"
+  
   MandatoryAthenaWorkgroup:
     Assertions:
       - Assert: !Not
@@ -315,6 +306,7 @@ Rules:
           - !Ref AthenaWorkgroupName
           - ''
         AssertDescription: "Athena workgroup is required"
+  
   MandatoryAthenaTable:
     Assertions:
       - Assert: !Not
@@ -322,6 +314,7 @@ Rules:
           - !Ref AthenaTableName
           - ''
         AssertDescription: "Athena table name is required"
+  
   MandatoryGlueDataCatalog:
     Assertions:
       - Assert: !Not
@@ -378,32 +371,6 @@ Rules:
           - !Ref ConfigureS3Replication
           - '<select>'
         AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the Log Archive bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the Log Archive bucket and want to configure this manually."
-
-  ValidateQuickSightUser:
-    # must be selected with a valid string (not the default one) in case 1 or 2.1
-    # The field is not considered in other use cases
-    RuleCondition: 
-      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions 1 or 2.1
-      Fn::Or:
-        - Fn::And:
-          - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
-          - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
-          - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
-        - Fn::And:
-          - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
-          - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
-          - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref QuickSightUserName
-          - ''
-        AssertDescription: "QuickSight user is required"
-      - Assert: !Not 
-        - !Equals
-          - !Ref QuickSightUserName
-          - '<Replace with QuickSight user>'
-        AssertDescription: "QuickSight user is required"
 
 Resources:
 

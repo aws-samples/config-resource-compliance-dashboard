@@ -2,24 +2,23 @@
 ## Added
 - About page
 - Configuration Items Event page
-- Added to Configuration Items page:
+- Added the following controls to Configuration Items page:
   - EBS Volume inventory 
   - AWS Config Inventory Dashboard visuals 
   - Support for technical lifecycle management by listing current version of resources (RDS Engine, Lambda runtime) that can be deprecated or enter extended support
-- Installation process completely based on CloudFormation, no more manual activities are needed 
+- Standard installation process completely based on CloudFormation, without the needs for manual activities
 - Documentation and support for KMS-encrypted Amazon S3 buckets or AWS Config delivery channels
 
 ## Changed
 - Interface improvements
 - Updated installation instructions
 - Clarified that the dashboard supports both AWS Config history and snapshot files
-- Partitioning strategy of AWS Config data now considers both ConfigSnapshot and ConfigHistory records
-
+- Partitioning strategy of AWS Config data now considers both AWS Config snapshot and history files
+- By default, partitionig is done on AWS Config snapshot files
 
 ## Fixed
 - Resources that were deleted or not recently changed are accurately considered
 - Removed reserved concurrency limitation on Lambda function
-
 
 
 # [2.0.0] - 2024-05-01
