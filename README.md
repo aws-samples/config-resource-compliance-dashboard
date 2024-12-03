@@ -364,8 +364,6 @@ Where:
 
 **Remember to delete that statement from the KMS resource policy when you destroy or redeploy the dashboard resources.**
 
-Alternatively, this can be done with a [KMS Key grant](https://docs.aws.amazon.com/kms/latest/developerguide/grants.html).
-
 ### Installation on dedicated Dashboard account
 
 The installation process consists of three steps:
@@ -484,8 +482,6 @@ Where:
 - `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
 
 **Remember to delete that statement from the KMS resource policy when you destroy or redeploy the dashboard resources.**
-
-Alternatively, this can be done with a [KMS Key grant](https://docs.aws.amazon.com/kms/latest/developerguide/grants.html).
 
 #### Manual setup of S3 replication
 _Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _in step 2._
