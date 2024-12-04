@@ -168,14 +168,9 @@ It is your responsibility to ensure this is done consistently and according to y
 
 Read more about the `AWSControlTowerExecution` IAM role in the [documentation](https://docs.aws.amazon.com/controltower/latest/userguide/awscontroltowerexecution.html).
 
-### AWS Key Management Service (KMS) key to encrypt the Log Archive bucket and/or the AWS Config delivery channel 
-**It's important to note that this senario is not fully supported by the dashboard.**
 
-If your Log Archive bucket and/or your AWS Config delivery channel are encrypted with a customer managed KMS key, you can proceed with the standard installation, but there are additional manual configuration steps to perform that will be explained below. 
 
-Unless you utilize multi-region KMS keys, it's important that your KMS key is in the same region as the dashboard resources, the Log Archive bucket and QuickSight. 
-
-### Deployment architecture 
+### Deployment architecture
 The most important decision is whether to install the dashboard on a dedicated Dashboard account or directly into the Log Archive account. These are the implications of each architecture.
 
 #### Log Archive account architecture
@@ -226,18 +221,22 @@ These parameters specify information about your AWS Config setup. They do not ch
   * This is the name of the Amazon S3 bucket collecting AWS Config files.
 
 
-**Parameter group: CRCD Dashboard - where you deploy the dashboard and where its data is**
+**Parameter group: Dashboard resources - where you deploy the dashboard and where its data is**
 
 These parameters define where you install your dashboard. You can specify the same values as above (for deployment in the Log Archive account) or a different AWS account ID and bucket name (if you chose to deploy in a dedicated Dashboard account).
 
 * `Dashboard account ID`
-  * The AWS account ID that contains the Amazon S3 bucket as the source of data for the CRCD dashboard and related data pipeline resources.
+  * The AWS account ID that contains the Amazon S3 bucket as the source of data for the dashboard and related data pipeline resources.
 * `Dashboard bucket`
-  * The name of the Amazon S3 bucket used as the source of data for the CRCD dashboard.
+  * The name of the Amazon S3 bucket used as the source of data for the dashboard.
+* `ARN of the KMS key that encrypts the Dashboard bucket`
+  * Leave empty if the bucket is not encrypted with a KMS key.
+  * If you encrypt the Dashboard bucket with a KMS key, copy the key's ARN here. CloudFormation will create an IAM policy that grants QuickSight permissions to use the key for decrypt operations.
+  * You may prefer managing key permissions on the key policy, rather than IAM. In his case, leave the parameter empty. This guide will give you instructions to grant key permissions manually.
 * `Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file`
-  * This depends on how you are going to install the CRCD dashboard. More details below.
+  * This depends on how you are going to install the dashboard. More details below.
 * `Configure cross-account replication of AWS Config files from Log Archive to Dashboard account`
-  * This depends on how you are going to install the CRCD dashboard. More details below.
+  * This depends on how you are going to install the dashboard. More details below.
 
 Follow the instructions in one of the paragraphs below, depending on the architecture of choice.
 
@@ -338,11 +337,14 @@ We recommend that you configure your event notification to an SNS topic:
 Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-enable-disable-notification-intro.html) to add a notification configuration to your bucket using an Amazon SNS topic. Also, ensure that the Log Archive bucket is [granted permissions to publish event notification messages to your SNS topic](https://docs.aws.amazon.com/AmazonS3/latest/userguide/grant-destinations-permissions-to-s3.html).
 
 
-#### Manual setup steps in case of KMS key encryption
-_Skip this section if you do not utilize a KMS key to encrypt your AWS Config objects._
-According to our tests, it is necessary to allow the QuickSite role permissions to use the KMS key for decrypt operations.
+#### Manual setup of KMS key permissions
+_Skip this section if you do not utilize a KMS key to encrypt your Dashboard bucket, or if you specified the key ARN to CloudFormation._
 
-We recommend [editing](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the KMS key policy of the customer managed key and add the following statement:
+Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSite role permissions to use the key for decrypt operations.
+
+1. Log into the AWS Management Console, on the account and region where you created the KMS key that encrypts the Dashboard bucket.
+1. Open the AWS Key Management Service console and click on the KMS key
+1. Add the following statement to the key policy:
 
 ```
 {
@@ -362,7 +364,6 @@ Where:
 - `ACCOUNT_ID` is the AWS account ID where you installed the dashboard.
 - `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
 
-**Remember to delete that statement from the KMS resource policy when you destroy or redeploy the dashboard resources.**
 
 ### Installation on dedicated Dashboard account
 
@@ -457,11 +458,14 @@ By default, the datasets for the CRCD dashboard are refreshed once a day. You ca
 1. Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
 
-#### Manual setup steps in case of KMS key encryption
-_Skip this section if you do not utilize a KMS key to encrypt your AWS Config objects._
-According to our tests, it is necessary to allow the QuickSite role permissions to use the KMS key for decrypt operations.
+#### Manual setup of KMS key permissions
+_Skip this section if you do not utilize a KMS key to encrypt your Dashboard bucket, or if you specified the key ARN to CloudFormation._
 
-We recommend [editing](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the KMS key policy of the customer managed key and add the following statement:
+Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSite role permissions to use the key for decrypt operations.
+
+1. Log into the AWS Management Console, on the account and region where you created the KMS key that encrypts the Dashboard bucket.
+1. Open the AWS Key Management Service console and click on the KMS key
+1. Add the following statement to the key policy:
 
 ```
 {
@@ -480,8 +484,6 @@ We recommend [editing](https://docs.aws.amazon.com/kms/latest/developerguide/key
 Where:
 - `ACCOUNT_ID` is the AWS account ID where you installed the dashboard.
 - `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
-
-**Remember to delete that statement from the KMS resource policy when you destroy or redeploy the dashboard resources.**
 
 #### Manual setup of S3 replication
 _Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _in step 2._

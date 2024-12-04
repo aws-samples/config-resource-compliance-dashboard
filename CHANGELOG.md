@@ -7,7 +7,7 @@
   - AWS Config Inventory Dashboard visuals 
   - Support for technical lifecycle management by listing current version of resources (RDS Engine, Lambda runtime) that can be deprecated or enter extended support
 - Standard installation process completely based on CloudFormation, without the needs for manual activities
-- Documentation and support for KMS-encrypted Amazon S3 buckets or AWS Config delivery channels
+- Support for KMS-encrypted Amazon S3 Dashboard bucket
 
 ## Changed
 - Interface improvements

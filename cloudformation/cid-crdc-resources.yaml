@@ -44,10 +44,11 @@ Metadata:
           - LogArchiveBucketName
       -
         Label:
-          default: "CRCD Dashboard - where you deploy the dashboard and where its data is" 
+          default: "Dashboard resources - where you deploy the dashboard and where its data is" 
         Parameters:
           - DashboardAccountId
           - DashboardBucketName
+          - DashboardBucketKmsKeyArn
           - ConfigureS3EventNotificationToLambda
           - ConfigureS3Replication
       -
@@ -81,6 +82,8 @@ Metadata:
         default: "Log Archive account ID"
       DashboardBucketName:
         default: "Dashboard bucket"
+      DashboardBucketKmsKeyArn:
+        default: "ARN of the KMS key that encrypts the Dashboard bucket"
       DashboardAccountId:
         default: "Dashboard account ID"
       ConfigureS3EventNotificationToLambda:
@@ -91,6 +94,12 @@ Metadata:
         default: "Name of the role used in cross-account replication of AWS Config files"
 
 Parameters:
+
+  DashboardBucketKmsKeyArn:
+    Type: "String"
+    Description: "If you encrypt the Dashboard bucket with a KMS key, copy the key's ARN here. The template will give QuickSight permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually."
+    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
+    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]"
 
   LogArchiveBucketName:
     Type: "String"
@@ -108,14 +117,14 @@ Parameters:
 
   DashboardAccountId:
     Type: String
-    Description: "The number of the AWS account that contains the Amazon S3 bucket source of data for the CRCD dashboard and related data pipeline resources. Insert an existing AWS account ID that will be dedicated to the dashboard, or the Lor Archive account ID if you want to install the CRCD Dashboard in the same account where AWS Config files are collected (Required)"
+    Description: "The number of the AWS account that contains the Amazon S3 bucket source of data for the dashboard and related data pipeline resources. Insert an existing AWS account ID that will be dedicated to the dashboard, or the Lor Archive account ID if you want to install the dashboard in the same account where AWS Config files are collected (Required)"
     AllowedPattern: '\d{12}'
     MinLength: 12
     ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number"
 
   DashboardBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket that is used as source of data for the CRCD dashboard. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created; if you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again (Required)"
+    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created; if you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again (Required)"
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     MinLength: 1
     ConstraintDescription: "Dashboard bucket name is missing or does not satisfy the Amazon S3 naming convention"
@@ -135,7 +144,7 @@ Parameters:
   AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
-    Description: "The Athena/Glue database for the CRCD dashboard (Required)"
+    Description: "The Athena/Glue database for the dashboard (Required)"
     MinLength: 1
     # The name for an Athena database
     # Max 255 characters cannot have the symbol '-' and must have lowercase character, '_' is accepted
@@ -156,7 +165,7 @@ Parameters:
   AthenaWorkgroupName:
     Type: "String"
     Default: "cid-crcd-dashboard"
-    Description: "The Athena workgroup for the CRCD dashboard (Required)"
+    Description: "The Athena workgroup for the dashboard (Required)"
     MinLength: 1
     ConstraintDescription: "Required: Athena workgroup"
 
@@ -192,6 +201,8 @@ Parameters:
 
 
 Conditions:
+  IsDashboardBucketKms: !Not [ !Equals [ !Ref DashboardBucketKmsKeyArn, "" ] ]
+
   IsLogArchiveAccountDeployment:
     # use case 1
     # Full deployment on the Log Archive account
@@ -540,6 +551,15 @@ Resources:
               - "s3:GetObject"
               - "s3:GetObjectVersion"
             Effect: "Allow"
+          - !If
+            - IsDashboardBucketKms
+            - Sid: "AllowKmsDecrypt"
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+              Resource: !Ref DashboardBucketKmsKeyArn
+            - !Ref "AWS::NoValue"
+
     Metadata:
       cfn_nag:
         rules_to_suppress:
