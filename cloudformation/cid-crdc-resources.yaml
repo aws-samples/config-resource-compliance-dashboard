@@ -95,56 +95,56 @@ Metadata:
 
 Parameters:
 
-  DashboardBucketKmsKeyArn:
-    Type: "String"
-    Description: "If you encrypt the Dashboard bucket with a KMS key, copy the key's ARN here. The template will give QuickSight permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually."
-    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
-    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]"
-
   LogArchiveBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)"
+    Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)."
     MinLength: 1
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-    ConstraintDescription: "Log Archive bucket name is missing or does not satisfy the Amazon S3 naming convention"
+    ConstraintDescription: "Log Archive bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   LogArchiveAccountId:
     Type: String
-    Description: "The number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)"
+    Description: "The number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
-    ConstraintDescription: "Log Archive account ID is missing or incorrect: AWS account IDs must be a 12-digit number"
+    ConstraintDescription: "Log Archive account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
   DashboardAccountId:
     Type: String
-    Description: "The number of the AWS account that contains the Amazon S3 bucket source of data for the dashboard and related data pipeline resources. Insert an existing AWS account ID that will be dedicated to the dashboard, or the Lor Archive account ID if you want to install the dashboard in the same account where AWS Config files are collected (Required)"
+    Description: "The number of the AWS account that contains the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the Log Archive account ID if you want to install the dashboard in the same account where AWS Config files are collected. To install the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
-    ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number"
+    ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
   DashboardBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created; if you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again (Required)"
+    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created with the name you specify here (Required)."
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     MinLength: 1
-    ConstraintDescription: "Dashboard bucket name is missing or does not satisfy the Amazon S3 naming convention"
+    ConstraintDescription: "Dashboard bucket name is missing or does not satisfy the Amazon S3 naming convention."
+
+  DashboardBucketKmsKeyArn:
+    Type: "String"
+    Description: "This parameter is used only if you install the dashboard on the Log Archive account (i.e. the Log Archive bucket and the Dashboard bucket are the same Amazon S3 bucket). If you encrypt the bucket with a KMS key, copy the key's ARN here. The template will give QuickSight permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually."
+    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
+    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   ConfigureS3EventNotificationToLambda:
     Type: String
-    Description:  "Select 'no' if you are deploying the dashboard on your Log Archive account and already have an S3 event notification configured"
+    Description:  "Select 'yes' to configure event notifications that will trigger the data pipeline of the dashboard whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the Dashboard bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
   ConfigureS3Replication:
     Type: String
-    Description: "ONLY in case of deployment on a dedicated Dashboard account. Select 'no' if you already have an S3 replication configurations on the Log Archive S3. Seleting 'yes' will OVERWRITE your existing S3 replication!"
+    Description: "Select 'yes' to configure object replication between the Log Archive bucket and the Dashboard bucket. Select 'no' if you already have an S3 replication configurations on the Log Archive bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
   
   AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
-    Description: "The Athena/Glue database for the dashboard (Required)"
+    Description: "The Athena/Glue database for the dashboard (Required)."
     MinLength: 1
     # The name for an Athena database
     # Max 255 characters cannot have the symbol '-' and must have lowercase character, '_' is accepted
@@ -155,7 +155,7 @@ Parameters:
   AthenaQueryResultBucketPrefix:
     Type: "String"
     Default: "cid-crcd-athena-query-results"
-    Description: "The Athena query result bucket for the workgroup, account ID and region will be added to the name by this template (Required)"
+    Description: "The Athena query result bucket for the workgroup, account ID and region will be added to the name by this template (Required)."
     # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
     # that leaves 36 character for the prefix
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,33}[a-z0-9]$'
@@ -165,30 +165,30 @@ Parameters:
   AthenaWorkgroupName:
     Type: "String"
     Default: "cid-crcd-dashboard"
-    Description: "The Athena workgroup for the dashboard (Required)"
+    Description: "The Athena workgroup for the dashboard (Required)."
     MinLength: 1
     ConstraintDescription: "Required: Athena workgroup"
 
   AthenaTableName:
     Type: "String"
     Default: "cid_crcd_config"
-    Description: "The name that will be assigned to the Athena table that contains the AWS Config data for the dashboard (Required)"
+    Description: "The name that will be assigned to the Athena table that contains the AWS Config data for the dashboard (Required)."
     MinLength: 1
-    ConstraintDescription: "Required: Athena table for AWS Config data"
+    ConstraintDescription: "Required: Athena table for AWS Config data."
 
   GlueDataCatalogName:
     Type: "String"
     Default: "AwsDataCatalog"
-    Description: "Name of the existing Glue Data Catalog (Required)"
+    Description: "Name of the Glue Data Catalog (Required)."
     MinLength: 1
-    ConstraintDescription: "Required: Existing Glue Data Catalog"
+    ConstraintDescription: "Required: Glue Data Catalog."
 
   LambdaPartitioningFunctionName:
     Type: "String"
     Default: "cid-crcd-config-file-partitioner"
     MinLength: 1
-    ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files"
-    Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)"
+    ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files."
+    Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)."
   
   CrossAccountReplicationRole: 
     Type: "String"
@@ -196,8 +196,8 @@ Parameters:
     # will use a fixed string
     Default: "cid-crcd-s3replication-role-for-config-files" 
     MinLength: 1
-    ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files"
-    Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)"
+    ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files."
+    Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)."
 
 
 Conditions:

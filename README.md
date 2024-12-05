@@ -230,9 +230,9 @@ These parameters define where you install your dashboard. You can specify the sa
 * `Dashboard bucket`
   * The name of the Amazon S3 bucket used as the source of data for the dashboard.
 * `ARN of the KMS key that encrypts the Dashboard bucket`
-  * Leave empty if the bucket is not encrypted with a KMS key.
-  * If you encrypt the Dashboard bucket with a KMS key, copy the key's ARN here. CloudFormation will create an IAM policy that grants QuickSight permissions to use the key for decrypt operations.
-  * You may prefer managing key permissions on the key policy, rather than IAM. In his case, leave the parameter empty. This guide will give you instructions to grant key permissions manually.
+  * This parameter is used only if you install the dashboard on the Log Archive account (i.e. the Log Archive bucket and the Dashboard bucket are the same Amazon S3 bucket) and you encrypt the bucket with a KMS key. 
+  * In this case, the installation process will create an IAM policy that grants QuickSight permissions to use the key for decrypt operations.
+  * You may prefer managing key permissions on the key policy, rather than IAM. In his case, and in case you want to install the dashboard on a dedicated Dashboard account, leave the parameter empty. This guide will give you instructions to grant key permissions manually.
 * `Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file`
   * This depends on how you are going to install the dashboard. More details below.
 * `Configure cross-account replication of AWS Config files from Log Archive to Dashboard account`
@@ -258,12 +258,16 @@ The installation process consists of two steps:
 ##### Step 1
 Log into the AWS Management Console for your **Log Archive account**.
 
-1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
-   - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
+1. Open the CloudFormation console and create a new stack with new resources.
+1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
+   - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Enter the same value as the `Log Archive account ID`. 
    - `Dashboard bucket` Enter the same value as the `Log Archive bucket`.
+   - `ARN of the KMS key that encrypts the Dashboard bucket` Leave empty if the bucket is not encrypted with a KMS key. If you encrypt the bucket with a KMS key, copy the key's ARN here. 
+      - CloudFormation will create an IAM policy that grants QuickSight permissions to use the key for decrypt operations.
+      - You may prefer managing key permissions on the key policy, rather than IAM. In his case, leave the parameter empty. This guide will give you instructions to grant key permissions manually.
    - `Configure S3 event notification` Select `yes` to configure S3 event notifications. This will trigger the **Partitioner** Lambda function, which will create the corresponding partition on Amazon Athena, when a new AWS Config file is delivered to the Log Archive bucket. Select `no` if you have already configured event notifications on the Log Archive bucket. You'll have to manually configure S3 event notifications (more details below). 
      - The S3 event notification configuration is performed by an ad-hoc Lambda function (**Configure bucket notification** in the diagram above) that will be called by the CloudFormation template automatically. 
      - The **Configure bucket notification** function will return an error (and the entire stack will fail) if you have already configured event notifications on the Log Archive bucket. In this case you must select `no` and run the stack again.
@@ -271,6 +275,52 @@ Log into the AWS Management Console for your **Log Archive account**.
    - Leave all other parameters at their default value.
 1. Run the CloudFormation template.
 1. Note down the output values of the CloudFormation template.
+
+
+###### Manual setup of KMS key permissions
+_Skip this section if you do not utilize a KMS key to encrypt your Dashboard bucket, or if you specified the key ARN to CloudFormation._
+
+Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSight role permissions to use the key for decrypt operations.
+1. Ensure you are logged into the AWS Management Console on the Log Archive account and region where you created the KMS key that encrypts the Log Archive bucket.
+1. Open the AWS Key Management Service console and click on the KMS key.
+1. Add the following statement to the key policy:
+
+```
+{
+    "Sid": "Allow Quicksight Role access",
+    "Effect": "Allow",
+    "Principal": {
+        "AWS": "arn:aws:iam::ACCOUNT_ID:role/QUICKSIGHT_DATASOURCE_ROLE"
+    },
+    "Action": [
+        "kms:Decrypt"
+    ],
+    "Resource": "*"
+}
+```
+
+Where:
+- `ACCOUNT_ID` is the AWS account ID where you installed the dashboard.
+- `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
+
+###### Manual setup of S3 event notification
+_Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure S3 event notification` _in Step 1._
+
+If you selected `no`, you must configure the Log Archive S3 bucket event notification to trigger the Lambda Partitioner function when objects are added to the bucket. CloudFormation has already deployed the necessary permissions for the Lambda function to access the Log Archive bucket. You can find the ARN of the Lambda Partitioner function in the output values of the CloudFormation template.
+
+The S3 event notifications for this dashboard must meet the following requirements:
+1. All object create events.
+1. All prefixes.
+
+This may be a challenge depending on your current S3 event notification setup, as Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html#notification-how-to-filtering-examples-invalid) overlapping prefixes in two rules for the same event type.
+
+We recommend that you configure your event notification to an SNS topic:
+* If your bucket publishes events notifications to an SNS topic, [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) the Lambda Partitioner function to the topic.
+* If your bucket sends event notifications to another Lambda function, change the notification to an SNS topic and [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) both the existing function and the Lambda Partitioner function to that SNS topic.
+
+Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-enable-disable-notification-intro.html) to add a notification configuration to your bucket using an Amazon SNS topic. Also, ensure that the Log Archive bucket is [granted permissions to publish event notification messages to your SNS topic](https://docs.aws.amazon.com/AmazonS3/latest/userguide/grant-destinations-permissions-to-s3.html).
+
+
 
 ##### Step 2
 Remain logged into the AWS Management Console for your **Log Archive account**.
@@ -319,32 +369,50 @@ By default, the datasets for the CRCD dashboard are refreshed once a day. You ca
 1. Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
 
-#### Manual setup of S3 event notification
-_Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure S3 event notification` _in step 1._
-
-If you selected `no`, you must configure the Log Archive S3 bucket event notification to trigger the Lambda Partitioner function when objects are added to the bucket. CloudFormation has already deployed the necessary permissions for the Lambda function to access the Log Archive bucket. You can find the ARN of the Lambda Partitioner function in the output values of the CloudFormation template.
-
-The S3 event notifications for this dashboard must meet the following requirements:
-1. All object create events.
-1. All prefixes.
-
-This may be a challenge depending on your current S3 event notification setup, as Amazon S3 [cannot have](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-filtering.html#notification-how-to-filtering-examples-invalid) overlapping prefixes in two rules for the same event type.
-
-We recommend that you configure your event notification to an SNS topic:
-* If your bucket publishes events notifications to an SNS topic, [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) the Lambda Partitioner function to the topic.
-* If your bucket sends event notifications to another Lambda function, change the notification to an SNS topic and [subscribe](https://docs.aws.amazon.com/lambda/latest/dg/with-sns.html#sns-trigger-console) both the existing function and the Lambda Partitioner function to that SNS topic.
-
-Follow [these instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/how-to-enable-disable-notification-intro.html) to add a notification configuration to your bucket using an Amazon SNS topic. Also, ensure that the Log Archive bucket is [granted permissions to publish event notification messages to your SNS topic](https://docs.aws.amazon.com/AmazonS3/latest/userguide/grant-destinations-permissions-to-s3.html).
 
 
-#### Manual setup of KMS key permissions
-_Skip this section if you do not utilize a KMS key to encrypt your Dashboard bucket, or if you specified the key ARN to CloudFormation._
 
-Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSite role permissions to use the key for decrypt operations.
+### Installation on dedicated Dashboard account
 
-1. Log into the AWS Management Console, on the account and region where you created the KMS key that encrypts the Dashboard bucket.
-1. Open the AWS Key Management Service console and click on the KMS key
-1. Add the following statement to the key policy:
+The installation process consists of three steps:
+1. On the Dashboard account, deploy data pipeline resources for the dashboard using a CloudFormation stack.
+1. On the Log Archive account, configure the S3 replication rule that copies AWS Config files from the Log Archive bucket to the Dashboard bucket using a CloudFormation stack.
+1. On the Dashboard account, deploy Quicksight resources for the dashboard and the necessary Athena views using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool.
+
+![CRCD](images/deployment-steps-dashboard-account.png "CRCD Dashboard: deployment steps on Dashboard account")
+
+#### Deployment Steps
+
+**Ensure you are in the region where both your Log Archive bucket and Amazon QuickSight are deployed.**
+
+##### Step 1
+Log into the AWS Management Console for your **Dashboard account**.
+
+1. Open the CloudFormation console and create a new stack with new resources.
+1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
+   - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
+   - `Log Archive account ID` Enter the AWS account ID of the Log Archive account. Notice this in **not** where you are currently logged in.
+   - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
+   - `Dashboard account ID` Enter the AWS account ID where you are currently logged in.
+   - `Dashboard bucket` Enter the name of the Amazon S3 bucket that will collect AWS Config data. The CloudFormation template will create this bucket on the Dashboard account.
+   - `ARN of the KMS key that encrypts the Dashboard bucket` Leave empty. This parameter is ignored in this deployment mode.
+   - `Configure S3 event notification` Leave at the default value. This parameter is ignored in this deployment mode.
+   - `Configure cross-account replication` Leave at the default value. This parameter is ignored in this deployment mode.
+   - Leave all other parameters at their default value.
+1. Run the CloudFormation template.
+1. Note down the output values of the CloudFormation template.
+
+###### KMS encryption on the Log Archive bucket (manual setup of KMS key permissions)
+_Skip this section if you do not utilize a KMS key to encrypt your Log Archive bucket._
+
+If the Amazon S3 bucket that collects AWS Config data (the Log Archive bucket) is encrypted with a KMS key, there will be additional constraints to the replication of objects between the Log Archive bucket and the Dashboard bucket. Amazon S3 [requires](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html#replication-default-encryption) the replica objects in the destination bucket use the same type of encryption as the source objects. 
+
+Since the Dashboard bucket was created with the default server-side encryption with Amazon S3 managed keys (SSE-S3), you have to perform manual activities before moving forward:
+1. [Encrypt](https://docs.aws.amazon.com/AmazonS3/latest/userguide/specifying-kms-encryption.html) the Dashboard bucket with a MKS key. You can use only KMS keys that are available in the same AWS Region as the bucket.
+1. Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSight IAM role permissions to use the key for decrypt operations.
+   1. Ensure you are logged into the AWS Management Console on the Dashboard account and region where you created the KMS key that encrypts the Dashboard bucket.
+   1. Open the AWS Key Management Service console and click on the KMS key.
+   1. Add the following statement to the key policy:
 
 ```
 {
@@ -365,50 +433,36 @@ Where:
 - `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
 
 
-### Installation on dedicated Dashboard account
-
-The installation process consists of three steps:
-1. On the Dashboard account, deploy data pipeline resources for the dashboard using a CloudFormation stack.
-1. On the Log Archive account, configure the S3 replication rule that copies AWS Config files from the Log Archive bucket to the Dashboard bucket using a CloudFormation stack.
-1. On the Dashboard account, deploy Quicksight resources for the dashboard and the necessary Athena views using the [CID-CMD](https://github.com/aws-samples/aws-cudos-framework-deployment) command line tool.
-
-![CRCD](images/deployment-steps-dashboard-account.png "CRCD Dashboard: deployment steps on Dashboard account")
-
-#### Deployment Steps
-
-**Ensure you are in the region where both your Log Archive bucket and Amazon QuickSight are deployed.**
-
-##### Step 1
-Log into the AWS Management Console for your **Dashboard account**.
-
-1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
-   - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
-   - `Log Archive account ID` Enter the AWS account ID of the Log Archive account. Notice this in NOT where you are currently logged in.
-   - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
-   - `Dashboard account ID` Enter the AWS account ID where you are currently logged in.
-   - `Dashboard bucket` Enter the name of the Amazon S3 bucket that will collect AWS Config data on the Dashboard account. The CloudFormation template will create this bucket.
-   - `Configure S3 event notification` Leave at the default value. This parameter is ignored in this deployment mode.
-   - `Configure cross-account replication` Leave at the default value. This parameter is ignored in this deployment mode.
-   - Leave all other parameters at their default value.
-1. Run the CloudFormation template.
-1. Note down the output values of the CloudFormation template.
 
 ##### Step 2
 Log into the AWS Management Console for your **Log Archive account**.
 
-1. Open the CloudFormation console and upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
-   - `Stack name` This is up to you, but we recommend using `cid-crcd-resources`.
+1. Open the CloudFormation console and create a new stack with new resources.
+1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
+   - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
    - `Log Archive bucket` Enter the name of the Amazon S3 bucket that collects AWS Config data.
    - `Dashboard account ID` Insert the number of the Dashboard account used at Step 1. 
    - `Dashboard bucket` Insert the bucket name that you specified in this field at Step 1.
+   - `ARN of the KMS key that encrypts the Dashboard bucket` Leave empty. This parameter is ignored in this deployment mode.
    - `Configure S3 event notification` Leave at the default value. This parameter is ignored in this deployment mode.
-   - `Configure cross-account replication` Select `yes` to configure S3 replication from the Log Archive bucket to the Dashboard bucket. If you already have configured S3 replication on the Log Archive bucket, select `no`. You'll have to manually configure S3 replication (more details below).
+   - `Configure cross-account replication` Select `yes` to configure S3 replication from the Log Archive bucket to the Dashboard bucket. If you already have configured S3 replication rules on the Log Archive bucket, or if the Log Archive bucket is encrypted with a KMS key, select `no`. You'll have to manually configure S3 replication (more details below).
      - The S3 replication configuration is performed by an ad-hoc Lambda function (**Configure bucket replication** in the diagram above) that will be called by the CloudFormation template automatically. 
      - Please notice that if you select `yes`, and you have existing S3 replication configurations, the **Configure bucket replication** function will return an error and the entire stack will fail. In this case you must select `no` and run the stack again.
    - Leave all other parameters at their default value.
 1. Run the CloudFormation template.
 1. Note down the output values of the CloudFormation template.
+
+
+###### Manual setup of S3 replication
+_Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _in Step 2._
+
+If your buckets are encrypted with the default server-side encryption with Amazon S3 managed keys (SSE-S3):
+1. Log onto the Log Archive Account and open the Amazon S3 console. 
+1. You can replicate AWS Config files from the centralized Log Archive bucket to the Dashboard bucket through an Amazon S3 Replication configuration, follow these [instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html). 
+1. Specify the IAM role created by the CloudFormation template at Step 2, as reported in the output values of the template.
+
+If your Log Archive bucket and the Dashboard bucket are encrypted with a KMS key, you have to handle the [replication of the encrypted objects](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html) to the Dashboard bucket. You can follow this [blog post](https://repost.aws/knowledge-center/s3-cross-encrypted-replication) to find out more.
 
 
 ##### Step 3
@@ -458,41 +512,7 @@ By default, the datasets for the CRCD dashboard are refreshed once a day. You ca
 1. Click on the **AWS Config Resource Compliance Dashboard (CRCD)** dashboard.
 
 
-#### Manual setup of KMS key permissions
-_Skip this section if you do not utilize a KMS key to encrypt your Dashboard bucket, or if you specified the key ARN to CloudFormation._
 
-Follow these steps to [edit](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying.html) the key policy and grant the QuickSite role permissions to use the key for decrypt operations.
-
-1. Log into the AWS Management Console, on the account and region where you created the KMS key that encrypts the Dashboard bucket.
-1. Open the AWS Key Management Service console and click on the KMS key
-1. Add the following statement to the key policy:
-
-```
-{
-    "Sid": "Allow Quicksight Role access",
-    "Effect": "Allow",
-    "Principal": {
-        "AWS": "arn:aws:iam::ACCOUNT_ID:role/QUICKSIGHT_DATASOURCE_ROLE"
-    },
-    "Action": [
-        "kms:Decrypt"
-    ],
-    "Resource": "*"
-}
-```
-
-Where:
-- `ACCOUNT_ID` is the AWS account ID where you installed the dashboard.
-- `QUICKSIGHT_DATASOURCE_ROLE` is the value of the output `QuickSightDataSourceRole` from the CloudFormation template.
-
-#### Manual setup of S3 replication
-_Skip this section if you selected_ `yes` _on CloudFormation parameter_ `Configure cross-account replication` _in step 2._
-
-**If your Log Archive bucket is encrypted with a KMS key, you have to handle the [replication of the encrypted objects](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-config-for-kms-objects.html) to the Dashboard bucket.**
-
-
-Log onto the Log Archive Account and open the Amazon S3 console. You can replicate AWS Config files from the centralized Log Archive bucket to the Dashboard bucket through an Amazon S3 Replication configuration, follow these [instructions](https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-walkthrough-2.html). 
-* Specify the IAM role created by the CloudFormation template at step 2, as reported in the output values of the CloudFormation template.
 
 
 ## Destroy dashboard resources
