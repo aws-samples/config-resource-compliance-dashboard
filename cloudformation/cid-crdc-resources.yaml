@@ -579,7 +579,8 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      BucketName: !Sub cid-${AWS::AccountId}-data-local
+      # This bucket may already exist on the account if other dashboards are installed, using a name unique to CRCD instead of the original cid-${AWS::AccountId}-data-local
+      BucketName: !Sub cid-${AWS::AccountId}-data-local-crcd
 
       ## Uncomment following lines to enable bucket logging if needed. Please be careful with the cost of logging.
       # LoggingConfiguration:

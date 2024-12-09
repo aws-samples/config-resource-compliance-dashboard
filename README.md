@@ -258,7 +258,7 @@ The installation process consists of two steps:
 ##### Step 1
 Log into the AWS Management Console for your **Log Archive account**.
 
-1. Open the CloudFormation console and create a new stack with new resources.
+1. Open the CloudFormation console and create a stack with new resources.
 1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
@@ -388,7 +388,7 @@ The installation process consists of three steps:
 ##### Step 1
 Log into the AWS Management Console for your **Dashboard account**.
 
-1. Open the CloudFormation console and create a new stack with new resources.
+1. Open the CloudFormation console and create a stack with new resources.
 1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
    - `Log Archive account ID` Enter the AWS account ID of the Log Archive account. Notice this in **not** where you are currently logged in.
@@ -437,7 +437,7 @@ Where:
 ##### Step 2
 Log into the AWS Management Console for your **Log Archive account**.
 
-1. Open the CloudFormation console and create a new stack with new resources.
+1. Open the CloudFormation console and create a stack with new resources.
 1. Upload the `cloudformation/cid-crcd-resources.yaml` template file. Specify the following parameters:
    - `Stack name` This is up to you, but we recommend using `config-dashboard-resources`.
    - `Log Archive account ID` Enter the AWS account ID where you are currently logged in.
