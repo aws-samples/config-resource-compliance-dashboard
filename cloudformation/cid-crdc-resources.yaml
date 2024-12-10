@@ -1742,9 +1742,14 @@ Outputs:
 
   # must be emptied before deleting the stack
   AthenaQueryResultBucketArn:
-    Description: "Amazon S3 bucket used by Athena"
+    Description: "Amazon S3 bucket used by Athena (ARN)"
     Condition: IsCreateDashboardResources
     Value: !GetAtt AthenaQueryResultBucket.Arn
+
+  AthenaQueryResultBucketName:
+    Description: "Amazon S3 bucket used by Athena (Name)"
+    Condition: IsCreateDashboardResources
+    Value: !Ref AthenaQueryResultBucket
 
   # must be emptied before deleting the stack
   DashboardBucketArn:
