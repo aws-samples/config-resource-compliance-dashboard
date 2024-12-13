@@ -154,7 +154,7 @@ Parameters:
 
   AthenaQueryResultBucketPrefix:
     Type: "String"
-    Default: "cid-crcd-athena-query-results"
+    Default: "crcd-athena-query-results"
     Description: "The Athena query result bucket for the workgroup, account ID and region will be added to the name by this template (Required)."
     # 64 characters in the bucket name, but automatically the template will add 2 dashes, 12 digit account number and region up to 14 characters ap-southeast-4, ap-northeast-1
     # that leaves 36 character for the prefix
@@ -164,7 +164,7 @@ Parameters:
 
   AthenaWorkgroupName:
     Type: "String"
-    Default: "cid-crcd-dashboard"
+    Default: "crcd-dashboard"
     Description: "The Athena workgroup for the dashboard (Required)."
     MinLength: 1
     ConstraintDescription: "Required: Athena workgroup"
@@ -185,7 +185,7 @@ Parameters:
 
   LambdaPartitioningFunctionName:
     Type: "String"
-    Default: "cid-crcd-config-file-partitioner"
+    Default: "crcd-config-file-partitioner"
     MinLength: 1
     ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files."
     Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)."
@@ -194,7 +194,7 @@ Parameters:
     Type: "String"
     # cannot concatenate with source bucket name as there is a limit on 64 characters for role names
     # will use a fixed string
-    Default: "cid-crcd-s3replication-role-for-config-files" 
+    Default: "crcd-s3replication-role-for-config-files" 
     MinLength: 1
     ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files."
     Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)."
@@ -462,7 +462,7 @@ Resources:
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
       MaxSessionDuration: 3600
-      RoleName: "cid-crcd-quicksight-datasource-role"
+      RoleName: "crcd-quicksight-datasource-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -482,7 +482,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-quicksight-datasource-policy"
+      ManagedPolicyName: "crcd-quicksight-datasource-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the S3 bucket source of AWS Config files"
       PolicyDocument:
@@ -747,7 +747,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-glue-policy"
+      ManagedPolicyName: "crcd-glue-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Glue permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -782,7 +782,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-s3-athenaqueryresults-policy"
+      ManagedPolicyName: "crcd-s3-athenaqueryresults-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives permissions on Athena query results S3 bucket to CRCD Lambda execution role"
       PolicyDocument:
@@ -811,7 +811,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-s3-configfile-policy"
+      ManagedPolicyName: "crcd-s3-configfile-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that allows CRCD Lambda to receive objects from the Config S3 bucket"
       PolicyDocument:
@@ -840,7 +840,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-cloudwatch-logs-policy"
+      ManagedPolicyName: "crcd-cloudwatch-logs-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives CloudWatch Logs permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -866,7 +866,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      ManagedPolicyName: "cid-crcd-athena-policy"
+      ManagedPolicyName: "crcd-athena-policy"
       Path: "/"
       Description: "CRCD Dashboard - Policy that gives Athena permissions to CRCD Lambda execution role"
       PolicyDocument:
@@ -931,8 +931,10 @@ Resources:
           import os
           import time
           import json
-
           import boto3
+          from urllib.parse import unquote
+          import gzip
+
 
           TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
@@ -954,7 +956,11 @@ Resources:
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
+          # Athena client
           athena = boto3.client('athena')
+
+          # Create an S3 client
+          s3 = boto3.client('s3')
 
           class AthenaException(Exception):
               ''''This is raised only if the Query is not in state SUCCEEDED'''
@@ -1008,7 +1014,7 @@ Resources:
               # process object key
               match  = re.match(PATTERN, event_object_key)
               if not match:
-                  print(f'ERROR: Cannot match {event_object_key}. Cannot proceed.')
+                  print(f'SKIPPING: Cannot match {event_object_key} as AWS Config file, skipping.')
                   return {
                       'statusCode': 200,
                       'body': 'Object key is not supported, this is not an AWS Config file.'
@@ -1032,13 +1038,16 @@ Resources:
               elif 'ConfigHistory'  in event_object_key:
                   dataSource = 'ConfigHistory'
 
-                  # If not enabled, I can return
+                  # If not enabled, and does not contain deleted resources notification I can return
                   if not isPartitionConfigHistory:
-                      print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
-                      return {
-                          'statusCode': 200,
-                          'body': 'ConfigHistory files are disabled in the function\'s environment variables.'
-                      }
+                      # Resource deletion info comes only from History records
+                      # even if they are disabled I will index those containing this info
+                      if not contains_deleted_resource(event_bucket_name, event_object_key):
+                          print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
+                          return {
+                              'statusCode': 200,
+                              'body': 'ConfigHistory files are disabled in the function\'s environment variables.'
+                          }
               else:
                   # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
                   print(f'ERROR: {event_object_key} is neither ConfigSnapshot nor ConfigHistory')
@@ -1049,6 +1058,42 @@ Resources:
 
               drop_partition(accountid, region, date, dataSource)
               add_partition(accountid, region, date, object_key_parent, dataSource)
+
+
+          # Resource deletion info comes only from History records
+          # These must always be indexed
+          def contains_deleted_resource(bucket_name, object_key):
+              try:
+                  # parse the object name before loading it
+                  # if ':' is encoded as '%3A' in the object key, the load will fail
+                  decoded_object_key = unquote(object_key)
+                  print(f'Loading object {decoded_object_key} of bucket {bucket_name} to check it has resource deleted notifications')
+                  obj = s3.get_object(Bucket=bucket_name, Key=decoded_object_key)
+                      
+                  # Read the gzipped JSON data from the S3 object
+                  gz_data = obj['Body'].read()
+                  json_data = gzip.decompress(gz_data).decode('utf-8')
+
+                  # Load the JSON data into a dictionary
+                  data = json.loads(json_data)
+
+                  for item in data.get('configurationItems', []):
+                      print(f"Current configurationItemStatus: {item.get('configurationItemStatus')}")
+
+                      if item.get('configurationItemStatus') == 'ResourceDeleted':
+                          return True
+                  return False
+
+              except s3.exceptions.ClientError as e:
+                  if e.response['Error']['Code'] == 'NoSuchKey':
+                      print(f"Error: The S3 object does not exist.")
+                  else:
+                      print(f"Error: {e}")
+                  raise e
+              except Exception as e:
+                  print(f"Error: {e}")
+                  raise e
+
 
           def add_partition(accountid, region, date, location, dataSource):
               execute_query(f"""
@@ -1110,7 +1155,7 @@ Resources:
       - Ref: IAMManagedPolicyLambdaCloudWatchLogs
       - Ref: IAMManagedPolicyLambdaS3ConfigObject
       MaxSessionDuration: 3600
-      RoleName: "cid-crcd-lambda-partitioner-role"
+      RoleName: "crcd-lambda-partitioner-role"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -1389,12 +1434,12 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: "cid-crcd-support-configure-s3-replication"
+      FunctionName: "crcd-support-configure-s3-replication"
       Description: "CRCD Dashboard - Configures a cross-account replication on the AWS Config bucket (one-time execution)"
       Handler: index.lambda_handler
       LoggingConfig:
         LogFormat: "Text"
-        # this is already by default LogGroup: "/aws/lambda/cid-crcd-support-configure-s3-replication"
+        # this is already by default LogGroup: "/aws/lambda/crcd-support-configure-s3-replication"
       Role: !GetAtt ConfigBucketReplicationConfigurationLambdaRole.Arn
       Timeout: 300
       Runtime: python3.12
@@ -1427,7 +1472,7 @@ Resources:
             source_account_id = params['SourceAccountId']
             destination_account_id = params['DestinationAccountId']
             replication_role_arn = params['ReplicationRoleArn']
-            replication_rule_name = 'cid-crcd-dashboard-configfile-replication'
+            replication_rule_name = 'crcd-dashboard-configfile-replication'
               
             s3 = boto3.client('s3')
 
@@ -1580,7 +1625,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: "cid-crcd-support-configure-s3-event-notification"
+      FunctionName: "crcd-support-configure-s3-event-notification"
       Description: "CRCD Dashboard - Configures the Log Archive bucket S3 event notification to trigger the CRCD Lambda Partitioner function (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
