@@ -1139,6 +1139,8 @@ Resources:
         rules_to_suppress:
           - id: W58
             reason: "Permission to write CloudWatch logs is given in IAMRoleLambdaPartitionerConfig"
+          - id: W92
+            reason: "This function does not need reserved concurrent executions"
 
   IAMRoleLambdaPartitionerConfig:
     Type: AWS::IAM::Role
@@ -1287,6 +1289,10 @@ Resources:
         rules_to_suppress:
           - id: W35
             reason: "We accept Dashboard bucket has no access logging"
+      cfn-lint:
+        config:
+          ignore_checks:
+            - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl. This bucket is created with the same configuration as the AWS Config bucket when created by AWS ControlTower
 
   # Authorizing the replication configuration on the receiving side
   ReplicationConfigurationDataCollection:
@@ -1568,6 +1574,11 @@ Resources:
             with urllib.request.urlopen(req) as f:
               print(f.read())
               print(f.info())
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W92
+            reason: "This function does not need reserved concurrent executions"
                 
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
@@ -1764,7 +1775,11 @@ Resources:
               with urllib.request.urlopen(req) as f:
                   print(f.read())
                   print(f.info())
-
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W92
+            reason: "This function does not need reserved concurrent executions"
 
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
