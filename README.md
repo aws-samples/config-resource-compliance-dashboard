@@ -12,7 +12,7 @@ The Amazon Web Services (AWS) Config Resource Compliance Dashboard (CRCD) shows 
 ### Advantages
 
 #### A simplified Configuration Management Database (CMDB) experience in AWS
-Avoid investment in a dedicated external CMDB system or third-party tools. Access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each account and region. Filter resources by account, region, custom tags and IP address. Plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
+Avoid investment in a dedicated external CMDB system or third-party tools. Access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each account and region. Filter resources by account, region, and fields that are specific to the resource such as IP address. If you tag consistently your resources, for example to map them to the application, owning team and environment, specify those tags to the dashboard and they will be displayed alongside the other resource-specific information, and used for filtering your configuration items. Manage and plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
 
 #### Compliance tracking
 Track compliance of your AWS Config rules and conformance packs per service, region, account, resource. Identify resources that require compliance remediation and establish a process for continuous compliance review. Verify that your tagging strategy is consistently applied across accounts and regions.
@@ -29,18 +29,17 @@ The CRCD dashboard helps security teams establish a compliance practice and offe
 - Compliance breakdown by service, account, and region
 - Compliance tracking for AWS Config rules and conformance packs
 
-#### Custom tags support
-Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, region, customizable tags.
+#### Inventory management
 
 ![CRCD](images/ec2-inventory.png "CRCD Dashboard, Configuration Items")
 
-The dashboard allows filtering of resources by the custom tags that you use to categorize workloads. The name of the tags will be provided by you during installation.
+Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, region and resource-specific fields (e.g. IP addresses for EC2). Furthermore, the dashboard supports filtering of these resources by the custom tags that you use to categorize workloads, such as Application, Owner and Environment. The name of the tags will be provided by you during installation.
 
-#### Inventory Dashboard
-The AWS Config [inventory dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) is replicated here, so that you can share it without managing read-only access to the AWS Config console.
+#### AWS Config Aggregator Dashboard
+Graphs from the AWS Config [Aggregator Dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) are added here, so that you can share it without managing read-only access to the AWS Config console.
 
 #### Tag compliance
-Tag compliance collects the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can activate this rule as many times as needed, as long as you give it a name that starts with `required-tags`.
+Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can deploy this rule to find resources in your accounts that were not launched with your desired tag configurations by specifying which resource types should have tags and the expected value for each tag. The rule can be deployed multiple times in AWS Config. To display data on the dashboard, the rules must have a name that starts with `required-tags`.
 
 ![CRCD](images/tag-compliance-summary.png "CRCD Dashboard, Tag Compliance")
 
@@ -233,7 +232,7 @@ These parameters define where you install your dashboard. You can specify the sa
   * This parameter is used only if you install the dashboard on the Log Archive account (i.e. the Log Archive bucket and the Dashboard bucket are the same Amazon S3 bucket) and you encrypt the bucket with a KMS key. 
   * In this case, the installation process will create an IAM policy that grants QuickSight permissions to use the key for decrypt operations.
   * You may prefer managing key permissions on the key policy, rather than IAM. In his case, and in case you want to install the dashboard on a dedicated Dashboard account, leave the parameter empty. This guide will give you instructions to grant key permissions manually.
-* `Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file`
+* `Configure S3 event notification to trigger the Lambda Partitioner function on every new AWS Config file`
   * This depends on how you are going to install the dashboard. More details below.
 * `Configure cross-account replication of AWS Config files from Log Archive to Dashboard account`
   * This depends on how you are going to install the dashboard. More details below.

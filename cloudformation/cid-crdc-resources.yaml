@@ -87,7 +87,7 @@ Metadata:
       DashboardAccountId:
         default: "Dashboard account ID"
       ConfigureS3EventNotificationToLambda:
-        default: "Configure S3 event notification to trigger the Lambda partitioner function on every new AWS Config file" 
+        default: "Configure S3 event notification to trigger the Lambda Partitioner function on every new AWS Config file" 
       ConfigureS3Replication:
         default: "Configure cross-account replication of AWS Config files from Log Archive to Dashboard account"
       CrossAccountReplicationRole:
@@ -365,7 +365,7 @@ Rules:
         - !Equals
           - !Ref ConfigureS3EventNotificationToLambda
           - '<select>'
-        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Log Archive bucket and want to configure this manually."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda Partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Log Archive bucket and want to configure this manually."
 
   ValidateConfigureS3Replication:
     # Replication must be selected on use case 2.2
