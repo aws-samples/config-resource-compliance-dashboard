@@ -401,6 +401,8 @@ Resources:
       CatalogId: !Sub '${AWS::AccountId}'
 
   AthenaQueryResultBucket:
+  # checkov:skip=CKV_AWS_21: We accept this bucket has no versioning
+  # checkov:skip=CKV_AWS_18: We accept this bucket has no access logging
     Type: AWS::S3::Bucket
     Condition: IsCreateDashboardResources
     Properties:
@@ -574,6 +576,7 @@ Resources:
   # coming from CID dashboards, we will keep naming consistent with that project
   # ----------------------------------------------------------------------------------------------------------
   SourceS3:
+  # checkov:skip=CKV_AWS_18: We accept this bucket has no access logging
     Type: AWS::S3::Bucket
     Condition: IsCreateDashboardResources
     DeletionPolicy: Delete
@@ -885,6 +888,9 @@ Resources:
             reason: "Policy names are as per our design"
 
   LambdaFunctionPartitionerConfig:
+  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipatethe need for reserved concurrency for the moment.
+  # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
+  # checkov:skip=CKV_AWS_116: No DQL needed.
     Type: AWS::Lambda::Function
     Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
@@ -1249,6 +1255,7 @@ Resources:
   # *********************************************************************************************************************************************************************
   
   DashboardBucket:
+  # checkov:skip=CKV_AWS_18: We accept Dashboard bucket has no access logging
     Type: AWS::S3::Bucket
     Condition: IsDashboardAccountDeployment # I want this only in case of 2.1
     DeletionPolicy: "Delete"
@@ -1435,6 +1442,8 @@ Resources:
   # Lambda triggered by CloudFormation
   # to configure bucket replication on AWS Config Logging
   ConfigBucketReplicationConfigurationLambda:
+  # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
+  # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
     Condition: IsConfigureS3Replication
     DeletionPolicy: "Delete"
@@ -1631,6 +1640,8 @@ Resources:
   # Lambda triggered by CloudFormation
   # to configure bucket notification on AWS Config Logging
   ConfigBucketNotificationConfigurationLambda:
+  # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
+  # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
     Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
     DeletionPolicy: "Delete"
