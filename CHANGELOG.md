@@ -1,4 +1,4 @@
-# [2.1.0] - 2024-10-18
+# [2.1.0] - 2024-12-16
 ## Added
 - About page
 - Configuration Items Event page
