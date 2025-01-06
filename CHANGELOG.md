@@ -1,3 +1,8 @@
+# [2.1.1] - 2025-01-06
+## Fixed
+- Typo on CloudFormation template file name
+- Typo on dashboard template
+
 # [2.1.0] - 2024-12-16
 ## Added
 - About page

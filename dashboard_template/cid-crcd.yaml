@@ -1,6 +1,6 @@
 # Dashboard template to install with CID-CMD tool
 dashboards:
-  PRE-GO-LIVE-2.1:
+  CID-CRCD:
     dependsOn:
       datasets:
       - config_compliance
