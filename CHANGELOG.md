@@ -1,3 +1,13 @@
+# [2.1.2] - 2025-01-20
+## Added
+- Cloud Formation template capable of setting S3 replication in case of KMS encrypted buckets.
+
+## Changed
+
+
+## Fixed
+
+
 # [2.1.1] - 2025-01-06
 ## Fixed
 - Typo on CloudFormation template file name
