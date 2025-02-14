@@ -1,12 +1,14 @@
 # [2.1.2] - 2025-01-20
 ## Added
-- Cloud Formation template capable of setting S3 replication in case of KMS encrypted buckets.
+- Cloud Formation template capable of setting S3 replication in case of KMS encrypted buckets
 
 ## Changed
-
+- Deployment instructions moved to the [Cloud Intelligence Dashboards Well Architected Labs](https://catalog.workshops.aws/awscid/en-US/dashboards/additional/config-resource-compliance-dashboard)
+- **About** tab: added our new email address aws-config-dashboard@amazon.com
 
 ## Fixed
-
+- **Compliance** tab, control **Current number of compliant AWS Config rules** and **Current number of non-compliant AWS Config rules**: adjusted aggregation parameter so that they report correct data.
+- **Tag Compliance** tab: fixed a typo on the description at the top
 
 # [2.1.1] - 2025-01-06
 ## Fixed
