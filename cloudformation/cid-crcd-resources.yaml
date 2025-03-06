@@ -996,6 +996,16 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
+  LambdaFunctionPartitionerConfigLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed.
+    Type: AWS::Logs::LogGroup
+    Condition: IsCreateDashboardResources
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaPartitioningFunctionName}"
+      RetentionInDays: 14
+
   LambdaFunctionPartitionerConfig:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipatethe need for reserved concurrency for the moment.
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
@@ -1039,7 +1049,7 @@ Resources:
           # Pass 0 to skip the record
           # Pass 1 to partition the record
           PARTITION_CONFIG_SNAPSHOT_RECORDS: 1
-          PARTITION_CONFIG_HISTORY_RECORDS: 0
+          PARTITION_CONFIG_HISTORY_RECORDS: 1
       Code:
         ZipFile: |
           import re
@@ -1597,7 +1607,7 @@ Resources:
         # this is already by default LogGroup: "/aws/lambda/crcd-support-configure-s3-replication"
       Role: !GetAtt ConfigBucketReplicationConfigurationLambdaRole.Arn
       Timeout: 300
-      Runtime: python3.12
+      Runtime: "python3.12"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -1827,7 +1837,7 @@ Resources:
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
       Timeout: 300
-      Runtime: python3.12
+      Runtime: "python3.12"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -1841,6 +1851,9 @@ Resources:
         Ipv6AllowedForDualStack: false
       RuntimeManagementConfig:
         UpdateRuntimeOn: "Auto"
+      LoggingConfig:
+        LogFormat: "Text"
+        # this is already by default LogGroup: "/aws/lambda/crcd-support-configure-s3-event-notification"
       Code:
         ZipFile: |
           import json
