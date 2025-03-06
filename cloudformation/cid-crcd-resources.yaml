@@ -111,7 +111,6 @@ Parameters:
     MinLength: 12
     ConstraintDescription: "Log Archive account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
-  # TODO explain what this is needed on step 2.1 and 2.2
   # 1 quicksight role gets permission to use the key for decryption
   # 2.1 the KMS key is needed so that the dashboard bucket will be created KMS encrypted
   # 2.2 is needed so that replication role gets permissions to use the key
@@ -422,13 +421,9 @@ Rules:
         AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the Log Archive bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the Log Archive bucket and want to configure this manually."
 
   # Kms key ARN validation
-  # use case 1
-  # - KMS key of Dashboard bucket DashboardBucketKmsKeyArn is always ignored
-  # - if LogArchiveBucketKmsKeyArn is provided, additional permissions will be granted
-
-  # TODO WIP
   ValidateDashboardBucketKmsKeyArn:
     # Must be given only at step 2 of the dashboard bucket installation - case 2.2
+    # If there is a KMS key specified on the Loig Archive bucket
     # In this case the KMS key ARNs of the buckets are either both specified on not entered.
     RuleCondition:
       Fn::And:
@@ -443,7 +438,7 @@ Rules:
         - !Equals
           - !Ref LogArchiveBucketKmsKeyArn
           - ''
-        AssertDescription: "REQUIRED PARAMETER - ARN of the KMS key that encrypts the Log Archive bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
+        AssertDescription: "REQUIRED PARAMETER - cannot replicate objects between buckets with different types of encryption. ARN of the KMS key that encrypts the Log Archive bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
 
 
 Resources:
@@ -1551,7 +1546,6 @@ Resources:
       ServiceToken: !GetAtt ConfigBucketReplicationConfigurationLambda.Arn
       SourceBucket: !Ref LogArchiveBucketName
       DestinationBucket: !Ref DashboardBucketName
-      # TODO test without KMS encryption
       DestinationBucketKmsKeyArn: !Ref DashboardBucketKmsKeyArn
       SourceAccountId: !Ref LogArchiveAccountId
       DestinationAccountId: !Ref DashboardAccountId

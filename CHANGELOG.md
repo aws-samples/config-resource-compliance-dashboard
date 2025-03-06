@@ -9,6 +9,7 @@
 ## Fixed
 - **Compliance** tab, control **Current number of compliant AWS Config rules** and **Current number of non-compliant AWS Config rules**: adjusted aggregation parameter so that they report correct data.
 - **Tag Compliance** tab: fixed a typo on the description at the top
+- Redesigned all the views for accuracy and performance
 
 # [2.1.1] - 2025-01-06
 ## Fixed
