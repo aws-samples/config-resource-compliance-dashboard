@@ -1040,7 +1040,7 @@ Resources:
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CONFIG_TABLE_NAME: !Ref AthenaTableName
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
-          # By default: ConfigSnapshot are enabled and ConfigHistory are disabled 
+          # By default: ConfigSnapshot and ConfigHistory are enabled as they are used for different purposes 
           # Pass 0 to skip the record
           # Pass 1 to partition the record
           PARTITION_CONFIG_SNAPSHOT_RECORDS: 1
