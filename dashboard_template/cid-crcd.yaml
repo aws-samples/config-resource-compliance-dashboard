@@ -8324,7 +8324,6 @@ dashboards:
                             DisplayMode: NEGATIVE
                           NullValueFormatConfiguration:
                             NullString: 'null'
-                          Prefix: ''
                           SeparatorConfiguration:
                             DecimalSeparator: DOT
                             ThousandsSeparator:
@@ -8346,7 +8345,6 @@ dashboards:
                             DisplayMode: NEGATIVE
                           NullValueFormatConfiguration:
                             NullString: 'null'
-                          Prefix: ''
                           SeparatorConfiguration:
                             DecimalSeparator: DOT
                             ThousandsSeparator:
@@ -8411,7 +8409,6 @@ dashboards:
                             DisplayMode: NEGATIVE
                           NullValueFormatConfiguration:
                             NullString: 'null'
-                          Prefix: ''
                           SeparatorConfiguration:
                             DecimalSeparator: DOT
                             ThousandsSeparator:
@@ -8433,7 +8430,6 @@ dashboards:
                             DisplayMode: NEGATIVE
                           NullValueFormatConfiguration:
                             NullString: 'null'
-                          Prefix: ''
                           SeparatorConfiguration:
                             DecimalSeparator: DOT
                             ThousandsSeparator:
@@ -8460,7 +8456,7 @@ dashboards:
                 TooltipVisibility: VISIBLE
             Subtitle:
               FormatText:
-                PlainText: ''
+                PlainText: ' '
               Visibility: HIDDEN
             Title:
               FormatText:
