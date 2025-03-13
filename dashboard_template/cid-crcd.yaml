@@ -12823,7 +12823,9 @@ datasets:
       views:
       - config_event
     schedules:
-    - default
+    # CUSTOMIZATION - configure daily incremental refresh, remove default
+    - incremental-daily
+
   config_compliance_resource:
     data:
       DataSetId: 99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
@@ -13289,6 +13291,23 @@ datasets:
       - config_compliance
     schedules:
     - default
+
+# CUSTOMIZATION - daily incremental refresh configuration
+schedules:
+  incremental-daily:
+    ScheduleId: crcd-daily-incremental
+    ScheduleFrequency:
+      Interval: DAILY
+      TimeOfTheDay: '02:00-09:00'
+    RefreshType: INCREMENTAL_REFRESH
+    RefreshConfiguration:
+      IncrementalRefresh:
+        LookbackWindow:
+          ColumnName: partitiondate
+          Size: 3
+          SizeUnit: DAY
+
+
 crawlers: {}
 views:
   config_event_delivery:
