@@ -43,7 +43,7 @@ The CRCD dashboard helps security teams establish a compliance practice and offe
 Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, region and resource-specific fields (e.g. IP addresses for EC2). Option to filter resources by the custom tags that you use to categorize workloads, such as Application, Owner and Environment. The name of the tags will be provided by you during installation.
 
 #### AWS Config Aggregator Dashboard
-Graphs from the AWS Config [Aggregator Dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) are added here, so that you can share it without managing read-only access to the AWS Config console.
+Graphs from the AWS Config [Aggregator Dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) are added here, so that you can share it without managing read-only access to the AWS Config Console.
 
 #### Tag compliance
 Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can deploy this rule to find resources in your accounts that were not launched with your desired tag configurations by specifying which resource types should have tags and the expected value for each tag. The rule can be deployed multiple times in AWS Config. To display data on the dashboard, the rules must have a name that starts with `required-tags`.
@@ -110,7 +110,7 @@ cid-cmd delete --resources cid-crcd.yaml
 
 ### Installation on Log Archive or standalone account
 1. Log into the AWS Console of the account where you deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified both in the `Log Archive account ID` and the `Dashboard account ID` parameters of the CloudFormation template.
-1. Open the S3 console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
+1. Open the S3 Console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
 1. In the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
 1. Revert any manual change made on this account during setup.
 
@@ -121,7 +121,7 @@ cid-cmd delete --resources cid-crcd.yaml
 1. Revert any manual change made on this account during setup.
 
 1. Log into the AWS Console of the account where you deployed the dashboard resources with CloudFormation. This is the AWS account ID that you specified in the `Dashboard account ID` parameter of the CloudFormation template.
-1. Open the S3 console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
+1. Open the S3 Console and empty the Amazon S3 bucket for the Athena Query results. The bucket name is in the CloudFormation stack output.
 1. Empty the Dashboard bucket, as well. This bucket contains a copy of the AWS Config files from the Log Archive account. The bucket name is in the CloudFormation stack output.
 1. In the same account, open CloudFormation and delete the stack that installed the data pipeline resources for the dashboard.
 1. Revert any manual change made on this account during setup.

@@ -534,7 +534,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W28
-            reason: "Policy names are as per our design"
+            reason: "Role names are as per our design"
 
   # Must create a KMS key in this case
   # Will encrypt the Dashboard bucket, and QuickSight will be allowed to use it
@@ -992,7 +992,7 @@ Resources:
             reason: "Policy names are as per our design"
 
   LambdaFunctionPartitionerConfigLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed.
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
     Type: AWS::Logs::LogGroup
     Condition: IsCreateDashboardResources
     DeletionPolicy: "Delete"
@@ -1000,6 +1000,11 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/lambda/${LambdaPartitioningFunctionName}"
       RetentionInDays: 14
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "No KMS encryption needed"
 
   LambdaFunctionPartitionerConfig:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipatethe need for reserved concurrency for the moment.

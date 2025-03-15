@@ -2,8 +2,7 @@
 
 ## Amazon S3 prefixes for AWS Config files
 
-The dashboard uses these sources to get the inventory of resources and their compliance with AWS Config Rules and Conformance Packs: AWS Config configuration history and configuration snapshot files. Check this [blog post](https://aws.amazon.com/blogs/mt/configuration-history-configuration-snapshot-files-aws-config/) for more on the difference between AWS Config configuration history and configuration snapshot files.
-
+The dashboard uses AWS Config configuration history and configuration snapshot files as source of data. Check this [blog post](https://aws.amazon.com/blogs/mt/configuration-history-configuration-snapshot-files-aws-config/) for more on the difference between AWS Config configuration history and configuration snapshot files.
 
 The solution supports the following ways of activating AWS Config:
 1. Manual setup on standalone AWS accounts.
