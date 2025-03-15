@@ -82,7 +82,7 @@ The solution provides Athena views, which are SQL queries that extract data from
 Deployment guide available at the [Cloud Intelligence Dashboards Framework workshops](https://catalog.workshops.aws/awscid/en-US/dashboards/additional/config-resource-compliance-dashboard).
 
 ## Additional info
-`==TODO link to documentation page==`
+See [this page](./documentation/README.md) for more.
 
 ## Destroy dashboard resources
 
