@@ -1007,7 +1007,7 @@ Resources:
             reason: "No KMS encryption needed"
 
   LambdaFunctionPartitionerConfig:
-  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipatethe need for reserved concurrency for the moment.
+  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
   # checkov:skip=CKV_AWS_116: No DQL needed.
     Type: AWS::Lambda::Function
