@@ -7750,8 +7750,8 @@ dashboards:
                   Visibility: VISIBLE
                   VisibleRange:
                     PercentRange:
-                      From: 70.0
-                      To: 90.0
+                      From: 80.0
+                      To: 100.0
                 TickLabelOptions:
                   LabelOptions:
                     FontConfiguration:
@@ -9712,7 +9712,17 @@ dashboards:
                         DataSetIdentifier: config_inventory_s3
                       FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.tag4.6.1711365052602
                   Values: []
-              SortConfiguration: {}
+              SortConfiguration:
+                RowSort:
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.accountid.0.1711365023768
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.region.2.1711365033167
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 9a7cb6e7-8c43-4bb8-ac46-7ba6b3d0fdb0.bucketname.1.1711365029334
               TableOptions:
                 CellStyle:
                   Height: 25
@@ -9764,15 +9774,15 @@ dashboards:
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.tag4.8.1714400289667
                 - CustomLabel: User Name
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.username.9.1714400303792
-                - CustomLabel: Is Publicly Accessible
+                - CustomLabel: Publicly Accessible
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ispubliclyaccessible.11.1714400315710
-                - CustomLabel: Is Storage Encrypted
+                - CustomLabel: Storage Encrypted
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.isstorageencrypted.12.1714400318162
                 - CustomLabel: Certificate Authority
                   FieldId: 376926d5-e359-404d-81f0-d72193114133.cacertificateidentifier.14.1727880711461
                 - CustomLabel: Availability Zone
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.availabilityzone.1.1714400243565
-                - CustomLabel: Is Multi AZ
+                - CustomLabel: Multi AZ
                   FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ismultiaz.10.1714400313959
               FieldWells:
                 TableAggregatedFieldWells:
@@ -9871,6 +9881,9 @@ dashboards:
                 - FieldSort:
                     Direction: ASC
                     FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.region.13.1714400330645
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 24dc16df-7afd-4c6f-9474-034e021989f2.configeventresourceid.16.1741440367415
               TableOptions:
                 HeaderStyle:
                   FontConfiguration:
@@ -9879,73 +9892,7 @@ dashboards:
                   Height: 29
                   TextWrap: WRAP
             ConditionalFormatting:
-              ConditionalFormattingOptions:
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.isstorageencrypted.12.1714400318162
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#0E6C0E'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{isstorageencrypted} = "true"'
-                        IconOptions:
-                          Icon: CHECKMARK
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.isstorageencrypted.12.1714400318162
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#B32728'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{isstorageencrypted} = "false"'
-                        IconOptions:
-                          Icon: X
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ispubliclyaccessible.11.1714400315710
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#0E6C0E'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{ispubliclyaccessible} = "true"'
-                        IconOptions:
-                          Icon: CHECKMARK
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ispubliclyaccessible.11.1714400315710
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#B32728'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{ispubliclyaccessible} = "false"'
-                        IconOptions:
-                          Icon: X
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ismultiaz.10.1714400313959
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#0E6C0E'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{ismultiaz} = "true"'
-                        IconOptions:
-                          Icon: CHECKMARK
-              - Cell:
-                  FieldId: 8eb86858-31c2-4719-9f8e-74e5fd8201f3.ismultiaz.10.1714400313959
-                  TextFormat:
-                    Icon:
-                      CustomCondition:
-                        Color: '#B32728'
-                        DisplayConfiguration:
-                          IconDisplayOption: ICON_ONLY
-                        Expression: '{ismultiaz} = "false"'
-                        IconOptions:
-                          Icon: X
+              ConditionalFormattingOptions: []
             Subtitle:
               FormatText:
                 RichText: "<visual-subtitle>\n  <inline color=\"#9d9d9d\">Use\_</inline>\n\
@@ -10147,7 +10094,7 @@ dashboards:
                   Width: 168px
                 - CustomLabel: Delete on termination
                   FieldId: 7559c02f-c409-4dc7-9be9-1a7c6350cb67.deleteontermination.12.1726652792041
-                  Width: 150px
+                  Width: 171px
                 - CustomLabel: Multiattach
                   FieldId: f8912a68-5eb4-4643-b49c-df7806da3972.multiattachenabled.11.1726652139590
                 - CustomLabel: Name (tag)
@@ -10262,6 +10209,9 @@ dashboards:
                 - FieldSort:
                     Direction: ASC
                     FieldId: f8912a68-5eb4-4643-b49c-df7806da3972.region.1.1726651963408
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: f8912a68-5eb4-4643-b49c-df7806da3972.volumeid.2.1726652034296
               TableOptions:
                 CellStyle:
                   Height: 25
@@ -10472,7 +10422,17 @@ dashboards:
                         DataSetIdentifier: 2config_inventory_ec2-1
                       FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.amiid.13.1727795613260
                   Values: []
-              SortConfiguration: {}
+              SortConfiguration:
+                RowSort:
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.accountid.0.1727795505165
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.instanceid.2.1727795513621
               TableOptions:
                 CellStyle:
                   Height: 25
@@ -10662,7 +10622,17 @@ dashboards:
                         NullValueFormatConfiguration:
                           NullString: 'null'
                   Values: []
-              SortConfiguration: {}
+              SortConfiguration:
+                RowSort:
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.accountid.0.1727879663259
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.region.1.1727879667446
+                - FieldSort:
+                    Direction: ASC
+                    FieldId: ee011ee3-43bb-40d5-811a-ad3fee8a12fa.functionname.2.1727879672442
               TableOptions:
                 HeaderStyle:
                   FontConfiguration:
@@ -13307,7 +13277,6 @@ schedules:
           Size: 3
           SizeUnit: DAY
 
-
 crawlers: {}
 views:
   config_event_delivery:
@@ -13727,7 +13696,7 @@ views:
       tag4:
         default: tag4
         description: "Enter the fourth tag name used to categorize workloads"
-        global: True
+        global: Truev
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
       WITH
@@ -13885,7 +13854,7 @@ views:
       tag4:
         default: tag4
         description: "Enter the fourth tag name used to categorize workloads"
-        global: True
+        global: Truev
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_rds AS
       WITH

@@ -38,3 +38,12 @@ Version 1.2.1 did not configure a retention period for the CloudWatch logs of th
 1. Open the CloudWatch Console on the AWS account and region where you deployed the dashboard.
 1. Select Log Groups and find `/aws/lambda/crcd-config-file-partitioner`
 1. Edit the log settings, change retention to 14 days, or the value that suits your needs.
+
+### From older versions
+You have to destroy the resources of the current versions and redeploy. When you removed the old versions, and before deploying v2.1.2, make sure to delete the CloudWatch log group of the Lambda Partitioner:
+1. Log onto the AWS Console on the account and region where you deploy the dashboard, open the CloudWatch console.
+1. Click on `Logs/Log groups`.
+1. Find the log group called `/aws/lambda/cid-crcd-config-file-partitioner` or `/aws/lambda/crcd-config-file-partitioner`, depending on your version, select it.
+1. Click on the `Actions` button and select `Delete log Group(s)`
+
+The AWS Config Dashboard v2.1.2 creates the CloudWatch log group as a CloudFormation resource with a retention period, and will fail if the log group already exists.
