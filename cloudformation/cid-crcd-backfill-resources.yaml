@@ -263,6 +263,7 @@ Resources:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is run only once, we don't anticipate the need for reserved concurrency for the moment.
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
   # checkov:skip=CKV_AWS_116: No DQL needed.
+  # checkov:skip=CKV_SECRET_6: Lambda function uses a variable called continuation_token but it is not a secret
     Type: AWS::Lambda::Function
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
