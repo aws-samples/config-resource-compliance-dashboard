@@ -11,7 +11,7 @@ The Amazon Web Services (AWS) Config Resource Compliance Dashboard (CRCD) shows 
 
 
 ### Advantages
-The AWS Config Resource Compliance Dashboard addresses significant challenges of AWS Customers in maintaining their compliance and security posture and establishing effective resource configuration management practices at scale.
+The AWS Config Resource Compliance Dashboard addresses significant challenges of AWS customers in maintaining their compliance and security posture and establishing effective resource configuration management practices at scale.
 
 Through this unified platform, organizations can bridge the gap between security oversight and operational execution, creating a more efficient and secure cloud infrastructure management and compliance process. 
 
@@ -23,18 +23,18 @@ Avoid investment in a dedicated external CMDB system or third-party tools. Acces
 #### Empower security and compliance practice
 Track compliance of your AWS Config rules and conformance packs per service, region, account, resource. Identify resources that require compliance remediation and establish a process for continuous compliance review. Verify that your tagging strategy is consistently applied across accounts and regions.
 
-#### Democratize compliance visibility. 
+#### Democratize compliance visibility
 The AWS Config Dashboard helps security teams establish a compliance practice and offers visibility over security compliance to field teams, without them accessing AWS Config service or dedicated security tooling accounts. This creates a short feedback loop from security to field teams, keeps non-compliant resources to a minimum, and helps organizations establish a continuous compliance review process.
 
 
 ### Dashboard features
 
 #### AWS Config compliance
-- At-a-glance status of compliant and non-compliant resources and AWS Config rules
-- Month-by-month compliance trend for resources and AWS Config rules
-- Compliance breakdown by service, account, and region
-- Compliance tracking for AWS Config rules and conformance packs
-- Compliance score for AWS Config rules and conformance packs, and AWS resources
+- At-a-glance status of compliant and non-compliant resources and AWS Config rules.
+- Month-by-month compliance trend for resources and AWS Config rules.
+- Compliance breakdown by service, account, and region.
+- Compliance tracking for AWS Config rules and conformance packs.
+- Compliance score for AWS Config rules and conformance packs, and AWS resources.
 
 #### Inventory management
 
@@ -74,7 +74,6 @@ You can also deploy the dashboard in a standalone account with AWS Config enable
 
 ### Architecture details
 An Amazon Athena table is used to extract data from the AWS Config configuration files delivered to Amazon S3. Whenever a new object is added to the bucket, the Lambda Partitioner function is triggered. This function checks if the object is an AWS Config configuration snapshot or configuration history file. If it is, the function adds a new partition to the corresponding Athena table with the new data. If the object is neither a configuration snapshot nor configuration history file, the function ignores it.
-By default, the Lambda Partitioner function skips configuration snapshots file. The function has environment variables that can be set to independently enable the partitioning of configuration snapshot or configuration history files. Configuration snapshot files are the only place where AWS Config registers that a specific resource was deleted. These records are always partitioned and added to the dashboard, as they are fundamental to the validity of the dashboard's data.
 
 The solution provides Athena views, which are SQL queries that extract data from Amazon S3 using the schema defined in the Athena table. Finally, you can visualize the data in a QuickSight dashboard that uses these views through Amazon QuickSight datasets.
 
@@ -93,4 +92,4 @@ See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more inform
 
 # License
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+This library is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file.
