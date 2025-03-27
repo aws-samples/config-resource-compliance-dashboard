@@ -4,7 +4,7 @@ see work log for more
 
 
 
-# [3] - 2025-03-27
+# [3.0.0] - 2025-03-27
 ## Added
 - **Compliance** tab, added compliance score visuals for resources, AWS Config rules and conformance packs.
 - **Configuration Item Events** tab, added **AWS Config Coverage** visuals, reorganized visuals in the tab.
