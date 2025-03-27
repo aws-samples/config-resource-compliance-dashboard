@@ -4,7 +4,7 @@ see work log for more
 
 
 
-# [2.1.2] - 2025-03-20
+# [3] - 2025-03-27
 ## Added
 - **Compliance** tab, added compliance score visuals for resources, AWS Config rules and conformance packs.
 - **Configuration Item Events** tab, added **AWS Config Coverage** visuals, reorganized visuals in the tab.
@@ -22,8 +22,10 @@ see work log for more
 - **Tag Compliance** tab: fixed a typo on the description at the top.
 - **Configuration Item Events** correctly captures all resource events in up to the previous six months.
 - **Configuration Item Events** tab, **All AWS Config Events** table filtered by account ID and region selectors at the top
-- Redesigned all the views for accuracy and performance.
+- Redesigned all the Athena views for accuracy and performance.
 
+
+Upgrading to v3 from an older version? Read [this](./documentation/upgrade.md) first.
 
 # [2.1.1] - 2025-01-06
 ## Fixed

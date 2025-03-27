@@ -2,9 +2,9 @@
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
 
-## Upgrade to v2.1.2
+## Upgrade to v3
 
-### Upgrade to v2.1.2 from v2.1.1 
+### Upgrade to v3 from v2.1.1 
 You only need to redeploy the frontend resources with the `cid-cmd` tool. You can keep the data pipeline resources that were installed by CloudFormation, as is.
 
 #### Step 1: Enable AWS Config history files on the Lambda Partitioner function
@@ -40,11 +40,11 @@ AWS Config Dashboard v1.2.1 did not configure a retention period for the CloudWa
 1. Find the log group called `/aws/lambda/crcd-config-file-partitioner`.
 1. Edit the log settings, change retention to 14 days, or the value that suits your needs.
 
-### Upgrade to v2.1.2 from older versions
-You have to destroy the resources of the current versions and redeploy. After you removed the old versions, and before deploying v2.1.2, make sure to delete the CloudWatch log group of the Lambda Partitioner:
+### Upgrade to v3 from older versions
+You have to destroy the resources of the current versions and redeploy. After you removed the old versions, and before deploying v3, make sure to delete the CloudWatch log group of the Lambda Partitioner:
 1. Log onto the AWS Console on the account and region where you deploy the dashboard, open the CloudWatch console.
 1. Click on `Logs/Log groups`.
 1. Find the log group called `/aws/lambda/crcd-config-file-partitioner` and select it.
 1. Click on the `Actions` button and select `Delete log group(s)`.
 
-The AWS Config Dashboard v2.1.2 creates the CloudWatch log group as a CloudFormation resource with a retention period, the installation will fail if the log group already exists.
+The AWS Config Dashboard v3 creates the CloudWatch log group as a CloudFormation resource with a retention period, the installation will fail if the log group already exists.

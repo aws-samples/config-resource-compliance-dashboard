@@ -1,4 +1,4 @@
-# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) v2.1.2
+# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) v3
 
 ## Description
 
