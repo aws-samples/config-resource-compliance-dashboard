@@ -25,7 +25,7 @@ see work log for more
 - Redesigned all the Athena views for accuracy and performance.
 
 
-Upgrading to v3 from an older version? Read [this](./documentation/upgrade.md) first.
+Upgrading to v3.0.0 from an older version? Read [this](./documentation/upgrade.md) first.
 
 # [2.1.1] - 2025-01-06
 ## Fixed
