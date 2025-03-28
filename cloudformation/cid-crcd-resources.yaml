@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 
-# Data pipeline installs resources from S3 to the Athena table. Athena views and QuickSight resources are not installed by this template
+# Data pipeline installs dashboard resources until an Athena table. Athena views and QuickSight resources are not installed by this template
 #
 # The following use cases are supported
 # 1. deployment on Log Archive account (all in one account)
@@ -14,12 +14,13 @@ Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 #    Create the S3 bucket for the copy of the logs
 #    Add permissions to the bucket to allow replication from the Log Archive Account
 #    Trigger the lambda function from the bucket created in the Dashboard account
+#    If the Log Archive bucket is encrypted with a KMS key, then the Dashboard bucket will also be encrypted
 #
 #    2.2
 #    Run the Log Archive account to setup replication to the bucket created on 2.1
 #
 # 3. Deployment on a single account
-#    This is most likely the same as use case 1
+#    This is exactly the same as use case 1
 
 # The template requires these parameters, which must always be provided by users:
 # A: LogArchiveAccountId  X: LogArchiveBucketName
@@ -31,8 +32,6 @@ Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
 #    use case 2.2 if A!=B and X!=Y and current account is A 
 #    use case 3 if A=B and X=Y
 
-# This way, all CRCD resources are mapped to the DashboardBucketName parameter
-
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -42,6 +41,7 @@ Metadata:
         Parameters:
           - LogArchiveAccountId
           - LogArchiveBucketName
+          - LogArchiveBucketKmsKeyArn
       -
         Label:
           default: "Dashboard resources - where you deploy the dashboard and where its data is" 
@@ -82,6 +82,8 @@ Metadata:
         default: "Log Archive account ID"
       DashboardBucketName:
         default: "Dashboard bucket"
+      LogArchiveBucketKmsKeyArn:
+        default: "ARN of the KMS key that encrypts the Log Archive bucket"
       DashboardBucketKmsKeyArn:
         default: "ARN of the KMS key that encrypts the Dashboard bucket"
       DashboardAccountId:
@@ -109,34 +111,45 @@ Parameters:
     MinLength: 12
     ConstraintDescription: "Log Archive account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
+  # 1 quicksight role gets permission to use the key for decryption
+  # 2.1 the KMS key is needed so that the dashboard bucket will be created KMS encrypted
+  # 2.2 is needed so that replication role gets permissions to use the key
+  # permissions are to Quicksight in case of installation in log archive bucket (step 1)
+  # permissions are to the replication role otherwise, and here there is no need to do that manually
+  LogArchiveBucketKmsKeyArn:
+    Type: "String"
+    Description: "If you encrypt the Log Archive bucket with a KMS key, copy the key's ARN here. If you deploy the dashboard on the Log Archive account, QuickSight will get permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually. If you deploy the dashboard on a dedicated Dashboard account, you must provide the key's ARN in both steps."
+    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
+    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
+
   DashboardAccountId:
-    Type: String
-    Description: "The number of the AWS account that contains the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the Log Archive account ID if you want to install the dashboard in the same account where AWS Config files are collected. To install the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
+    Type: "String"
+    Description: "The number of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the Log Archive account ID if you want to deploy the dashboard in the same account where AWS Config files are collected. To deploy the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
     ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
   DashboardBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you install the dashboard on the Log Archive account, insert the name of the Log Archive bucket again. If you install the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created with the name you specify here (Required)."
+    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you deploy the dashboard on the Log Archive account, insert the name of the Log Archive bucket again. If you deploy the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created with the name you specify here (Required)."
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     MinLength: 1
     ConstraintDescription: "Dashboard bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   DashboardBucketKmsKeyArn:
     Type: "String"
-    Description: "This parameter is used only if you install the dashboard on the Log Archive account (i.e. the Log Archive bucket and the Dashboard bucket are the same Amazon S3 bucket). If you encrypt the bucket with a KMS key, copy the key's ARN here. The template will give QuickSight permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually."
+    Description: "This parameter is used only in the second step of the Dashboard account deployment. In this case, insert the ARN of the KMS key created in the first step (it's DashboardBucketKmsKeyArn on the CloudFormation Outputs). If you deploy the dashboard on the Log Archive account, or if you are at the first step of the Dashboard account deployment, this parameter is ignored."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   ConfigureS3EventNotificationToLambda:
-    Type: String
+    Type: "String"
     Description:  "Select 'yes' to configure event notifications that will trigger the data pipeline of the dashboard whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the Dashboard bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
   ConfigureS3Replication:
-    Type: String
+    Type: "String"
     Description: "Select 'yes' to configure object replication between the Log Archive bucket and the Dashboard bucket. Select 'no' if you already have an S3 replication configurations on the Log Archive bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
@@ -201,7 +214,11 @@ Parameters:
 
 
 Conditions:
+  # used only in case 2.2, when setting up replication on the log archive bucket
   IsDashboardBucketKms: !Not [ !Equals [ !Ref DashboardBucketKmsKeyArn, "" ] ]
+
+  # Additional resources need to be created if the Log Archive bucket is encrypted with KMS
+  IsLogArchiveBucketKms: !Not [ !Equals [ !Ref LogArchiveBucketKmsKeyArn, "" ] ]
 
   IsLogArchiveAccountDeployment:
     # use case 1
@@ -211,6 +228,12 @@ Conditions:
       - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
       - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
   
+  IsLogArchiveAccountDeploymentKms:
+    # use case 1 with KMS encrypted bucket
+    Fn::And: 
+      - !Condition IsLogArchiveAccountDeployment
+      - !Condition IsLogArchiveBucketKms
+
   IsDashboardAccountDeployment:
     # use case 2.1
     Fn::And:
@@ -219,6 +242,13 @@ Conditions:
       - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
       - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
   
+  IsDashboardAccountDeploymentKms:
+    # use case 2.1 with KMS encrypted buckets
+    # TODO add IsDashboardBucketKms? but then it would not cover 2.1
+    Fn::And:
+      - !Condition IsDashboardAccountDeployment
+      - !Condition IsLogArchiveBucketKms
+
   IsS3ReplicationOnly:
     # use case 2.2
     # in the Log Archive installation there is a second cloudformation run where we configure only the S3 object replication
@@ -228,6 +258,13 @@ Conditions:
       - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
       - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
       - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+
+  IsS3ReplicationKms:
+    # replication in case buckets are encrypted with a KMS key
+    Fn::And:
+      - !Condition IsDashboardBucketKms
+      - !Condition IsLogArchiveBucketKms
+      - !Condition IsS3ReplicationOnly
 
   IsConfigureS3EventNotificationToLambda:
     # some customers that install on the Log Archive account may already have S3 notifications
@@ -383,6 +420,27 @@ Rules:
           - '<select>'
         AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the Log Archive bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the Log Archive bucket and want to configure this manually."
 
+  # Kms key ARN validation
+  ValidateDashboardBucketKmsKeyArn:
+    # Must be given only at step 2 of the dashboard bucket installation - case 2.2
+    # If there is a KMS key specified on the Loig Archive bucket
+    # In this case the KMS key ARNs of the buckets are either both specified on not entered.
+    RuleCondition:
+      Fn::And:
+        # These 3 replicate the condition for !Condition IsS3ReplicationOnly
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Not [!Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]]
+        - !Not [!Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]]
+        # a KMS key for the Dashboard bucket was given
+        - !Not [ !Equals [ !Ref DashboardBucketKmsKeyArn, "" ] ]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref LogArchiveBucketKmsKeyArn
+          - ''
+        AssertDescription: "REQUIRED PARAMETER - cannot replicate objects between buckets with different types of encryption. ARN of the KMS key that encrypts the Log Archive bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
+
+
 Resources:
 
   # ***********************************************************************************************************************************************
@@ -476,7 +534,45 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W28
-            reason: "Policy names are as per our design"
+            reason: "Role names are as per our design"
+
+  # Must create a KMS key in this case
+  # Will encrypt the Dashboard bucket, and QuickSight will be allowed to use it
+  DashboardBucketKmsKey:
+    Type: AWS::KMS::Key
+    UpdateReplacePolicy: "Delete"
+    DeletionPolicy: "Delete"
+    Condition: IsDashboardAccountDeploymentKms
+    Properties:
+      Description: "CRCD Dashboard: Key that encrypts the Dashboard bucket in case of deployment on dedicated Dashboard account"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: crcd-dashboardkey-policy
+        Statement:
+          - Sid: 'Enable IAM user permissions'
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${DashboardAccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+          # Allow the account on the other side (Log Archive) to use this for replication
+          # It would be better to allow only the replication role, but it does not exist yet!
+          - Sid: 'Allow Log Archive account use the key for replication'
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${LogArchiveAccountId}:root"
+            Action:
+              - kms:GenerateDataKey
+              - kms:Encrypt
+            Resource: '*'
+
+  DashboardBucketKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Condition: IsDashboardAccountDeploymentKms
+    Properties:
+      AliasName: alias/crcd-key-dashboard
+      TargetKeyId: !Ref DashboardBucketKmsKey
 
   IAMManagedPolicyQuickSightDataSource:
     Type: AWS::IAM::ManagedPolicy
@@ -553,15 +649,23 @@ Resources:
               - "s3:GetObject"
               - "s3:GetObjectVersion"
             Effect: "Allow"
+          # Gives permissions to quicksight in case of installation with a KMS encrypted bucket
           - !If
-            - IsDashboardBucketKms
-            - Sid: "AllowKmsDecrypt"
+            - IsLogArchiveAccountDeploymentKms
+            - Sid: "AllowKmsDecryptLogArchiveBucket"
               Effect: Allow
               Action:
                 - 'kms:Decrypt'
-              Resource: !Ref DashboardBucketKmsKeyArn
+              Resource: !Ref LogArchiveBucketKmsKeyArn
             - !Ref "AWS::NoValue"
-
+          - !If
+            - IsDashboardAccountDeploymentKms
+            - Sid: "AllowKmsDecryptDashboardBucket"
+              Effect: Allow
+              Action:
+                - 'kms:Decrypt'
+              Resource: !GetAtt DashboardBucketKmsKey.Arn
+            - !Ref "AWS::NoValue"
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -887,8 +991,23 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
+  LambdaFunctionPartitionerConfigLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    Condition: IsCreateDashboardResources
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${LambdaPartitioningFunctionName}"
+      RetentionInDays: 14
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "No KMS encryption needed"
+
   LambdaFunctionPartitionerConfig:
-  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipatethe need for reserved concurrency for the moment.
+  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
   # checkov:skip=CKV_AWS_116: No DQL needed.
     Type: AWS::Lambda::Function
@@ -926,11 +1045,11 @@ Resources:
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CONFIG_TABLE_NAME: !Ref AthenaTableName
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
-          # By default: ConfigSnapshot are enabled and ConfigHistory are disabled 
+          # By default: ConfigSnapshot and ConfigHistory are enabled as they are used for different purposes 
           # Pass 0 to skip the record
           # Pass 1 to partition the record
           PARTITION_CONFIG_SNAPSHOT_RECORDS: 1
-          PARTITION_CONFIG_HISTORY_RECORDS: 0
+          PARTITION_CONFIG_HISTORY_RECORDS: 1
       Code:
         ZipFile: |
           import re
@@ -1264,10 +1383,16 @@ Resources:
     - LambdaInvocationPermissionLambdaPartitionerConfig
     Properties:
       BucketName: !Ref DashboardBucketName
-      BucketEncryption:
+      BucketEncryption: 
         ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
+          - !If
+            - IsDashboardAccountDeploymentKms
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: 'aws:kms'
+                KMSMasterKeyID: !GetAtt DashboardBucketKmsKey.Arn
+              BucketKeyEnabled: true
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: 'AES256'
       VersioningConfiguration:
         Status: Enabled
       AccessControl: BucketOwnerFullControl
@@ -1393,7 +1518,29 @@ Resources:
           Resource:
           - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
           - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
-      PolicyName: !Sub "${CrossAccountReplicationRole}_policy"
+      PolicyName: !Sub "${CrossAccountReplicationRole}_s3"
+      Roles:
+        - !Ref ReplicationConfigurationConfigBucketRole
+
+  # In case the buckets are encrypted with KMS, the replication role must be able to decrypt using the source key and encrypt using the destination key
+  ReplicationConfigurationConfigBucketKmsPolicy:
+    Type: AWS::IAM::Policy
+    Condition: IsS3ReplicationKms
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Action:
+          - kms:Decrypt
+          - kms:GenerateDataKey
+          Effect: Allow
+          Resource: !Ref LogArchiveBucketKmsKeyArn
+        - Action:
+          - kms:Encrypt
+          - kms:GenerateDataKey
+          Effect: Allow
+          Resource: !Ref DashboardBucketKmsKeyArn
+      PolicyName: !Sub "${CrossAccountReplicationRole}_kms"
       Roles:
         - !Ref ReplicationConfigurationConfigBucketRole
 
@@ -1404,9 +1551,11 @@ Resources:
       ServiceToken: !GetAtt ConfigBucketReplicationConfigurationLambda.Arn
       SourceBucket: !Ref LogArchiveBucketName
       DestinationBucket: !Ref DashboardBucketName
+      DestinationBucketKmsKeyArn: !Ref DashboardBucketKmsKeyArn
       SourceAccountId: !Ref LogArchiveAccountId
       DestinationAccountId: !Ref DashboardAccountId
       ReplicationRoleArn: !GetAtt ReplicationConfigurationConfigBucketRole.Arn
+      
 
   ConfigBucketReplicationConfigurationLambdaRole:
     Type: AWS::IAM::Role
@@ -1457,7 +1606,7 @@ Resources:
         # this is already by default LogGroup: "/aws/lambda/crcd-support-configure-s3-replication"
       Role: !GetAtt ConfigBucketReplicationConfigurationLambdaRole.Arn
       Timeout: 300
-      Runtime: python3.12
+      Runtime: "python3.12"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -1483,12 +1632,13 @@ Resources:
             # Get the necessary parameters from the event
             params = event['ResourceProperties']
             source_bucket_name = params['SourceBucket']
+            destination_bucket_kms_key = params['DestinationBucketKmsKeyArn']
             destination_bucket_name = params['DestinationBucket']
             source_account_id = params['SourceAccountId']
             destination_account_id = params['DestinationAccountId']
             replication_role_arn = params['ReplicationRoleArn']
             replication_rule_name = 'crcd-dashboard-configfile-replication'
-              
+
             s3 = boto3.client('s3')
 
             if event['RequestType'] == 'Delete':
@@ -1528,7 +1678,7 @@ Resources:
               try:
                 existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
                 if 'ReplicationConfiguration' in existing_config:
-                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}. CRCD dashboard installation cannot proceed."
+                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}. CRCD dashboard deployment cannot proceed."
                   print(error_message)
 
                   # This will make the CloudFormation template fail
@@ -1541,25 +1691,59 @@ Resources:
               
               # Configure the replication
               try:
-                replication_configuration = {
-                  'Role': replication_role_arn,
-                  'Rules': [
-                    {
-                      'ID': replication_rule_name,
-                      'Status': 'Enabled',
-                      'Priority': 1,
-                      "DeleteMarkerReplication": {"Status": "Disabled"},
-                      "Filter": {"Prefix": ""},
-                      'Destination': {
-                        'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
-                        'Account': destination_account_id
+                if (not destination_bucket_kms_key):
+                  print('Replication configuration with SSE-S3 encrypted buckets')
+                  replication_configuration = {
+                    'Role': replication_role_arn,
+                    'Rules': [
+                      {
+                        'ID': replication_rule_name,
+                        'Status': 'Enabled',
+                        'Priority': 1,
+                        "DeleteMarkerReplication": {"Status": "Disabled"},
+                        "Filter": {"Prefix": ""},
+                        'Destination': {
+                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                          'Account': destination_account_id
+                        }
                       }
-                    }
-                  ]
-                }
+                    ]
+                  }
+                else:
+                  print('Replication configuration with KMS encrypted buckets')
+                  replication_configuration = {
+                    'Role': replication_role_arn,
+                    'Rules': [
+                      {
+                        'ID': replication_rule_name,
+                        'Status': 'Enabled',
+                        'Priority': 1,
+                        "DeleteMarkerReplication": {"Status": "Disabled"},
+                        "Filter": {"Prefix": ""},
+                        'Destination': {
+                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                          'Account': destination_account_id,
+                          'EncryptionConfiguration': {
+                            'ReplicaKmsKeyID': f'{destination_bucket_kms_key}'
+                          },
+                        },
+                        'SourceSelectionCriteria': {
+                          'SseKmsEncryptedObjects': {
+                            'Status': 'Enabled'  
+                          },
+                          'ReplicaModifications': {
+                            'Status': 'Disabled'
+                          }
+                        }
+                      }
+                    ]
+                  }
 
+                print('Calling the s3 API')
                 s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=replication_configuration)
+                print('Called the S3 API')
               except Exception as e:
+                print('ERROR: ' + str(e))
                 send_response(event, context, 'FAILED', {'Error': str(e)})
                 return
               
@@ -1652,7 +1836,7 @@ Resources:
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
       Timeout: 300
-      Runtime: python3.12
+      Runtime: "python3.12"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -1666,6 +1850,9 @@ Resources:
         Ipv6AllowedForDualStack: false
       RuntimeManagementConfig:
         UpdateRuntimeOn: "Auto"
+      LoggingConfig:
+        LogFormat: "Text"
+        # this is already by default LogGroup: "/aws/lambda/crcd-support-configure-s3-event-notification"
       Code:
         ZipFile: |
           import json
@@ -1691,7 +1878,7 @@ Resources:
                       existing_config = s3.get_bucket_notification_configuration(Bucket=bucket_name)
                       if has_notifications(existing_config):
                           # If there's an existing configuration, fail the Lambda function
-                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. CRCD dashboard installation cannot proceed."
+                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. CRCD dashboard deployment cannot proceed."
                           print(error_message)
                           print(f"Existing S3 event configuration: {existing_config}")
                           send_response(event, context, 'FAILED', {'Error': error_message})
@@ -1794,7 +1981,7 @@ Resources:
 
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
-  QuickSightDataSourceRole:
+  QuickSightDataSourceRoleName:
     Description: "Name of the IAM role created for QuickSight"
     Condition: IsCreateDashboardResources
     Value: !Ref IAMRoleQuickSightDataSource
@@ -1828,11 +2015,21 @@ Outputs:
     Condition: IsDashboardAccountDeployment
     Value: !GetAtt DashboardBucket.Arn
     
-  # Will be needed to manually configure replication
-  ReplicationRoleArn:
+  # Will be needed in case you have to manually configure replication
+  ReplicationRoleName:
     Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files"
     Condition: IsS3ReplicationOnly
     Value: !Ref ReplicationConfigurationConfigBucketRole
+
+  ReplicationRoleArn:
+    Description: "ARN of the IAM role created for the cross-account S3 replication of AWS Config files"
+    Condition: IsS3ReplicationOnly
+    Value: !GetAtt ReplicationConfigurationConfigBucketRole.Arn
+
+  DashboardBucketKmsKeyArn:
+    Description: "Arn of the KMS key that encrypts the Dashboard bucket. Needed for the cross-account S3 replication of AWS Config files"
+    Condition: IsDashboardAccountDeploymentKms
+    Value: !GetAtt DashboardBucketKmsKey.Arn
 
   # these are great for development 
 #  ConditionIsConfigureS3EventNotificationToLambda:
