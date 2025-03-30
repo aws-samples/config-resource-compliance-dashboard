@@ -1,9 +1,4 @@
 
-
-see work log for more
-
-
-
 # [3.0.0] - 2025-03-27
 ## Added
 - **Compliance** tab, added compliance score visuals for resources, AWS Config rules and conformance packs.
