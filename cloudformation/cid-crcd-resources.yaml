@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
+Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD)"
 
 # Data pipeline installs dashboard resources until an Athena table. Athena views and QuickSight resources are not installed by this template
 #
@@ -47,7 +47,7 @@ Metadata:
           default: "Dashboard resources - where you deploy the dashboard and where its data is" 
         Parameters:
           - DashboardAccountId
-          - DashboardBucketName
+          - DashboardBucketName # TODO can this be a prefix, with a value we decide and then append accountID and Region?
           - DashboardBucketKmsKeyArn
           - ConfigureS3EventNotificationToLambda
           - ConfigureS3Replication
