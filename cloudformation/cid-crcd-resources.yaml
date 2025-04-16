@@ -674,7 +674,6 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
-  # TODO check, becasue I had to add "glue:GetDatabase"
   IAMManagedPolicyLambdaGlue:
     Type: AWS::IAM::ManagedPolicy
     Condition: IsCreateDashboardResources
