@@ -1,4 +1,10 @@
 
+# [3.0.1] - 2025-04-30
+This is a technical update to allo the CRCD Dashboard to be installed together with other CID Dashboards.
+
+## Added
+- Export
+
 # [3.0.0] - 2025-03-27
 ## Added
 - **Compliance** tab, added compliance score visuals for resources, AWS Config rules and conformance packs.

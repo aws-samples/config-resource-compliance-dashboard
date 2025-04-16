@@ -12297,7 +12297,7 @@ dashboards:
             \ is not part of, nor does it modify, any agreement between AWS and its customers.</inline>\n\
             </text-box>"
           SheetTextBoxId: a1f587ee-2c8c-491d-87c3-96b07a02856d
-        - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>CRCD v3.0.0</b>\n\
+        - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>CRCD v3.0.1</b>\n\
             \  </inline>\n  <br/>\n  <inline font-size=\"20px\">Config Resource Compliance\
             \ Dashboard</inline>\n  <br/>\n  <br/>\n  <inline font-size=\"16px\">Created\
             \ by: Luca Casarini</inline>\n  <br/>\n  <inline font-size=\"14px\">Powered\
