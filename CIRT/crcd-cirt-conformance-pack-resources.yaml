@@ -1,0 +1,66 @@
+# STEP 1
+# Supports deployment of CRCD CRT resources
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates S3 bucket for AWS Config Conformance Pack templates'
+
+Resources:
+  DeliveryS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Sub 'awsconfigconforms-crcd-cirt-${AWS::AccountId}'  # No region suffix needed as this is central
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  DeliveryS3BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref DeliveryS3Bucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AWSConfigConformsCheckAcls
+            Action: s3:GetBucketAcl
+            Effect: Allow
+            Resource: !GetAtt DeliveryS3Bucket.Arn
+            Principal:
+              Service: config.amazonaws.com
+            Condition:
+              StringEquals:
+                aws:PrincipalOrgID: ${aws:PrincipalOrgID}
+              Bool:
+                aws:SecureTransport: true
+          - Sid: AWSConfigConformsReadWriteBucket
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Effect: Allow
+            Resource: !Sub ${DeliveryS3Bucket.Arn}/*
+            Principal:
+              Service: config.amazonaws.com
+            Condition:
+              StringEquals:
+                aws:PrincipalOrgID: ${aws:PrincipalOrgID}
+              Bool:
+                aws:SecureTransport: true
+
+Outputs:
+  BucketName:
+    Description: Name of the created S3 bucket
+    Value: !Ref DeliveryS3Bucket
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+  BucketArn:
+    Description: ARN of the created S3 bucket
+    Value: !GetAtt DeliveryS3Bucket.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketArn'
