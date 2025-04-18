@@ -144,3 +144,159 @@ Additional Notes:
 2. The template assumes self-managed permissions
 3. You might want to add error handling and retry settings
 4. Consider adding tags for better resource management
+
+
+
+# see regions with config recorder - within a single accout
+
+Yes, you can use the AWS CLI to get all regions with AWS Config recorders. Here's a script that does this [[1]](https://docs.aws.amazon.com/cli/latest/reference/configservice/describe-configuration-recorders.html):
+
+```bash
+#!/bin/bash
+
+# Get all enabled regions
+regions=$(aws ec2 describe-regions --query 'Regions[].RegionName' --output text)
+
+echo "Regions with active AWS Config recorders:"
+for region in $regions; do
+    # Check for config recorders in each region
+    recorder_status=$(aws configservice describe-configuration-recorder-status \
+        --region $region \
+        --query 'ConfigurationRecordersStatus[?recording==`true`].name' \
+        --output text 2>/dev/null)
+    
+    if [ ! -z "$recorder_status" ]; then
+        echo "- $region"
+    fi
+done
+```
+
+Or as a one-liner:
+```bash
+for region in $(aws ec2 describe-regions --query 'Regions[].RegionName' --output text); do aws configservice describe-configuration-recorder-status --region $region --query 'ConfigurationRecordersStatus[?recording==`true`].name' --output text 2>/dev/null && echo "$region has active recorder"; done
+```
+
+Sources:
+[1] Title: "describe-configuration-recorders"
+URL: https://docs.aws.amazon.com/cli/latest/reference/configservice/describe-configuration-recorders.html
+Relevant Passage: ["Returns details about your AWS Config configuration recorders"]
+Confidence Level: High
+Last Updated: 2023
+
+[2] Title: "describe-configuration-recorder-status"
+URL: https://docs.aws.amazon.com/cli/latest/reference/configservice/describe-configuration-recorder-status.html
+Relevant Passage: ["Returns the current status of the specified configuration recorder"]
+Confidence Level: High
+Last Updated: 2023
+
+Additional Tips:
+1. Add error handling for regions where AWS Config isn't available
+2. Consider checking recorder configuration details with `describe-configuration-recorders`
+3. You might want to check if the recorder is actually recording with the `recording` status
+4. For organization-wide checks, you'll need appropriate IAM roles/permissions
+
+Would you like me to provide a more detailed script with additional error handling or organization-wide capabilities?
+
+
+# see everything in the organization
+
+Yes, you can use AWS Organizations API with AWS Config to check configuration recorders across all accounts in your organization [[1]](https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html). Here's a script to do this:
+
+```bash
+#!/bin/bash
+
+# Get list of all account IDs in the organization
+account_ids=$(aws organizations list-accounts --query 'Accounts[*].Id' --output text)
+
+# Get list of all regions
+regions=$(aws ec2 describe-regions --query 'Regions[].RegionName' --output text)
+
+echo "Checking AWS Config recorders across all accounts and regions..."
+echo "Format: AccountID -> Region -> Recorder Status"
+echo "----------------------------------------"
+
+for account in $account_ids; do
+    echo "Account: $account"
+    for region in $regions; do
+        # Assume role in target account
+        role_arn="arn:aws:iam::${account}:role/AWSControlTowerExecution"  # Or your preferred role
+        
+        # Assume role and check config recorder
+        recorder_status=$(aws sts assume-role \
+            --role-arn $role_arn \
+            --role-session-name ConfigCheck \
+            --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+            --output text | while read -r key secret token; do
+                AWS_ACCESS_KEY_ID=$key \
+                AWS_SECRET_ACCESS_KEY=$secret \
+                AWS_SESSION_TOKEN=$token \
+                aws configservice describe-configuration-recorder-status \
+                    --region $region \
+                    --query 'ConfigurationRecordersStatus[?recording==`true`].name' \
+                    --output text 2>/dev/null
+            done)
+        
+        if [ ! -z "$recorder_status" ]; then
+            echo "  - $region: ENABLED"
+        else
+            echo "  - $region: disabled"
+        fi
+    done
+    echo "----------------------------------------"
+done
+```
+
+Alternative approach using AWS Config Aggregator [[2]](https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html):
+
+```bash
+#!/bin/bash
+
+# First, ensure you have a configuration aggregator set up
+# This command creates an organization-wide aggregator if you don't have one
+aws configservice put-configuration-aggregator \
+    --configuration-aggregator-name "OrganizationConfigStatus" \
+    --organization-aggregation-source "{\"RoleArn\": \"arn:aws:iam::${AWS_ACCOUNT_ID}:role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig\", \"AllAwsRegions\": true}"
+
+# Wait for aggregator to collect data (might take a few minutes)
+sleep 300  # 5 minutes wait
+
+# Get aggregated view
+aws configservice get-aggregate-discovered-resource-counts \
+    --configuration-aggregator-name "OrganizationConfigStatus" \
+    --filters ResourceType=AWS::Config::ResourceCompliance \
+    --group-by-Key ACCOUNT_ID,AWS_REGION \
+    --output json
+
+```
+
+Requirements:
+1. Management account access
+2. Appropriate IAM roles/permissions:
+   - organizations:ListAccounts
+   - sts:AssumeRole
+   - config:DescribeConfigurationRecorderStatus
+3. A role that can be assumed in member accounts (like AWSControlTowerExecution)
+
+Sources:
+[1] Title: "Multi-Account Multi-Region Data Aggregation"
+URL: https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html
+Relevant Passage: ["You can aggregate AWS Config data from multiple accounts and regions"]
+Confidence Level: High
+Last Updated: 2023
+
+[2] Title: "Setting Up an Aggregator Using Organizations"
+URL: https://docs.aws.amazon.com/config/latest/developerguide/set-up-aggregator-organization.html
+Relevant Passage: ["You can aggregate AWS Config data using AWS Organizations"]
+Confidence Level: High
+Last Updated: 2023
+
+Additional Tips:
+1. Consider using AWS Config Aggregator for more efficient data collection
+2. Add error handling for accounts where role assumption fails
+3. Consider caching results for large organizations
+4. Add filtering options for specific regions or accounts
+
+Would you like me to:
+1. Add more error handling to the script?
+2. Provide the IAM policy requirements?
+3. Show how to set up Config Aggregator through CloudFormation?
