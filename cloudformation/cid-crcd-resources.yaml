@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD) v2"
+Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD)"
 
 # Data pipeline installs dashboard resources until an Athena table. Athena views and QuickSight resources are not installed by this template
 #
