@@ -38,7 +38,8 @@ Resources:
   OrganizationConformancePack:
     Type: 'AWS::Config::OrganizationConformancePack'
     Properties:
-      OrganizationConformancePackName: 'crcd-cirt-security-recommendations'
+      # TODO renaming to allow installation
+      OrganizationConformancePackName: 'crcd-cirt-security-recommendations2'
       DeliveryS3Bucket: !Ref DeliveryS3BucketName
       ExcludedAccounts: !Ref ExcludedAccounts
       TemplateBody: |
