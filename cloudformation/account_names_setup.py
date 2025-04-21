@@ -1,11 +1,3 @@
-# This works, TODO build the queries according to what table/db exists, only with account names for now
-
-
-# TODO
-# VIEW_IS_STALE: line 1:15: View 'awsdatacatalog.cid_crcd_database.config_test' is stale or in invalid state: column [account_id] of type varchar projected from query view at position 0 cannot be coerced to column [account_id] of type varchar(15) stored in view definition
-# A view build from a sys view will be stale if the sys view changes, rebuild if exists?
-
-
 # TODO this is the policy it needs
 
 # crcd-glue-account-names-policy  
@@ -48,11 +40,8 @@ import os
 import boto3
 import time
 
-
-# CRCD_TABLE_NAME = os.environ["CRCD_TABLE_NAME"] # TODO probably not used
 CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]   
 CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
-ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
 ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
 ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE"]
@@ -67,74 +56,70 @@ glue = boto3.client('glue')
 athena = boto3.client('athena')
 
 class AthenaException(Exception):
-    ''''This is raised only if the Query is not in state SUCCEEDED'''
+    ''''This is raised in case of Exception while running queries on Athnea or Glue'''
     pass
 
 def lambda_handler(event, context):
     organization_table_exists = False
     account_map_exists = False 
 
-    # Check which tables exist
-    if check_table_exists(ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
-        organization_table_exists = True
-    else:
-        account_map_exists = check_table_exists(ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
+    try:
+        # Check which tables exist
+        if check_table_exists(ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+            organization_table_exists = True
+        else:
+            account_map_exists = check_table_exists(ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
 
-    # Prepare CREATE OR REPLACE VIEW query based on table existence
-    if organization_table_exists:
-        create_view_query = f"""
-        CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-        SELECT 
-            id as account_id,
-            arn as account_arn,
-            email as account_email,
-            name as account_name,
-            parentid as parent_id
-        FROM "optimization_data"."organization_data"
-        """
-    elif account_map_exists:
-        create_view_query = f"""
-        CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-        SELECT 
-            account_id,
-            'ARN' as account_arn,
-            'EMAIL' as account_email,
-            account_name,
-            parent_account_id as parent_id
-        FROM "cid_cur"."account_map"
-        """
-    else:
-        # This creates a view with no rows, but having these columns
-        create_view_query = f"""
-        CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-        SELECT 
-            'NO_TABLES_EXIST' as account_id,
-            'NO_TABLES_EXIST' as account_arn,
-            'NO_TABLES_EXIST' as account_email,
-            'NO_TABLES_EXIST' as account_name,
-            'NO_TABLES_EXIST' as parent_id
-        WHERE false
-        """
+        # Prepare CREATE OR REPLACE VIEW query based on table existence
+        if organization_table_exists:
+            create_view_query = f"""
+            CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+            SELECT 
+                id as account_id,
+                payer_id as payer_account_id,  
+                name as account_name
+            FROM "optimization_data"."organization_data"
+            """
+        elif account_map_exists:
+            create_view_query = f"""
+            CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+            SELECT 
+                account_id,
+                parent_account_id as payer_account_id,
+                account_name
+            FROM "cid_cur"."account_map"
+            """
+        else:
+            # This creates a view with no rows, but having these columns
+            create_view_query = f"""
+            CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+            SELECT 
+                'NO_TABLES_EXIST' as account_id,
+                'NO_TABLES_EXIST' as payer_account_id,
+                'NO_TABLES_EXIST' as account_name
+            WHERE false
+            """
 
-    # Execute the view creation query
-    success = execute_athena_query(create_view_query)
-    
-    return {
-        'statusCode': 200 if success else 500,
-        'body': {
-            'message': 'View created successfully' if success else 'Failed to create view',
-            'optimization_table_exists': organization_table_exists,
-            'account_map_exists': account_map_exists,
-            'view_name': f"{CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME}"
-        }
-    }
+        # Execute the view creation query    
+        success = execute_athena_query(create_view_query)
+        if success:
+            print(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} created successfully. Data sources: organization_table_exists {organization_table_exists}, account_map_exists {account_map_exists}")
+            # Send a successful response back to CloudFormation
+            send_response(event, context, 'SUCCESS', {})
+        else:
+            send_response(event, context, 'FAILED', {'Error': 'Athena query was not successful'})
+    except AthenaException as ae:
+        # Send a failed response back to CloudFormation
+        send_response(event, context, 'FAILED', {'Error': str(ae)})
+    except Exception as e:
+        # Send a failed response back to CloudFormation
+        send_response(event, context, 'FAILED', {'Error': str(e)})
 
 
 def check_table_exists(database_name, table_name):
     """Check if table exists in Glue Data Catalog"""
-    if LOGGING_ON:
-        print(f"Checking existence of table {table_name} on database {database_name}")
-
+    print(f"Checking existence of table {table_name} on database {database_name}")
+    
     try:
         glue.get_table(DatabaseName=database_name, Name=table_name)
         if LOGGING_ON:
@@ -146,7 +131,7 @@ def check_table_exists(database_name, table_name):
         return False
     except Exception as e:
         print(f"Error checking table existence: {str(e)}")
-        return False
+        raise AthenaException(f'Query failed: {str(e)}')
 
 def execute_athena_query(query):
     print('Executing query:', query)
@@ -154,7 +139,7 @@ def execute_athena_query(query):
         start_query_response = athena.start_query_execution(
             QueryString=query,
             QueryExecutionContext={
-                'Database': ATHENA_DATABASE_NAME
+                'Database': CRCD_DATABASE_NAME
             },
             ResultConfiguration={
                 'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
@@ -180,7 +165,7 @@ def execute_athena_query(query):
                     'QueryExecutionId': query_execution_id,
                     'State': query_state,
                     'StateChangeReason': error_reason,
-                    'Database': ATHENA_DATABASE_NAME,
+                    'Database': CRCD_DATABASE_NAME,
                     'WorkGroup': ATHENA_WORKGROUP,
                     'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}'
                 }
@@ -193,12 +178,32 @@ def execute_athena_query(query):
         print(f'Exception during query execution: {str(e)}')
         raise
 
+def send_response(event, context, response_status, response_data):
+    """Interacts with the Cloud Formation template that called this Lambda"""
+    response_body = json.dumps({
+        'Status': response_status,
+        'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+        'PhysicalResourceId': context.log_stream_name,
+        'StackId': event['StackId'],
+        'RequestId': event['RequestId'],
+        'LogicalResourceId': event['LogicalResourceId'],
+        'Data': response_data
+    })
+
+    response_url = event['ResponseURL']
+    
+    import urllib.request
+    req = urllib.request.Request(response_url, data=response_body.encode('utf-8'), method='PUT')
+    with urllib.request.urlopen(req) as f:
+        print(f.read())
+        print(f.info())
+
 def execute_athena_query_DEPRECATED(query):
     print('Executing query:', query)
     start_query_response = athena.start_query_execution(
         QueryString=query,
         QueryExecutionContext={
-            'Database': ATHENA_DATABASE_NAME
+            'Database': CRCD_DATABASE_NAME
         },
         ResultConfiguration={
             'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}/crcd-account-names-setup',
