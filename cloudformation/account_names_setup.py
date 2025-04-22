@@ -40,6 +40,7 @@ import os
 import boto3
 import time
 
+# TODO call these from inside the handler, in case of exceptions no error is returned to CFN and it will hang
 CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]   
 CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
@@ -62,6 +63,11 @@ class AthenaException(Exception):
 def lambda_handler(event, context):
     organization_table_exists = False
     account_map_exists = False 
+
+    if event['RequestType'] == 'Delete':
+        # bypass for now
+        # TODO handle all request types
+        send_response(event, context, 'SUCCESS', {})
 
     try:
         # Check which tables exist
