@@ -1,9 +1,9 @@
 
 # [3.0.1] - 2025-04-30
-This is a technical update to allo the CRCD Dashboard to be installed together with other CID Dashboards.
+This is a technical update to allow the CRCD Dashboard to be easier to install together with other CID Dashboards.
 
 ## Added
-- Export
+- The CloudFormation template exports the Amazon QuickSight policy to access the CRCD resources. This will be used by the `cid-cmd` tool to manage permissions during the dashboard deployment in case other CID dasboards exist.
 
 # [3.0.0] - 2025-03-27
 ## Added

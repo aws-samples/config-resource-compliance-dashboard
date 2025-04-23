@@ -1,6 +1,8 @@
 # Upgrade Instructions
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
+## Upgrade to v3.0.1
+There are no functional changes over v3.0.0. The new version allows CRCD to be easier to install together with other CID dashboards, if you are already running v3.0.0 there is no reason to upgrade.
 
 ## Upgrade to v3.0.0
 
