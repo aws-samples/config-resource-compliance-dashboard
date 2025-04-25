@@ -4,25 +4,24 @@ from datetime import datetime
 import os
 import re
 
-
 # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
 # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
 # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
 # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
 PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
-
 def lambda_handler(event, context):
     glue = boto3.client('glue')
 
     # Get the table name from environment variable
-    table_name = os.environ.get('DYNAMODB_TRACKING_TABLE_NAME', 'CRCDPreprocessingJobTracking')
+    table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
     
     # Use the environment variable for the table name
     dynamodb = boto3.resource('dynamodb').Table(table_name)
 
-    # this will be dynamic, hard coding for now
-    DashboardBucketName = 'crcd-dashboard-bucket-058264555211-eu-north-1'
+    # Gets more environment variables
+    dashboard_bucket_name = os.environ["DASHBOARD_BUCKET_NAME"]
+    preprocessing_glue_job = os.environ["GLUE_JOB_NAME"]
     
     records = event['Records']
     for record in records:
@@ -39,10 +38,6 @@ def lambda_handler(event, context):
         filename = os.path.basename(key)
         # Remove the .json.gz extension if present
         filename = filename.replace('.json.gz', '')
-        
-        #timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-        # run_id = f"s3-trigger-{timestamp}"
-        #run_id = f"{filename}-{timestamp}"
 
         # Split by underscore and take the last two parts
         parts = filename.split('_')
@@ -68,10 +63,11 @@ def lambda_handler(event, context):
         # Start Glue job
         try:
             response = glue.start_job_run(
-                JobName='crcd-config-file-processing-job',
+                JobName=preprocessing_glue_job,
                 Arguments={
+                    '--tracking_table_name': f"{table_name}",
                     '--source_path': f"s3://{bucket}/{key}",
-                    '--destination_path': f"s3://{DashboardBucketName}/",
+                    '--destination_path': f"s3://{dashboard_bucket_name}/",
                     '--CRCD_JOB_RUN_ID': run_id
                 }
             )

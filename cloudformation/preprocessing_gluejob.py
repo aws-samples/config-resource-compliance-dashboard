@@ -19,6 +19,7 @@ from collections import Counter
 # Get job parameters
 args = getResolvedOptions(sys.argv, [
     'JOB_NAME',
+    'tracking_table_name',
     'source_path',
     'destination_path',
     'CRCD_JOB_RUN_ID'
@@ -40,7 +41,9 @@ spark.conf.set("spark.sql.adaptive.enabled", "true")
 
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table('CRCDFlatteningJobTracking')
+# table = dynamodb.Table('CRCDFlatteningJobTracking') # TODO delete when tested
+table = dynamodb.Table(args['tracking_table_name'])
+
 
 def decode_s3_key(s3_path):
     """Decode only the key part of the S3 path"""
@@ -59,7 +62,6 @@ def decode_s3_key(s3_path):
     decoded_key = urllib.parse.unquote(key)
     
     return f"s3://{bucket}/{decoded_key}"
-
 
 def get_relative_path(source_path):
     """Extract the relative path from the full S3 path"""
@@ -109,7 +111,6 @@ def update_job_status(status, processed_items=0, error_message=None):
         )
     except Exception as e:
         print(f"Error updating DynamoDB: {str(e)}")
-
 
 def sanitize_s3_name(name):
     # Generate random string of 10 alphanumeric characters
@@ -181,12 +182,12 @@ def truncate_s3_key(key, max_length=1000):  # leaving some room for safety
     truncated_base = base.encode('utf-8')[:-excess_bytes-1].decode('utf-8', errors='ignore')
     return truncated_base + extension
 
-
-
-def process_file():
+def process_file():    
     try:
         logger.info("10====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
         logger.info(f"Original source path: {args['source_path']}")
+        logger.info(f"DDB Table name: {args['tracking_table_name']}")
+
 
         # if %3A is on the file name, glue does not find it
         source_path = decode_s3_key(args['source_path'])

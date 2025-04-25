@@ -144,7 +144,7 @@ Parameters:
 
   ConfigureS3EventNotificationToLambda:
     Type: "String"
-    Description:  "Select 'yes' to configure event notifications that will trigger the data pipeline of the dashboard whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the Dashboard bucket. In this case, you must configure this manually."
+    Description:  "Select 'yes' to configure event notifications that will trigger the data pipeline of the dashboard whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the bucket. In this case, you must configure S3 event notifications manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
@@ -1684,8 +1684,7 @@ Resources:
                   - 's3:GetBucketNotification'
                 Resource: !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
 
-  # Lambda triggered by CloudFormation
-  # to configure bucket notification on AWS Config Logging
+  # Lambda triggered by CloudFormation to configure bucket notification on AWS Config Log Archive bucket
   ConfigBucketNotificationConfigurationLambda:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
@@ -1994,7 +1993,7 @@ Resources:
               CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]   
               CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
               ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
-              ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
+              ATHENA_WORKGROUP = os.environ["ATHENA_WORKGROUP"]
               ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE"]
               ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE"]
               ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE"]
