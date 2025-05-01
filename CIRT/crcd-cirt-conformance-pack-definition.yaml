@@ -1,7 +1,6 @@
 ConformancePackName: crcd-cirt-security-recommendations
 Description: "Conformance pack for comprehensive security controls recommended by AWS Customer Incident Response Team (CIRT)"
 
-
 Parameters:  # Add parameters section at the top level
   ApiGatewayEndpointTypes:
     Type: String

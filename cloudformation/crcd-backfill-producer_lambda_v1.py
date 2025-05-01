@@ -1,5 +1,7 @@
 # producer with org reading
 
+# big issue with permissions as reading the organization is tipically blocket from member accounts
+
 # Required permissions
 # {
 #     "Version": "2012-10-17",
@@ -67,7 +69,7 @@ s3 = boto3.client('s3')
 # Define the batch size of the objects read from S3
 batch_size = 500 # was: 500
 
-LOGGING_ON = False  # enables additional logging to CloudWatch
+LOGGING_ON = True  # enables additional logging to CloudWatch
 
 # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
 # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
@@ -122,8 +124,13 @@ def lambda_handler(event, context):
   min_config_history_date = datetime(year, month, 1)
   print (f'This is the minimum date for Config history files: {min_config_history_date}')
 
+  regions = get_enabled_regions()
+
+
   # Get organization details
   org_details = get_organization_details()
+
+  print("Organization details done")
         
   # Generate prefixes
   prefixes = generate_config_prefixes(org_details)
@@ -131,8 +138,11 @@ def lambda_handler(event, context):
   for p in prefixes:
      print(p)
 
-
-
+  # TODO development - stopping here
+  return {
+      'statusCode': 200,
+      'body': json.dumps(f'Successfully processed {object_counter} objects in the bucket. Sent to the queue for partitioning {actual_object_counter} objects out of {potential_object_counter} valid AWS Config objects, of which there were {config_history_counter} ConfigHistory and {config_snapshot_counter} ConfigSnapshot records.')
+  }
 
   # Iterate over the object keys in batches
   while True:
@@ -316,6 +326,13 @@ def get_organization_details() -> Dict:
         
         # Get list of all accounts
         accounts = []
+
+        # TODO ISSUE
+        # If you're not in the management account, the member account must have access to Organizations API actions
+        # Some organizations restrict Organizations API access to specific roles or the management account only
+        # My test org is like this, even the CLI command fails on CloudShell: aws organizations list-accounts --query 'Accounts[?Status==`ACTIVE`].Id' --output json
+
+
         paginator = org_client.get_paginator('list_accounts')
         
         for page in paginator.paginate():

@@ -1,3 +1,7 @@
+# The idea was to remove from the list of objects before testing the regular expression on each
+# Buckets with many objects, or that also store CloudTrail files will make the Lambda time out before finding all the relevant
+# AWS Config records.
+
 # AWS Config Resource Compliance Dashboard
 # Backfilling producer function, scans your Amazon S3 dashboard bucket and finds all files related to AWS Config that are valid.
 # These files are sent to an SQS queue that will trigger another function to add them to the dashboard data.
@@ -91,8 +95,6 @@ def lambda_handler(event, context):
   print (f'This is the minimum date for Config history files: {min_config_history_date}')
 
 
-
-
   continuation_token = None
   while True:
     # Get the next batch of objects
@@ -110,6 +112,8 @@ def lambda_handler(event, context):
         for obj in matching_objects:
             object_counter += 1
             key = obj['Key']
+
+            if LOGGING_ON: print(f'Processing object {key}')
                 
             # Now we know it's a Config file, process based on type
             if can_process(key, min_config_snapshot_date, min_config_history_date):
@@ -191,7 +195,7 @@ def can_process(object_key, min_config_snapshot_date, min_config_history_date):
     if LOGGING_ON: print(f'Cannot match {object_key} as AWS Config file. Skipping.')
     return False
 
-  # process object key
+  # process object key TODO maybe can be skipped since it's filtered before?
   match  = re.match(PATTERN, object_key)
 
   # if match it is a config file
