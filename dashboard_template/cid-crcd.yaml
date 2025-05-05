@@ -11512,7 +11512,7 @@ dashboards:
             \  <br/>\n  <inline color=\"#9d9d9d\" font-size=\"16px\">All visuals include\
             \ all AWS Config rules whose name starts with \"</inline>\n  <inline color=\"\
             #9d9d9d\" font-family=\"Amazon Ember\" font-size=\"16px\">required-tags</inline>\n\
-            \  <inline color=\"#9d9d9d\" font-size=\"16px\">\" created from the managed\
+            \  <inline color=\"#9d9d9d\" font-size=\"16px\">\" (case-sensitive) created from the managed\
             \ rule\_</inline>\n  <inline color=\"#6288d6\" font-size=\"16px\">\n    <a href=\"\
             https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html\"\
             \ target=\"_blank\">\n      <u>REQUIRED_TAGS</u>\n    </a>\n  </inline>\n  <br/>\n\
