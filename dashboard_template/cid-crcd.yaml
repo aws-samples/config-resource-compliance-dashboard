@@ -11512,7 +11512,7 @@ dashboards:
             \  <br/>\n  <inline color=\"#9d9d9d\" font-size=\"16px\">All visuals include\
             \ all AWS Config rules whose name starts with \"</inline>\n  <inline color=\"\
             #9d9d9d\" font-family=\"Amazon Ember\" font-size=\"16px\">required-tags</inline>\n\
-            \  <inline color=\"#9d9d9d\" font-size=\"16px\">\" created from the managed\
+            \  <inline color=\"#9d9d9d\" font-size=\"16px\">\" (case-sensitive) created from the managed\
             \ rule\_</inline>\n  <inline color=\"#6288d6\" font-size=\"16px\">\n    <a href=\"\
             https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html\"\
             \ target=\"_blank\">\n      <u>REQUIRED_TAGS</u>\n    </a>\n  </inline>\n  <br/>\n\
@@ -12297,7 +12297,7 @@ dashboards:
             \ is not part of, nor does it modify, any agreement between AWS and its customers.</inline>\n\
             </text-box>"
           SheetTextBoxId: a1f587ee-2c8c-491d-87c3-96b07a02856d
-        - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>CRCD v3.0.0</b>\n\
+        - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>CRCD v3.0.1</b>\n\
             \  </inline>\n  <br/>\n  <inline font-size=\"20px\">Config Resource Compliance\
             \ Dashboard</inline>\n  <br/>\n  <br/>\n  <inline font-size=\"16px\">Created\
             \ by: Luca Casarini</inline>\n  <br/>\n  <inline font-size=\"14px\">Powered\
@@ -12360,6 +12360,9 @@ datasets:
     dependsOn:
       views:
       - config_event_delivery
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_compliance_conformance_pack:
@@ -12429,6 +12432,9 @@ datasets:
     dependsOn:
       views:
       - config_compliance_conformance_pack
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_s3:
@@ -12504,6 +12510,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory_s3
+    # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_ebs:
@@ -12630,6 +12639,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory_ebs
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_lambda:
@@ -12738,6 +12750,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory_lambda
+    # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_event:
@@ -12792,6 +12807,9 @@ datasets:
     dependsOn:
       views:
       - config_event
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     # CUSTOMIZATION - configure daily incremental refresh, remove default
     - incremental-daily
@@ -12854,6 +12872,9 @@ datasets:
     dependsOn:
       views:
       - config_compliance_resource
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_ec2:
@@ -12971,6 +12992,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory_ec2
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory:
@@ -13043,6 +13067,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_rds:
@@ -13187,6 +13214,9 @@ datasets:
     dependsOn:
       views:
       - config_inventory_rds
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_compliance:
@@ -13259,6 +13289,9 @@ datasets:
     dependsOn:
       views:
       - config_compliance
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
 

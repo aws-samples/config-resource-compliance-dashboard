@@ -1,3 +1,14 @@
+_Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
+
+
+# [3.0.1] - 2025-05-09
+This is a technical update to allow the CRCD Dashboard to be easier to install together with other CID Dashboards.
+
+## Added
+- The CloudFormation template exports the Amazon QuickSight policy to access the CRCD resources. This will be used by the `cid-cmd` tool to manage permissions during the dashboard deployment in case other CID dasboards exist.
+
+## Changed
+- Clarified that `required-tags` is a case-sensitive filter
 
 # [3.0.0] - 2025-03-27
 ## Added
