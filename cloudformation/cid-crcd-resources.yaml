@@ -1980,7 +1980,7 @@ Resources:
           LOGGING_ON = False  # enables additional logging to CloudWatch
 
           class AthenaException(Exception):
-              ''''This is raised in case of Exception while running queries on Athnea or Glue'''
+              ''''This is raised in case of Exception while running queries on Athena or Glue'''
               pass
 
           def lambda_handler(event, context):

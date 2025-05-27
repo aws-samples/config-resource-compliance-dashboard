@@ -500,6 +500,15 @@ Resources:
                 Resource: 
                   - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
                   - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+              - Effect: Allow
+                Action:
+                  - "s3:PutObject"
+                Resource:
+                  # TODO check it works 
+                  - !Ref DashboardBucket
+                  - !Sub '${DashboardBucket.Arn}/*'
+                  # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
+                  # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}/*"
 
   # Lambda Function that triggers Glue jobs
   ConfigFilePreprocessingProducerLambda:
@@ -1240,6 +1249,7 @@ Resources:
 
   # Glue Job
   # TODO check more suggested --conf settings to add to DefaultArguments
+  # TODO review the settings on the account. If I use this it means I have big files and I need power: G4x instances, autoscaling, ...
   # --conf spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version=2
   # --conf spark.hadoop.mapreduce.fileoutputcommitter.marksuccessfuljobs=true
   # --conf spark.hadoop.mapreduce.task.timeout=300000
