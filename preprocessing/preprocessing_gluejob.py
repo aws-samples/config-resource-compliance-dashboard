@@ -1,5 +1,6 @@
 
 import math
+import time
 import sys
 from awsglue.transforms import *
 from pyspark.sql.types import *
@@ -181,10 +182,43 @@ def process_file():
     
     try:
         # Convert DataFrame back to Python dict for processing
+        start_time = time.time()
         logger.info(f"====CRCD==== starting load of JSON")
-        json_content = json.loads(df.toJSON().collect()[0])
-        logger.info(f"====CRCD==== completed load of JSON")
         
+        # ====CRCD==== 
+        json_content = json.loads(df.toJSON().collect()[0])
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logger.info(f"====CRCD==== completed load 1 of JSON in {elapsed_time:.6f} seconds")
+
+        # TODO loading the file TWICE to compare performance
+        # This uses spark
+        start_time = time.time()
+        raw_data = sc.textFile(source_path)
+        config_content = raw_data.collect()
+        config_content = "".join(config_content)
+        json_content = json.loads(config_content)
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        logger.info(f"====CRCD==== completed load 2 of JSON in {elapsed_time:.6f} seconds")
+        
+
+        # Performance
+        # config_history_payload_10000-items_20250406170827.json.gz - 500Kb zipped
+        # ====CRCD==== completed load 1 of JSON in 10.112428 seconds
+        # ====CRCD==== completed load 2 of JSON in 2.617950 seconds
+
+        # config_history_payload_100000-items_20250406170856.json.gz - 5MB zipped
+        # ====CRCD==== completed load 1 of JSON in 57.562911 seconds 
+        # ====CRCD==== completed load 2 of JSON in 27.099247 seconds
+
+        # config_history_payload_500000-items_20250406170928.json.gz - 25MB zipped
+        #
+
+
+
+
         processed_count = 0
         total_items = 0
         processed_items = []
@@ -236,7 +270,7 @@ def process_file():
                     filename
                 )
                 
-                logger.info(f"====CRCD==== Processing item {index}/{total_items}: {filename}")
+                logger.info(f"====CRCD-iteration==== Processing item {index}/{total_items}: {filename}")
                 
                 dest_parts = destination.replace('s3://', '').split('/', 1)
                 dest_bucket = dest_parts[0]
@@ -270,7 +304,8 @@ def process_file():
                     ContentEncoding='gzip'
                 )
                 processed_count += 1
-                logger.info(f"====CRCD==== Successfully saved {filename} to {destination}")
+                # This is too verbose
+                # logger.info(f"====CRCD==== Successfully saved {filename} to {destination}")
                 
             except Exception as item_error:
                 logger.error(f"Error processing item {index}/{total_items}: {str(item_error)}")
