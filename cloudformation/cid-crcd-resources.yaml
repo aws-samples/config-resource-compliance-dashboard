@@ -2011,7 +2011,8 @@ Resources:
               else:
                   try:
                       # Check which tables exist
-                      if check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+                      # TODO due to a bug organization_data does not work for the moment
+                      if False and check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
                           organization_table_exists = True
                       else:
                           account_map_exists = check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
@@ -2024,7 +2025,7 @@ Resources:
                               id as account_id,
                               payer_id as payer_account_id,  
                               name as account_name
-                          FROM "optimization_data"."organization_data"
+                          FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
                           """
                       elif account_map_exists:
                           create_view_query = f"""
@@ -2033,7 +2034,7 @@ Resources:
                               account_id,
                               parent_account_id as payer_account_id,
                               account_name
-                          FROM "cid_cur"."account_map"
+                          FROM "{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE}"
                           """
                       else:
                           # This creates a view with no rows, but having these columns
