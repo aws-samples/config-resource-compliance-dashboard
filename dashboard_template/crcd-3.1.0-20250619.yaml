@@ -1,0 +1,2117 @@
+dashboards:
+  CRCD-3.1.0:
+    dependsOn:
+      datasets:
+      - config_compliance
+      - config_compliance_cirt
+      - config_compliance_conformance_pack
+      - config_compliance_resource
+      - config_event
+      - config_event_delivery
+      - config_inventory
+      - config_inventory_ebs
+      - config_inventory_ec2
+      - config_inventory_lambda
+      - config_inventory_rds
+      - config_inventory_s3
+    name: null
+    dashboardId: crcd-3-1-0
+    category: Custom
+    theme: MIDNIGHT
+    version: v3.0.1
+    file: ./crcd-3.1.0-definition.yaml
+datasets:
+  config_compliance_conformance_pack:
+    data:
+      DataSetId: d45218d0-83c2-45af-9f5d-ce71be1e4bb2
+      Name: config_compliance_conformance_pack
+      PhysicalTableMap:
+        42df0fd0-0cc6-4da8-8447-27884c2d013d:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_compliance_conformance_pack
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: compliancesampledate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: conformancepackid
+              Type: STRING
+            - Name: conformancepackname
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: arn
+              Type: STRING
+            - Name: compliancetype
+              Type: STRING
+            - Name: compliantrulecount
+              Type: INTEGER
+            - Name: noncompliantrulecount
+              Type: INTEGER
+            - Name: totalrulecount
+              Type: INTEGER
+            - Name: pkconformancepackid
+              Type: STRING
+        67780e14-944f-463b-a05f-5a83d3c56d62:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        a9310485-b3e7-42ec-ab57-208266b5d6a2:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - compliancesampledate
+              - configitemcapturetime
+              - conformancepackid
+              - conformancepackname
+              - resourcetype
+              - arn
+              - compliancetype
+              - compliantrulecount
+              - noncompliantrulecount
+              - totalrulecount
+              - pkconformancepackid
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: fc17b8d4-1613-4544-a16c-3c0a4238d6eb
+              RightOperand: c565bd37-594f-4943-bc95-a4070176889a
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        c565bd37-594f-4943-bc95-a4070176889a:
+          Alias: config_inventory_account (2)
+          Source:
+            PhysicalTableId: 67780e14-944f-463b-a05f-5a83d3c56d62
+        fc17b8d4-1613-4544-a16c-3c0a4238d6eb:
+          Alias: config_compliance_conformance_pack
+          Source:
+            PhysicalTableId: 42df0fd0-0cc6-4da8-8447-27884c2d013d
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_compliance_conformance_pack
+      - config_inventory_account
+    schedules:
+    - default
+  config_inventory_ebs:
+    data:
+      DataSetId: 81881280-5baa-43ed-a029-f477dcbcde03
+      Name: config_inventory_ebs
+      PhysicalTableMap:
+        1780deb8-1bb7-4916-831d-1738c871dcb8:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_ebs
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: arn
+              Type: STRING
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourcename
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: tagname
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: creationtime
+              Type: STRING
+            - Name: createtime
+              Type: DATETIME
+            - Name: encrypted
+              Type: STRING
+            - Name: kmskeyid
+              Type: STRING
+            - Name: iops
+              Type: STRING
+            - Name: throughput
+              Type: STRING
+            - Name: size
+              Type: STRING
+            - Name: snapshotid
+              Type: STRING
+            - Name: volumeid
+              Type: STRING
+            - Name: volumetype
+              Type: STRING
+            - Name: fastrestored
+              Type: STRING
+            - Name: multiattachenabled
+              Type: STRING
+            - Name: state
+              Type: STRING
+            - Name: attachmentdevice
+              Type: STRING
+            - Name: attachmentinstanceid
+              Type: STRING
+            - Name: attachmentstate
+              Type: STRING
+            - Name: deleteontermination
+              Type: STRING
+            - Name: attachmentvolumeid
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+        c5e32c7b-b034-41f5-977b-e31c518e8d09:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        1a7d2300-b0c8-419b-840d-8d7362018210:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - arn
+              - configeventresourceid
+              - resourcename
+              - partitiondate
+              - tagname
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - configitemcapturetime
+              - creationtime
+              - createtime
+              - encrypted
+              - kmskeyid
+              - iops
+              - throughput
+              - size
+              - snapshotid
+              - volumeid
+              - volumetype
+              - fastrestored
+              - multiattachenabled
+              - state
+              - attachmentdevice
+              - attachmentinstanceid
+              - attachmentstate
+              - deleteontermination
+              - attachmentvolumeid
+              - configitemstatus
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 4039d32f-1791-40e0-8a03-22a7181a9dd1
+              RightOperand: a1570bac-dfbb-4c8c-996f-5b7dbc7de846
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        4039d32f-1791-40e0-8a03-22a7181a9dd1:
+          Alias: config_inventory_ebs
+          Source:
+            PhysicalTableId: 1780deb8-1bb7-4916-831d-1738c871dcb8
+        a1570bac-dfbb-4c8c-996f-5b7dbc7de846:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: c5e32c7b-b034-41f5-977b-e31c518e8d09
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_ebs
+      - config_inventory_account
+    schedules:
+    - default
+  config_inventory_s3:
+    data:
+      DataSetId: 78d5f479-44d4-4763-b901-0de3d48a0098
+      Name: config_inventory_s3
+      PhysicalTableMap:
+        bac364c6-0414-41a1-8f01-f640a90f7391:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+        f9fe062d-acce-4e23-a6fa-26655a09d2cd:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_s3
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: arn
+              Type: STRING
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: configeventresourcename
+              Type: STRING
+            - Name: bucketname
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: creationdate
+              Type: DATETIME
+            - Name: configitemstatus
+              Type: STRING
+      LogicalTableMap:
+        1decc8a3-7437-4a12-a8ec-348ed436b41e:
+          Alias: config_inventory_s3
+          Source:
+            PhysicalTableId: f9fe062d-acce-4e23-a6fa-26655a09d2cd
+        24a73348-b3c4-48cc-8c68-10333bbe8411:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - partitiondate
+              - configitemcapturetime
+              - arn
+              - configeventresourceid
+              - configeventresourcename
+              - bucketname
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - creationdate
+              - configitemstatus
+              - account_id
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 1decc8a3-7437-4a12-a8ec-348ed436b41e
+              RightOperand: b0c5d842-7551-4d5d-8000-aeaa08ed1d9e
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        b0c5d842-7551-4d5d-8000-aeaa08ed1d9e:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: bac364c6-0414-41a1-8f01-f640a90f7391
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_account
+      - config_inventory_s3
+    schedules:
+    - default
+  config_inventory_account:
+    data:
+      DataSetId: 91eb93f3-eb67-4d48-bf52-16b6f08b3646
+      Name: config_inventory_account
+      PhysicalTableMap:
+        9655f2cc-0ea0-4c90-8024-27fd9cf41a9d:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        eb220a6a-2bee-431c-ba94-65b6d07da592:
+          Alias: config_inventory_account
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - account_id
+              - payer_account_id
+              - account_name
+          Source:
+            PhysicalTableId: 9655f2cc-0ea0-4c90-8024-27fd9cf41a9d
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_account
+    schedules:
+    - default
+  config_inventory:
+    data:
+      DataSetId: 6a209bbd-782d-48eb-810d-2ee770849663
+      Name: config_inventory
+      PhysicalTableMap:
+        085fc94c-371b-4d45-9bce-40edaa00f2e8:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+        4c48eceb-766e-4f61-a77f-3aabc65a4e64:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: resourcetype
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: arn
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+            - Name: pkresourceid
+              Type: STRING
+      LogicalTableMap:
+        526bd7c2-5c59-46f0-9254-8f55a3d06806:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - partitiondate
+              - resourcetype
+              - resourceid
+              - configitemcapturetime
+              - arn
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - configitemstatus
+              - pkresourceid
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631
+              RightOperand: 9289acb5-2803-4fdd-8f36-6a9cea4c237d
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        9289acb5-2803-4fdd-8f36-6a9cea4c237d:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: 085fc94c-371b-4d45-9bce-40edaa00f2e8
+        ba381cbb-ad93-4fd3-b49b-ad46a4dfd631:
+          Alias: config_inventory
+          Source:
+            PhysicalTableId: 4c48eceb-766e-4f61-a77f-3aabc65a4e64
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_account
+      - config_inventory
+    schedules:
+    - default
+  config_inventory_rds:
+    data:
+      DataSetId: e296cb2f-878a-4884-8813-21afeb26db8d
+      Name: config_inventory_rds
+      PhysicalTableMap:
+        30221784-9d72-43be-83a6-fc3b0f9676fc:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+        eddabfc0-67c7-4ccf-91d4-237802c462f1:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_rds
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: availabilityzone
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: arn
+              Type: STRING
+            - Name: databaseresourceid
+              Type: STRING
+            - Name: databaseinstancearn
+              Type: STRING
+            - Name: databaseinstance
+              Type: STRING
+            - Name: databasestatus
+              Type: STRING
+            - Name: deletionprotection
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: databasename
+              Type: STRING
+            - Name: cacertificateidentifier
+              Type: STRING
+            - Name: engine
+              Type: STRING
+            - Name: engineversion
+              Type: STRING
+            - Name: endpoint
+              Type: STRING
+            - Name: port
+              Type: STRING
+            - Name: instancecreatetime
+              Type: DATETIME
+            - Name: kmskeyid
+              Type: STRING
+            - Name: latestrestorabletime
+              Type: DATETIME
+            - Name: username
+              Type: STRING
+            - Name: ismultiaz
+              Type: STRING
+            - Name: ispubliclyaccessible
+              Type: STRING
+            - Name: isstorageencrypted
+              Type: STRING
+            - Name: storagetype
+              Type: STRING
+            - Name: timezone
+              Type: STRING
+            - Name: resourcecreatetime
+              Type: STRING
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourcename
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+            - Name: backupwindow
+              Type: STRING
+            - Name: maintenancewindow
+              Type: STRING
+            - Name: backupretention
+              Type: STRING
+      LogicalTableMap:
+        1eece7df-cac7-43c0-8bef-5d86a2f6a1ef:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - availabilityzone
+              - partitiondate
+              - configitemcapturetime
+              - arn
+              - databaseresourceid
+              - databaseinstancearn
+              - databaseinstance
+              - databasestatus
+              - deletionprotection
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - databasename
+              - cacertificateidentifier
+              - engine
+              - engineversion
+              - endpoint
+              - port
+              - instancecreatetime
+              - kmskeyid
+              - latestrestorabletime
+              - username
+              - ismultiaz
+              - ispubliclyaccessible
+              - isstorageencrypted
+              - storagetype
+              - timezone
+              - resourcecreatetime
+              - configeventresourceid
+              - resourcename
+              - configitemstatus
+              - backupwindow
+              - maintenancewindow
+              - backupretention
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 24dc16df-7afd-4c6f-9474-034e021989f2
+              RightOperand: 61b5e5c4-c8e9-42bb-83f4-53d1c78c06c4
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        24dc16df-7afd-4c6f-9474-034e021989f2:
+          Alias: config_inventory_rds
+          Source:
+            PhysicalTableId: eddabfc0-67c7-4ccf-91d4-237802c462f1
+        61b5e5c4-c8e9-42bb-83f4-53d1c78c06c4:
+          Alias: config_inventory_account (2)
+          Source:
+            PhysicalTableId: 30221784-9d72-43be-83a6-fc3b0f9676fc
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_account
+      - config_inventory_rds
+    schedules:
+    - default
+  config_event_delivery:
+    data:
+      DataSetId: 89570728-8d10-4e62-bae2-9c9bb0a2a74b
+      Name: config_event_delivery
+      PhysicalTableMap:
+        2c12fa34-dca2-4bcc-ad64-da5d606da51c:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_event_delivery
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: latestpartitiondate
+              Type: DATETIME
+            - Name: latestconfigitemcapturetime
+              Type: DATETIME
+        cfca6050-00c2-4aaf-8f98-57a2c33df201:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        542fb543-3fc7-40b0-859a-a2330b509307:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - latestpartitiondate
+              - latestconfigitemcapturetime
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5
+              RightOperand: ce12390d-939b-4532-a10a-3f4beffb303b
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        6b7e7ccd-cddf-45ad-8faf-619b488ecac5:
+          Alias: config_event_delivery
+          Source:
+            PhysicalTableId: 2c12fa34-dca2-4bcc-ad64-da5d606da51c
+        ce12390d-939b-4532-a10a-3f4beffb303b:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: cfca6050-00c2-4aaf-8f98-57a2c33df201
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_event_delivery
+      - config_inventory_account
+    schedules:
+    - default
+  config_inventory_lambda:
+    data:
+      DataSetId: 35bdc507-f89f-4b0d-942b-0ce2a89e28ab
+      Name: config_inventory_lambda
+      PhysicalTableMap:
+        b67ec065-152c-44b5-88a4-dd7d9bd52fa7:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_lambda
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: arn
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: creationtime
+              Type: DATETIME
+            - Name: functionarn
+              Type: STRING
+            - Name: functionname
+              Type: STRING
+            - Name: description
+              Type: STRING
+            - Name: runtime
+              Type: STRING
+            - Name: rolearn
+              Type: STRING
+            - Name: handler
+              Type: STRING
+            - Name: lastmodified
+              Type: DATETIME
+            - Name: lastupdatestatus
+              Type: STRING
+            - Name: memorysize
+              Type: STRING
+            - Name: packagetype
+              Type: STRING
+            - Name: revisionid
+              Type: STRING
+            - Name: timeout
+              Type: STRING
+            - Name: lambdaversion
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+        d890a9e4-9a3b-47fc-85d4-ce33d0a478cf:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        10e5bbbd-d5b4-4e08-af70-875df9cefe82:
+          Alias: config_inventory_account (2)
+          Source:
+            PhysicalTableId: d890a9e4-9a3b-47fc-85d4-ce33d0a478cf
+        35984259-fde2-441d-b9a3-cb80d24dc57c:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - partitiondate
+              - configitemcapturetime
+              - configeventresourceid
+              - arn
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - creationtime
+              - functionarn
+              - functionname
+              - description
+              - runtime
+              - rolearn
+              - handler
+              - lastmodified
+              - lastupdatestatus
+              - memorysize
+              - packagetype
+              - revisionid
+              - timeout
+              - lambdaversion
+              - configitemstatus
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf
+              RightOperand: 10e5bbbd-d5b4-4e08-af70-875df9cefe82
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf:
+          Alias: config_inventory_lambda
+          Source:
+            PhysicalTableId: b67ec065-152c-44b5-88a4-dd7d9bd52fa7
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_lambda
+      - config_inventory_account
+    schedules:
+    - default
+  config_event:
+    data:
+      DataSetId: b6acd8c6-96c9-4073-901a-df399fd9ce68
+      Name: config_event
+      PhysicalTableMap:
+        3e6ba302-842a-40cc-bdd5-29155ad13a21:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_event
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: resourcetype
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: arn
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+        ef7f2c8b-50fc-4f83-b4aa-dd701f950275:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        02611018-14d1-4077-a518-b9e438b0fa0d:
+          Alias: config_event
+          Source:
+            PhysicalTableId: 3e6ba302-842a-40cc-bdd5-29155ad13a21
+        aef549cd-af21-4cf9-9744-35901e3145b4:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - partitiondate
+              - resourcetype
+              - resourceid
+              - configitemcapturetime
+              - arn
+              - configitemstatus
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 02611018-14d1-4077-a518-b9e438b0fa0d
+              RightOperand: c551563e-9b3f-4396-aa23-2651644fa028
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        c551563e-9b3f-4396-aa23-2651644fa028:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ef7f2c8b-50fc-4f83-b4aa-dd701f950275
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_event
+      - config_inventory_account
+    schedules:
+    - default
+  config_compliance_resource:
+    data:
+      DataSetId: 99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
+      Name: config_compliance_resource
+      PhysicalTableMap:
+        125453f5-f3ba-43bf-a8ac-94ed796d4f56:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+        52353df5-38cb-4ea7-a3fe-d00bb9a9d7d0:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_compliance_resource
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: compliancesampledate
+              Type: DATETIME
+            - Name: resourcetype
+              Type: STRING
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: eventtype
+              Type: STRING
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: compliancetype
+              Type: STRING
+            - Name: pkresourceid
+              Type: STRING
+      LogicalTableMap:
+        531ea802-7a8c-4342-96e0-0a0e5a7df481:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: 125453f5-f3ba-43bf-a8ac-94ed796d4f56
+        64552c6c-a332-4c76-bf4a-f89fd2d0e154:
+          Alias: config_compliance_resource
+          Source:
+            PhysicalTableId: 52353df5-38cb-4ea7-a3fe-d00bb9a9d7d0
+        ea2a8230-3bcc-4670-ad2e-cc6a1a97bd00:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - compliancesampledate
+              - resourcetype
+              - configeventresourceid
+              - resourceid
+              - eventtype
+              - configitemcapturetime
+              - compliancetype
+              - pkresourceid
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 64552c6c-a332-4c76-bf4a-f89fd2d0e154
+              RightOperand: 531ea802-7a8c-4342-96e0-0a0e5a7df481
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_account
+      - config_compliance_resource
+    schedules:
+    - default
+  config_compliance_cirt:
+    data:
+      DataSetId: ee416ca1-09b9-4b70-953b-262db9de8b48
+      Name: config_compliance_cirt
+      PhysicalTableMap:
+        41ab6b06-474f-4dc8-97f6-520955747ca5:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_compliance
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: compliancesampledate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: compliancetype
+              Type: STRING
+            - Name: ruleid
+              Type: STRING
+            - Name: rulename
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: conformancepackid
+              Type: STRING
+            - Name: conformancepackname
+              Type: STRING
+            - Name: pkresourceid
+              Type: STRING
+            - Name: pkruleid
+              Type: STRING
+      LogicalTableMap:
+        e2cf6055-3898-43bf-9f1e-e4a58bb63ebf:
+          Alias: config_compliance
+          DataTransforms:
+          - CreateColumnsOperation:
+              Columns:
+              - ColumnName: cirt-classification-lv1
+                ColumnId: 90a4e512-1c14-4b13-bd1e-bb8f4b8bef56
+                Expression: |-
+                  ifelse(contains({rulename}, 'root-account-hardware-mfa-enabled')
+                      OR contains({rulename}, 'root-account-mfa-enabled')
+                      OR contains({rulename}, 'iam-root-access-key-check')
+                      OR contains({rulename}, 'iam-user-mfa-enabled')
+                      OR contains({rulename}, 'mfa-enabled-for-iam-console-access')
+                      OR contains({rulename}, 'ec2-launch-template-imdsv2-check')
+                      OR contains({rulename}, 'ec2-imdsv2-check')
+                      OR contains({rulename}, 'autoscaling-launchconfig-requires-imdsv2')
+                      OR contains({rulename}, 's3-bucket-level-public-access-prohibited')
+                      OR contains({rulename}, 's3-account-level-public-access-blocks-periodic')
+                      OR contains({rulename}, 's3-account-level-public-access-blocks')
+                      OR contains({rulename}, 's3-access-point-public-access-blocks')
+                      OR contains({rulename}, 's3-access-point-in-vpc-only')
+                      OR contains({rulename}, 's3-bucket-public-write-prohibited')
+                      OR contains({rulename}, 's3-bucket-public-read-prohibited')
+                      OR contains({rulename}, 'vpc-sg-port-restriction-check')
+                      OR contains({rulename}, 'vpc-sg-open-only-to-authorized-ports')
+                      OR contains({rulename}, 'restricted-common-ports')
+                      OR contains({rulename}, 'redshift-unrestricted-port-access')
+                      OR contains({rulename}, 'xxx')
+                   , 'Initial Access', 'Undefined')
+          - CreateColumnsOperation:
+              Columns:
+              - ColumnName: cirt-classification-lv2
+                ColumnId: 807e7962-a543-420e-a607-bcf4ff0b77f6
+                Expression: |-
+                  ifelse(contains({rulename}, 'root-account-hardware-mfa-enabled')
+                      OR contains({rulename}, 'root-account-mfa-enabled')
+                      OR contains({rulename}, 'iam-root-access-key-check')
+                      OR contains({rulename}, 'iam-user-mfa-enabled')
+                      OR contains({rulename}, 'mfa-enabled-for-iam-console-access')
+                      , 'IAM Protection',
+                      contains({rulename}, 'ec2-launch-template-imdsv2-check')
+                      OR contains({rulename}, 'ec2-imdsv2-check')
+                      OR contains({rulename}, 'autoscaling-launchconfig-requires-imdsv2')
+                      , 'EC2 Protection',
+                      contains({rulename}, 's3-bucket-level-public-access-prohibited')
+                      OR contains({rulename}, 's3-account-level-public-access-blocks-periodic')
+                      OR contains({rulename}, 's3-account-level-public-access-blocks')
+                      OR contains({rulename}, 's3-access-point-public-access-blocks')
+                      OR contains({rulename}, 's3-access-point-in-vpc-only')
+                      OR contains({rulename}, 's3-bucket-public-write-prohibited')
+                      OR contains({rulename}, 's3-bucket-public-read-prohibited')
+                      , 'S3 Protection',
+                      contains({rulename}, 'vpc-sg-port-restriction-check')
+                      OR contains({rulename}, 'vpc-sg-open-only-to-authorized-ports')
+                      OR contains({rulename}, 'restricted-common-ports')
+                      OR contains({rulename}, 'redshift-unrestricted-port-access')
+                      , 'Security Group Protection', 'Undefined')
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - FilterOperation:
+              ConditionExpression: locate({conformancepackname},"crcd-cirt-security-recommendations")>0
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - compliancesampledate
+              - configitemcapturetime
+              - configeventresourceid
+              - resourcetype
+              - compliancetype
+              - ruleid
+              - rulename
+              - resourceid
+              - conformancepackid
+              - conformancepackname
+              - pkresourceid
+              - pkruleid
+              - cirt-classification-lv1
+              - cirt-classification-lv2
+          Source:
+            PhysicalTableId: 41ab6b06-474f-4dc8-97f6-520955747ca5
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_compliance
+    schedules:
+    - default
+  config_inventory_ec2:
+    data:
+      DataSetId: bff53ae6-246a-479a-8d36-3ab03c4ef1f0
+      Name: config_inventory_ec2
+      PhysicalTableMap:
+        1f9edcad-3f4e-4f5d-9907-b33b769d0bd0:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_ec2
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: partitiondate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: statetransitionreason
+              Type: STRING
+            - Name: instanceid
+              Type: STRING
+            - Name: arn
+              Type: STRING
+            - Name: tagname
+              Type: STRING
+            - Name: tag1
+              Type: STRING
+            - Name: tag2
+              Type: STRING
+            - Name: tag3
+              Type: STRING
+            - Name: tag4
+              Type: STRING
+            - Name: alltags
+              Type: STRING
+            - Name: creationtime
+              Type: DATETIME
+            - Name: launchtime
+              Type: DATETIME
+            - Name: instancetype
+              Type: STRING
+            - Name: kernelid
+              Type: STRING
+            - Name: platform
+              Type: STRING
+            - Name: platformdetails
+              Type: STRING
+            - Name: keyname
+              Type: STRING
+            - Name: amiid
+              Type: STRING
+            - Name: privateip
+              Type: STRING
+            - Name: publicip
+              Type: STRING
+            - Name: ipv6address
+              Type: STRING
+            - Name: privatednsname
+              Type: STRING
+            - Name: publicdnsname
+              Type: STRING
+            - Name: state
+              Type: STRING
+            - Name: configitemstatus
+              Type: STRING
+        e61a222f-c965-48ea-a0c5-1cd8374b9d29:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        18801cc2-6530-401f-8213-5b252a5196a1:
+          Alias: config_inventory_account (2)
+          Source:
+            PhysicalTableId: e61a222f-c965-48ea-a0c5-1cd8374b9d29
+        37b06139-07f3-4c66-99af-332327cd6946:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - partitiondate
+              - configitemcapturetime
+              - configeventresourceid
+              - statetransitionreason
+              - instanceid
+              - arn
+              - tagname
+              - tag1
+              - tag2
+              - tag3
+              - tag4
+              - alltags
+              - creationtime
+              - launchtime
+              - instancetype
+              - kernelid
+              - platform
+              - platformdetails
+              - keyname
+              - amiid
+              - privateip
+              - publicip
+              - ipv6address
+              - privatednsname
+              - publicdnsname
+              - state
+              - configitemstatus
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 6af82678-b6e5-4bef-b251-290e2cef2eec
+              RightOperand: 18801cc2-6530-401f-8213-5b252a5196a1
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        6af82678-b6e5-4bef-b251-290e2cef2eec:
+          Alias: config_inventory_ec2
+          Source:
+            PhysicalTableId: 1f9edcad-3f4e-4f5d-9907-b33b769d0bd0
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_inventory_ec2
+      - config_inventory_account
+    schedules:
+    - default
+  config_compliance:
+    data:
+      DataSetId: 8a84b77a-b162-4df9-bc86-5367e7c0ad06
+      Name: config_compliance
+      PhysicalTableMap:
+        41ab6b06-474f-4dc8-97f6-520955747ca5:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_compliance
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: compliancesampledate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: compliancetype
+              Type: STRING
+            - Name: ruleid
+              Type: STRING
+            - Name: rulename
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: conformancepackid
+              Type: STRING
+            - Name: conformancepackname
+              Type: STRING
+            - Name: pkresourceid
+              Type: STRING
+            - Name: pkruleid
+              Type: STRING
+        900867b6-4c49-4a0b-b91a-5388b9216a2b:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      LogicalTableMap:
+        2e64f87f-c98c-4f1c-8738-d9f7ffd5f0a8:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: 900867b6-4c49-4a0b-b91a-5388b9216a2b
+        d9df40c0-d09e-4607-a19f-3fb978c6c388:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - compliancesampledate
+              - configitemcapturetime
+              - configeventresourceid
+              - resourcetype
+              - compliancetype
+              - ruleid
+              - rulename
+              - resourceid
+              - conformancepackid
+              - conformancepackname
+              - pkresourceid
+              - pkruleid
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf
+              RightOperand: 2e64f87f-c98c-4f1c-8738-d9f7ffd5f0a8
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        e2cf6055-3898-43bf-9f1e-e4a58bb63ebf:
+          Alias: config_compliance
+          Source:
+            PhysicalTableId: 41ab6b06-474f-4dc8-97f6-520955747ca5
+      ImportMode: SPICE
+    dependsOn:
+      views:
+      - config_compliance
+      - config_inventory_account
+    schedules:
+    - default
+crawlers: {}
+views:
+  config_event_delivery:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_event_delivery AS
+      WITH
+        resource_info AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "LatestPartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "LatestConfigItemCaptureTime"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -3, current_date)))
+         GROUP BY "accountId", "region"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.LatestPartitionDate
+      , r.LatestConfigItemCaptureTime
+      FROM
+        resource_info r
+  cid_crcd_config:
+    data: |-
+      CREATE EXTERNAL TABLE `cid_crcd_config`(
+        `fileversion` string COMMENT 'from deserializer',
+        `configsnapshotid` string COMMENT 'from deserializer',
+        `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
+      PARTITIONED BY (
+        `accountid` string,
+        `dt` string,
+        `region` string,
+        `datasource` string)
+      ROW FORMAT SERDE
+        'org.openx.data.jsonserde.JsonSerDe'
+      WITH SERDEPROPERTIES (
+        'case.insensitive'='false',
+        'mapping.arn'='ARN',
+        'mapping.availabilityzone'='availabilityZone',
+        'mapping.awsaccountid'='awsAccountId',
+        'mapping.awsregion'='awsRegion',
+        'mapping.configsnapshotid'='configSnapshotId',
+        'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
+        'mapping.configurationitems'='configurationItems',
+        'mapping.configurationitemstatus'='configurationItemStatus',
+        'mapping.configurationitemversion'='configurationItemVersion',
+        'mapping.configurationstateid'='configurationStateId',
+        'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
+        'mapping.fileversion'='fileVersion',
+        'mapping.resourceid'='resourceId',
+        'mapping.resourcename'='resourceName',
+        'mapping.resourcetype'='resourceType',
+        'mapping.supplementaryconfiguration'='supplementaryConfiguration')
+      STORED AS INPUTFORMAT
+        'org.apache.hadoop.mapred.TextInputFormat'
+      OUTPUTFORMAT
+        'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
+      LOCATION
+        '${s3path}'
+      TBLPROPERTIES (
+      )
+    parameters:
+      s3path:
+        default: s3://aws-controltower-logs-{account_id}-eu-west-1/
+        description: S3 Path for cid_crcd_config table
+  config_inventory_account:
+    dependsOn:
+      views:
+      - config_sys_account_data
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_account AS
+      SELECT
+        account_id
+      , payer_account_id
+      , account_name
+      FROM
+        "${athena_database_name}".config_sys_account_data
+  config_sys_account_data:
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_sys_account_data AS
+      SELECT
+        account_id
+      , parent_account_id payer_account_id
+      , account_name
+      FROM
+        "cid_cur"."account_map"
+  config_compliance_conformance_pack:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_conformance_pack AS
+      WITH
+        conformance_pack_compliance AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , "configurationItem"."resourceId" "ConformancePackId"
+         , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConformancePackName"
+         , 'AWS::Config::ConformancePackCompliance' "ResourceType"
+         , MAX_BY("configurationItem"."arn", "configurationItem"."configurationitemcapturetime") "Arn"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliantRuleCount'), "configurationItem"."configurationitemcapturetime") "CompliantRuleCount"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.nonCompliantRuleCount'), "configurationItem"."configurationitemcapturetime") "NonCompliantRuleCount"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount'), "configurationItem"."configurationitemcapturetime") "TotalRuleCount"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "accountId", "region", "dt", "configurationItem"."resourceId"
+      )
+      SELECT
+        ccp.AccountId
+      , ccp.Region
+      , ccp.ComplianceSampleDate
+      , ccp.ConfigItemCaptureTime
+      , ccp.ConformancePackId
+      , ccp.ConformancePackName
+      , ccp.ResourceType
+      , ccp.Arn
+      , ccp.ComplianceType
+      , CAST(ccp.CompliantRuleCount AS INTEGER) CompliantRuleCount
+      , CAST(ccp.NonCompliantRuleCount AS INTEGER) NonCompliantRuleCount
+      , CAST(ccp.TotalRuleCount AS INTEGER) TotalRuleCount
+      , concat(concat(concat(concat(ccp.AccountId, '-'), ccp.Region), '-'), ccp.ConformancePackId) "PKConformancePackId"
+      FROM
+        conformance_pack_compliance ccp
+  config_inventory_s3:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_s3 AS
+      WITH
+        resource_info AS (
+         SELECT
+           ARBITRARY("accountId") "AccountId"
+         , ARBITRARY("region") "Region"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         , "configurationItem"."resourceId" "ConfigEventResourceId"
+         , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceName"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.name'), "configurationItem"."configurationitemcapturetime") "BucketName"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::S3::Bucket') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.PartitionDate
+      , r.ConfigItemCaptureTime
+      , r.Arn
+      , r.ConfigEventResourceId
+      , r.ConfigEventResourceName
+      , r.BucketName
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.CreationDate
+      , r.ConfigItemStatus
+      FROM
+        resource_info r
+      WHERE (ConfigItemStatus <> 'ResourceDeleted')
+  config_inventory_ebs:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ebs AS
+      WITH
+        resource_info AS (
+         SELECT
+           ARBITRARY("accountId") "AccountId"
+         , ARBITRARY("region") "Region"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         , "configurationItem"."resourceId" "ConfigEventResourceId"
+         , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."resourcecreationtime", "configurationItem"."configurationitemcapturetime") "CreationTime"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.createTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreateTime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.encrypted'), "configurationItem"."configurationitemcapturetime") "Encrypted"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmsKeyId'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.iops'), "configurationItem"."configurationitemcapturetime") "Iops"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.throughput'), "configurationItem"."configurationitemcapturetime") "Throughput"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.size'), "configurationItem"."configurationitemcapturetime") "Size"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.snapshotId'), "configurationItem"."configurationitemcapturetime") "SnapshotId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumeId'), "configurationItem"."configurationitemcapturetime") "VolumeId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumeType'), "configurationItem"."configurationitemcapturetime") "VolumeType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.fastRestored'), "configurationItem"."configurationitemcapturetime") "FastRestored"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiAttachEnabled'), "configurationItem"."configurationitemcapturetime") "MultiAttachEnabled"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state'), "configurationItem"."configurationitemcapturetime") "State"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].device'), "configurationItem"."configurationitemcapturetime") "AttachmentDevice"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].instanceId'), "configurationItem"."configurationitemcapturetime") "AttachmentInstanceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].deleteOnTermination'), "configurationItem"."configurationitemcapturetime") "DeleteOnTermination"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].state'), "configurationItem"."configurationitemcapturetime") "AttachmentState"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].volumeId'), "configurationItem"."configurationitemcapturetime") "AttachmentVolumeId"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Volume') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.Arn
+      , r.ConfigEventResourceId
+      , r.ResourceName
+      , r.PartitionDate
+      , r.TagName
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.ConfigItemCaptureTime
+      , r.CreationTime
+      , r.CreateTime
+      , r.Encrypted
+      , r.KmsKeyId
+      , r.Iops
+      , r.Throughput
+      , r.Size
+      , r.SnapshotId
+      , r.VolumeId
+      , r.VolumeType
+      , r.FastRestored
+      , r.MultiAttachEnabled
+      , r.State
+      , r.AttachmentDevice
+      , r.AttachmentInstanceId
+      , r.AttachmentState
+      , r.DeleteOnTermination
+      , r.AttachmentVolumeId
+      , r.ConfigItemStatus
+      FROM
+        resource_info r
+      WHERE (true AND (ConfigItemStatus <> 'ResourceDeleted'))
+  config_inventory_lambda:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_lambda AS
+      WITH
+        resource_info AS (
+         SELECT
+           "accountId"
+         , "region"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         , "configurationItem"."resourceId" "ConfigEventResourceId"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , MAX_BY(CAST(parse_datetime("configurationItem"."resourceCreationTime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionArn'), "configurationItem"."configurationitemcapturetime") "FunctionArn"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionName'), "configurationItem"."configurationitemcapturetime") "FunctionName"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.description'), "configurationItem"."configurationitemcapturetime") "Description"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.runtime'), "configurationItem"."configurationitemcapturetime") "Runtime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.role'), "configurationItem"."configurationitemcapturetime") "RoleARN"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.handler'), "configurationItem"."configurationitemcapturetime") "Handler"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.lastModified'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LastModified"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.lastUpdateStatus'), "configurationItem"."configurationitemcapturetime") "LastUpdateStatus"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.memorySize'), "configurationItem"."configurationitemcapturetime") "MemorySize"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.packageType'), "configurationItem"."configurationitemcapturetime") "PackageType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.revisionId'), "configurationItem"."configurationitemcapturetime") "RevisionId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timeout'), "configurationItem"."configurationitemcapturetime") "Timeout"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.version'), "configurationItem"."configurationitemcapturetime") "LambdaVersion"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Lambda::Function') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "accountId", "region", "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.PartitionDate
+      , r.ConfigItemCaptureTime
+      , r.ConfigEventResourceId
+      , r.Arn
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.CreationTime
+      , r.FunctionArn
+      , r.FunctionName
+      , r.Description
+      , r.Runtime
+      , r.RoleARN
+      , r.Handler
+      , r.LastModified
+      , r.LastUpdateStatus
+      , r.MemorySize
+      , r.PackageType
+      , r.RevisionId
+      , r.Timeout
+      , r.LambdaVersion
+      , r.ConfigItemStatus
+      FROM
+        resource_info r
+      WHERE (ConfigItemStatus <> 'ResourceDeleted')
+  config_event:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_event AS
+      WITH
+        resource_info AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "PartitionDate"
+         , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
+         , "configurationItem"."resourceId" "ResourceId"
+         , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
+         , "configurationItem"."resourcetype" "ResourceType"
+         , "configurationItem"."arn" "Arn"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -1, current_date))) AND (datasource = 'ConfigHistory'))
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.PartitionDate
+      , r.ResourceType
+      , r.ResourceId
+      , r.ConfigItemCaptureTime
+      , r.Arn
+      , r.ConfigItemStatus
+      FROM
+        resource_info r
+  config_compliance_resource:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_resource AS
+      WITH
+        resource_compliance AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "EventType"
+         , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
+         WHERE (("configurationItem"."resourceType" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "accountId", "region", "dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+      )
+      SELECT
+        rc.AccountId
+      , rc.Region
+      , rc.ComplianceSampleDate
+      , rc.ResourceType
+      , rc.ConfigEventResourceId
+      , rc.ResourceId
+      , rc.EventType
+      , rc.ConfigItemCaptureTime
+      , rc.ComplianceType
+      , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.ResourceId) "PKResourceID"
+      FROM
+        resource_compliance rc
+  config_compliance:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance AS
+      WITH
+        conformance_packs AS (
+         SELECT
+           ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
+         , ARBITRARY("configurationItem"."resourceName") "ConformancePackName"
+         , "json_extract_scalar"(rule, '$.configRuleName') "RuleName"
+         FROM
+           ((cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
+         GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
+      )
+      , resource_compliance AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+         , MAX_BY("json_extract_scalar"(rule, '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         , "json_extract_scalar"(rule, '$.configRuleId') "RuleId"
+         , ARBITRARY("json_extract_scalar"(rule, '$.configRuleName')) "RuleName"
+         , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+         FROM
+           ((cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+      )
+      SELECT
+        rc.AccountId
+      , rc.Region
+      , rc.ComplianceSampleDate
+      , rc.ConfigItemCaptureTime
+      , rc.ConfigEventResourceId
+      , rc.ResourceType
+      , rc.ComplianceType
+      , rc.RuleId
+      , rc.RuleName
+      , rc.ResourceId
+      , cp.ConformancePackId
+      , cp.ConformancePackName
+      , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.ResourceId) "PKResourceId"
+      , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.RuleId) "PKRuleId"
+      FROM
+        (resource_compliance rc
+      LEFT JOIN conformance_packs cp ON (cp.RuleName = rc.RuleName))
+  config_inventory_ec2:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
+      WITH
+        resource_info AS (
+         SELECT
+           ARBITRARY("accountId") "AccountId"
+         , ARBITRARY("region") "Region"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , "configurationItem"."resourceId" "ConfigEventResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.stateTransitionReason'), "configurationItem"."configurationitemcapturetime") "StateTransitionReason"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceId'), "configurationItem"."configurationitemcapturetime") "InstanceId"
+         , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , MAX_BY(CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LaunchTime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceType'), "configurationItem"."configurationitemcapturetime") "InstanceType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kernelId'), "configurationItem"."configurationitemcapturetime") "KernelId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.platform'), "configurationItem"."configurationitemcapturetime") "Platform"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.platformDetails'), "configurationItem"."configurationitemcapturetime") "PlatformDetails"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.keyName'), "configurationItem"."configurationitemcapturetime") "KeyName"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.imageId'), "configurationItem"."configurationitemcapturetime") "AmiId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateIpAddress'), "configurationItem"."configurationitemcapturetime") "PrivateIp"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicIpAddress'), "configurationItem"."configurationitemcapturetime") "PublicIp"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.ipv6Address'), "configurationItem"."configurationitemcapturetime") "IPv6Address"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.name'), "configurationItem"."configurationitemcapturetime") "State"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateDnsName'), "configurationItem"."configurationitemcapturetime") "PrivateDnsName"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicDnsName'), "configurationItem"."configurationitemcapturetime") "PublicDnsName"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Instance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.PartitionDate
+      , r.ConfigItemCaptureTime
+      , r.ConfigEventResourceId
+      , r.StateTransitionReason
+      , r.InstanceId
+      , r.Arn
+      , r.TagName
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.CreationTime
+      , r.LaunchTime
+      , r.InstanceType
+      , r.KernelId
+      , r.Platform
+      , r.PlatformDetails
+      , r.KeyName
+      , r.AmiId
+      , r.PrivateIp
+      , r.PublicIp
+      , r.IPv6Address
+      , r.PrivateDnsName
+      , r.PublicDnsName
+      , r.State
+      , r.ConfigItemStatus
+      FROM
+        resource_info r
+      WHERE (true AND (ConfigItemStatus <> 'ResourceDeleted'))
+  config_inventory:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory AS
+      WITH
+        resource_info AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , "configurationItem"."resourceId" "ResourceId"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , "configurationItem"."resourcetype" "ResourceType"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.PartitionDate
+      , r.ResourceType
+      , r.ResourceId
+      , r.ConfigItemCaptureTime
+      , r.Arn
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.ConfigItemStatus
+      , concat(concat(concat(concat(concat(concat(r.AccountId, '-'), r.Region), '-'), r.ResourceType), '-'), r.ResourceId) "PKResourceId"
+      FROM
+        resource_info r
+  config_inventory_rds:
+    dependsOn:
+      views:
+      - cid_crcd_config
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_rds AS
+      WITH
+        resource_info AS (
+         SELECT
+           ARBITRARY("accountId") "AccountId"
+         , ARBITRARY("region") "Region"
+         , ARBITRARY("configurationItem"."availabilityZone") "AvailabilityZone"
+         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+         , ARBITRARY("configurationItem"."arn") "Arn"
+         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbiResourceId'), "configurationItem"."configurationitemcapturetime") "DatabaseResourceID"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceArn'), "configurationItem"."configurationitemcapturetime") "DatabaseInstanceArn"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.cACertificateIdentifier'), "configurationItem"."configurationitemcapturetime") "CACertificateIdentifier"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.endpoint.address'), "configurationItem"."configurationitemcapturetime") "EndPoint"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.endpoint.port'), "configurationItem"."configurationitemcapturetime") "Port"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.deletionProtection'), "configurationItem"."configurationitemcapturetime") "DeletionProtection"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredBackupWindow'), "configurationItem"."configurationitemcapturetime") "BackupWindow"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredMaintenanceWindow'), "configurationItem"."configurationitemcapturetime") "MaintenanceWindow"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.backupRetentionPeriod'), "configurationItem"."configurationitemcapturetime") "BackupRetention"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceClass'), "configurationItem"."configurationitemcapturetime") "DatabaseInstance"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceStatus'), "configurationItem"."configurationitemcapturetime") "DatabaseStatus"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBName'), "configurationItem"."configurationitemcapturetime") "DatabaseName"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.engine'), "configurationItem"."configurationitemcapturetime") "Engine"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.engineVersion'), "configurationItem"."configurationitemcapturetime") "EngineVersion"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.instanceCreateTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "InstanceCreateTime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmsKeyId'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
+         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.latestRestorableTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LatestRestorableTime"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.masterUsername'), "configurationItem"."configurationitemcapturetime") "Username"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiAZ'), "configurationItem"."configurationitemcapturetime") "IsMultiAZ"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publiclyAccessible'), "configurationItem"."configurationitemcapturetime") "IsPubliclyAccessible"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storageEncrypted'), "configurationItem"."configurationitemcapturetime") "IsStorageEncrypted"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storageType'), "configurationItem"."configurationitemcapturetime") "StorageType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timezone'), "configurationItem"."configurationitemcapturetime") "TimeZone"
+         , MAX_BY("configurationItem"."resourceCreationTime", "configurationItem"."configurationitemcapturetime") "ResourceCreateTime"
+         , "configurationItem"."resourceId" "ConfigEventResourceId"
+         , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
+         FROM
+           (cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::RDS::DBInstance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "configurationItem"."resourceId"
+      )
+      SELECT
+        r.AccountId
+      , r.Region
+      , r.AvailabilityZone
+      , r.PartitionDate
+      , r.ConfigItemCaptureTime
+      , r.Arn
+      , r.DatabaseResourceID
+      , r.DatabaseInstanceArn
+      , r.DatabaseInstance
+      , r.DatabaseStatus
+      , r.DeletionProtection
+      , r.TAG1
+      , r.TAG2
+      , r.TAG3
+      , r.TAG4
+      , r.AllTags
+      , r.DatabaseName
+      , r.CACertificateIdentifier
+      , r.Engine
+      , r.EngineVersion
+      , r.Endpoint
+      , r.Port
+      , r.InstanceCreateTime
+      , r.KmsKeyId
+      , r.LatestRestorableTime
+      , r.Username
+      , r.IsMultiAZ
+      , r.IsPubliclyAccessible
+      , r.IsStorageEncrypted
+      , r.StorageType
+      , r.TimeZone
+      , r.ResourceCreateTime
+      , r.ConfigEventResourceId
+      , r.ResourceName
+      , r.ConfigItemStatus
+      , r.BackupWindow
+      , r.MaintenanceWindow
+      , r.BackupRetention
+      FROM
+        resource_info r
+      WHERE (ConfigItemStatus <> 'ResourceDeleted')

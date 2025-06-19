@@ -871,7 +871,7 @@ Resources:
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucket
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
-          CONFIG_TABLE_NAME: !Ref AthenaTableName
+          CRCD_TABLE_NAME: !Ref AthenaTableName
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
           # By default: ConfigSnapshot and ConfigHistory are enabled as they are used for different purposes 
           # Pass 0 to skip the record
@@ -889,8 +889,8 @@ Resources:
           from botocore.exceptions import ClientError
           import gzip
 
-
-          TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
+          # Reading environment parameters, all are required and will raise a KeyError if the environment variable doesn't exist
+          CRCD_TABLE_NAME = os.environ["CRCD_TABLE_NAME"]
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
           ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
           ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
@@ -898,7 +898,7 @@ Resources:
 
           # Partitioning of ConfigSnapshot and ConfigHistory records is enabled from parameters
           # Pass 0 to skip the record
-          # Pass 1 to partition the record
+          # Pass 1 to partition the record (recommended)
           PARTITION_ENABLED = '1'
           PARTITION_DISABLED = '0'
           PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
@@ -1025,8 +1025,6 @@ Resources:
                       'body': 'Partition available for {accountid}, {date}, {region}, {dataSource}.'
                   }
 
-
-
           def partition_exists(account_id, dt, region, data_source):
               """
               Check if a partition exists using the Glue API
@@ -1038,7 +1036,7 @@ Resources:
                   # Get partition
                   response = glue_client.get_partition(
                       DatabaseName=ATHENA_DATABASE_NAME,
-                      TableName=TABLE_NAME,
+                      TableName=CRCD_TABLE_NAME,
                       PartitionValues=partition_values
                   )
                   
@@ -1053,7 +1051,7 @@ Resources:
 
           def add_partition_if_not_exists(accountid, region, date, location, dataSource):
               execute_query(f"""
-                  ALTER TABLE {TABLE_NAME}
+                  ALTER TABLE {CRCD_TABLE_NAME}
                   ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
                   LOCATION '{location}'
               """)
@@ -1107,9 +1105,6 @@ Resources:
               except Exception as e:
                   print(f'Exception during query execution: {str(e)}')
                   raise
-
-
-
 
     Metadata:
       cfn_nag:
@@ -1990,6 +1985,7 @@ Resources:
               account_map_exists = False 
 
               # Get the necessary parameters from the environment variables
+              # All are required and will raise a KeyError if the environment variable doesn't exist
               CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]   
               CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
               ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
