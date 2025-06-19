@@ -2011,7 +2011,7 @@ Resources:
               else:
                   try:
                       # Check which tables exist
-                      # TODO due to a bug organization_data does not work for the moment
+                      # TODO due to a bug organization_data does not work for the moment - make account map first choice?
                       if False and check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
                           organization_table_exists = True
                       else:
