@@ -2194,6 +2194,12 @@ Outputs:
     Description: "Arn of the KMS key that encrypts the Dashboard bucket. Needed for the cross-account S3 replication of AWS Config files"
     Condition: IsDashboardAccountDeploymentKms
     Value: !GetAtt DashboardBucketKmsKey.Arn
+  
+  ReadAccessPolicyARN:
+    Description: "Access Policy for CRCD Dashboard data pipeline"
+    Condition: IsCreateDashboardResources
+    Value: !Ref IAMManagedPolicyQuickSightDataSource
+    Export: { Name: "cid-CRCDConfigDashboard-ReadAccessPolicyARN" }
 
   # these are great for development 
 #  ConditionIsConfigureS3EventNotificationToLambda:
