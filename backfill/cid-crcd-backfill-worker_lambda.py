@@ -52,6 +52,7 @@ PATTERN_REGION_COMPILED = re.compile(PATTERN_REGION)
 # create the clients that are needed
 athena = boto3.client('athena')
 s3 = boto3.client('s3')
+glue_client = boto3.client('glue')
 
 def lambda_handler(event, context):
 
@@ -90,17 +91,20 @@ def lambda_handler(event, context):
 
     for rec in event['Records']:
         print(f'ITERATION---START--------------------------------------------------')
+
+        event_body = rec['body']
+        
         if LOGGING_ON:
             print(f'rec = {rec}')
-        event_body = rec['body']
-        print(f'event_body = {event_body}')
+            print(f'event_body = {event_body}')
+
         message = json.loads(event_body)
         event_bucket_name = message['Records'][0]['s3']['bucket']['name']
         # print(f'event_bucket_name = {event_bucket_name}')
         event_object_key = message['Records'][0]['s3']['object']['key']
         # print(f'event_object_key = {event_object_key}')
 
-        print(f'Backfilling item: bucket = {event_bucket_name}, object = {event_object_key}')
+        print(f'Processing backfilling prefix: bucket = {event_bucket_name}, prefix = {event_object_key}')
 
         # Backfill ConfigSnapshot records
         backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
@@ -218,7 +222,7 @@ def backfill(bucket_name, prefix_key, date_array, config_data_source):
     if LOGGING_ON:
         print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name}')
 
-    # object_key_parent_root = f's3://{bucket_name}/{prefix_key}/'
+    # object_key_parent_root = f's3://{bucket_name}/{prefix_key}'
 
     for dt in date_array:
         # prefix_key ends with '/'
@@ -235,21 +239,68 @@ def backfill(bucket_name, prefix_key, date_array, config_data_source):
                 print(f'Cannot match {prefix_key} as AWS Config file, skipping.')
                 continue
             if LOGGING_ON:
-                print('match.groupdict() = ', match.groupdict())
+                print('Prefix exists! match.groupdict() = ', match.groupdict())
             
             accountid = match.groupdict()['account_id']
             region = match.groupdict()['region']
             
-            print(f'Backfilling item: bucket = {bucket_name}, accountid = {accountid}, region = {region}, dt = {dt}')
+            print(f'Creating partition for item: bucket = {bucket_name}, accountid = {accountid}, region = {region}, dt = {dt}')
 
+            # TODO delete old code
             #drop_partition(accountid, region, dt, DATA_SOURCE_CONFIG_HISTORY)
             #add_partition(accountid, region, dt, object_key_parent, DATA_SOURCE_CONFIG_HISTORY)
+
+            # Considering the use case where many objects are added to the same s3 path at the same time
+            # Check if partition exists: need both to avoid calling Athena API too much and create the partition only if it's not there
+            # There's no need to create a partition on an S3 path that already exist - Athena will find new files in there
+            if not partition_exists(accountid, dt, region, config_data_source):
+                # Create the partition if it doesn't exist
+                # I just checked, but another Lambda running on another S3 object may come in between
+                # TODO build object_location
+                # LOCATION 's3://crcd-dashboard-bucket-058264555211-eu-north-1/AWSLogs/058264555211/Config/eu-west-1/2025/6/8/ConfigSnapshot/'
+                object_location = f's3://{bucket_name}/{object_key_parent}'
+                add_partition_if_not_exists(accountid, region, dt, object_location, config_data_source)
+                print(f"Partition created for {accountid}, {dt}, {region}, {config_data_source}")
+            else:
+                print(f"Partition already exists for {accountid}, {dt}, {region}, {config_data_source}")
+
+
+
         else:
             if LOGGING_ON:
                 print(f'Prefix does not exist: {object_key_parent}')
 
         
+def partition_exists(account_id, dt, region, data_source):
+    """
+    Check if a partition exists using the Glue API
+    """
+    try:
+        # Define partition values in the same order as defined in the Glue table
+        partition_values = [account_id, dt, region, data_source]
         
+        # Get partition
+        response = glue_client.get_partition(
+            DatabaseName=ATHENA_DATABASE_NAME,
+            TableName=TABLE_NAME,
+            PartitionValues=partition_values
+        )
+        
+        # If we get here, the partition exists
+        return True
+    except ClientError as e:
+        # If the error is EntityNotFoundException, the partition doesn't exist
+        if e.response['Error']['Code'] == 'EntityNotFoundException':
+            return False
+        # For any other error, raise it
+        raise
+
+def add_partition_if_not_exists(accountid, region, date, location, dataSource):
+    execute_query(f"""
+        ALTER TABLE {TABLE_NAME}
+        ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
+        LOCATION '{location}'
+    """)
 
 
 def backfill_legacy(event_bucket_name, event_object_key):
@@ -313,6 +364,56 @@ def drop_partition(accountid, region, date, dataSource):
 
 # Runs an SQL statemetn against Athena
 def execute_query(query):
+    """
+        Executes an Athena query (to create a partition) with additional logging and troubleshooting
+        It may happen that multiple objects are added to the bucket at the same time
+        Every object may need to create an Athena partition, and we need to handle concurrency and limit the impact on Athena API
+    """
+    print('Executing query:', query)
+    try:
+        start_query_response = athena.start_query_execution(
+            QueryString=query,
+            QueryExecutionContext={
+                'Database': ATHENA_DATABASE_NAME
+            },
+            ResultConfiguration={
+                'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
+            },
+            WorkGroup=ATHENA_WORKGROUP
+        )
+        query_execution_id = start_query_response['QueryExecutionId']
+        print(f'Query started with execution ID: {query_execution_id}')
+
+        is_query_running = True
+        while is_query_running:
+            time.sleep(1)
+            execution_status = athena.get_query_execution(
+                QueryExecutionId=query_execution_id
+            )
+            query_execution = execution_status['QueryExecution']
+            query_state = query_execution['Status']['State']
+            is_query_running = query_state in ('RUNNING', 'QUEUED')
+
+            if not is_query_running and query_state != 'SUCCEEDED':
+                error_reason = query_execution['Status'].get('StateChangeReason', 'No reason provided')
+                error_details = {
+                    'QueryExecutionId': query_execution_id,
+                    'State': query_state,
+                    'StateChangeReason': error_reason,
+                    'Database': ATHENA_DATABASE_NAME,
+                    'WorkGroup': ATHENA_WORKGROUP,
+                    'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}'
+                }
+                print(f'Query failed: {json.dumps(error_details)}')
+                raise AthenaException(f'Query failed: {error_reason}')
+        
+        print(f'Query completed successfully. Execution ID: {query_execution_id}')
+        return query_execution_id
+    except Exception as e:
+        print(f'Exception during query execution: {str(e)}')
+        raise
+
+def execute_query_legacy(query):
     print('Executing query:', query)
     start_query_response = athena.start_query_execution(
         QueryString=query,
