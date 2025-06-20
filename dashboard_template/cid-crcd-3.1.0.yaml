@@ -1,5 +1,6 @@
+# Dashboard template to install with CID-CMD tool
 dashboards:
-  CRCD-3.1.0:
+  CID-CRCD:
     dependsOn:
       datasets:
       - config_compliance
@@ -14,12 +15,33 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
-    name: null
-    dashboardId: crcd-3-1-0
+    # CUSTOMIZATION - descriptive name of the dashboard
+    name: "AWS Config Resource Compliance Dashboard (CRCD)"
+    dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    version: v3.0.1
-    file: ./crcd-3.1.0-20250617-definition.yaml
+    version: v3.1.0
+    # TODO - match the file name of the definition file
+    file: ./cid-crcd-3.1.0-definition.yaml
+    # CUSTOMIZATION - custom tags on the dashboard visual elements
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
+
 datasets:
   config_event_delivery:
     data:
@@ -89,6 +111,9 @@ datasets:
       views:
       - config_event_delivery
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_compliance_conformance_pack:
@@ -143,7 +168,7 @@ datasets:
             - Name: account_name
               Type: STRING
       LogicalTableMap:
-        a9310485-b3e7-42ec-ab57-208266b5d6a2:
+        9f837e6b-d20c-47e1-be6a-480e31662a40:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -174,7 +199,7 @@ datasets:
               Type: LEFT
               OnClause: '{accountid} = {account_id}'
         c565bd37-594f-4943-bc95-a4070176889a:
-          Alias: config_inventory_account (2)
+          Alias: config_inventory_account
           Source:
             PhysicalTableId: 67780e14-944f-463b-a05f-5a83d3c56d62
         fc17b8d4-1613-4544-a16c-3c0a4238d6eb:
@@ -186,6 +211,9 @@ datasets:
       views:
       - config_compliance_conformance_pack
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_s3:
@@ -290,6 +318,9 @@ datasets:
       views:
       - config_inventory_account
       - config_inventory_s3
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_ebs:
@@ -444,6 +475,9 @@ datasets:
       views:
       - config_inventory_ebs
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_lambda:
@@ -525,10 +559,10 @@ datasets:
               Type: STRING
       LogicalTableMap:
         10e5bbbd-d5b4-4e08-af70-875df9cefe82:
-          Alias: config_inventory_account (2)
+          Alias: config_inventory_account
           Source:
             PhysicalTableId: d890a9e4-9a3b-47fc-85d4-ce33d0a478cf
-        35984259-fde2-441d-b9a3-cb80d24dc57c:
+        24654cd9-b07a-4b1e-a3f9-dd053f0357e7:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -580,6 +614,9 @@ datasets:
       views:
       - config_inventory_lambda
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_event:
@@ -662,8 +699,12 @@ datasets:
       views:
       - config_event
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
-    - default
+    # CUSTOMIZATION - configure daily incremental refresh, remove default
+    - incremental-daily
   config_compliance_resource:
     data:
       DataSetId: 99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
@@ -750,6 +791,9 @@ datasets:
       views:
       - config_inventory_account
       - config_compliance_resource
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_compliance_cirt:
@@ -880,6 +924,9 @@ datasets:
     dependsOn:
       views:
       - config_compliance
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_ec2:
@@ -967,10 +1014,10 @@ datasets:
               Type: STRING
       LogicalTableMap:
         18801cc2-6530-401f-8213-5b252a5196a1:
-          Alias: config_inventory_account (2)
+          Alias: config_inventory_account
           Source:
             PhysicalTableId: e61a222f-c965-48ea-a0c5-1cd8374b9d29
-        37b06139-07f3-4c66-99af-332327cd6946:
+        4fe15bb6-230a-4c72-bba6-05a4a807600e:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -1025,6 +1072,9 @@ datasets:
       views:
       - config_inventory_ec2
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory:
@@ -1125,6 +1175,9 @@ datasets:
       views:
       - config_inventory_account
       - config_inventory
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_compliance:
@@ -1225,6 +1278,9 @@ datasets:
       views:
       - config_compliance
       - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
   config_inventory_rds:
@@ -1329,7 +1385,15 @@ datasets:
             - Name: backupretention
               Type: STRING
       LogicalTableMap:
-        1eece7df-cac7-43c0-8bef-5d86a2f6a1ef:
+        24dc16df-7afd-4c6f-9474-034e021989f2:
+          Alias: config_inventory_rds
+          Source:
+            PhysicalTableId: eddabfc0-67c7-4ccf-91d4-237802c462f1
+        61b5e5c4-c8e9-42bb-83f4-53d1c78c06c4:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: 30221784-9d72-43be-83a6-fc3b0f9676fc
+        716aab50-fe3f-48e3-a2cc-5933fb5d4be8:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -1384,22 +1448,34 @@ datasets:
               RightOperand: 61b5e5c4-c8e9-42bb-83f4-53d1c78c06c4
               Type: LEFT
               OnClause: '{accountid} = {account_id}'
-        24dc16df-7afd-4c6f-9474-034e021989f2:
-          Alias: config_inventory_rds
-          Source:
-            PhysicalTableId: eddabfc0-67c7-4ccf-91d4-237802c462f1
-        61b5e5c4-c8e9-42bb-83f4-53d1c78c06c4:
-          Alias: config_inventory_account (2)
-          Source:
-            PhysicalTableId: 30221784-9d72-43be-83a6-fc3b0f9676fc
       ImportMode: SPICE
     dependsOn:
       views:
       - config_inventory_account
       - config_inventory_rds
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
     schedules:
     - default
+
+# CUSTOMIZATION - daily incremental refresh configuration
+schedules:
+  incremental-daily:
+    ScheduleId: crcd-daily-incremental
+    ScheduleFrequency:
+      Interval: DAILY
+      TimeOfTheDay: '02:00-09:00'
+    RefreshType: INCREMENTAL_REFRESH
+    RefreshConfiguration:
+      IncrementalRefresh:
+        LookbackWindow:
+          ColumnName: partitiondate
+          Size: 3
+          SizeUnit: DAY
+
 crawlers: {}
+
 views:
   config_event_delivery:
     dependsOn:
@@ -1427,49 +1503,6 @@ views:
       , r.LatestConfigItemCaptureTime
       FROM
         resource_info r
-  cid_crcd_config:
-    data: |-
-      CREATE EXTERNAL TABLE `cid_crcd_config`(
-        `fileversion` string COMMENT 'from deserializer',
-        `configsnapshotid` string COMMENT 'from deserializer',
-        `configurationitems` array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>> COMMENT 'from deserializer')
-      PARTITIONED BY (
-        `accountid` string,
-        `dt` string,
-        `region` string,
-        `datasource` string)
-      ROW FORMAT SERDE
-        'org.openx.data.jsonserde.JsonSerDe'
-      WITH SERDEPROPERTIES (
-        'case.insensitive'='false',
-        'mapping.arn'='ARN',
-        'mapping.availabilityzone'='availabilityZone',
-        'mapping.awsaccountid'='awsAccountId',
-        'mapping.awsregion'='awsRegion',
-        'mapping.configsnapshotid'='configSnapshotId',
-        'mapping.configurationitemcapturetime'='configurationItemCaptureTime',
-        'mapping.configurationitems'='configurationItems',
-        'mapping.configurationitemstatus'='configurationItemStatus',
-        'mapping.configurationitemversion'='configurationItemVersion',
-        'mapping.configurationstateid'='configurationStateId',
-        'mapping.configurationstatemd5hash'='configurationStateMd5Hash',
-        'mapping.fileversion'='fileVersion',
-        'mapping.resourceid'='resourceId',
-        'mapping.resourcename'='resourceName',
-        'mapping.resourcetype'='resourceType',
-        'mapping.supplementaryconfiguration'='supplementaryConfiguration')
-      STORED AS INPUTFORMAT
-        'org.apache.hadoop.mapred.TextInputFormat'
-      OUTPUTFORMAT
-        'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
-      LOCATION
-        '${s3path}'
-      TBLPROPERTIES (
-      )
-    parameters:
-      s3path:
-        default: s3://aws-controltower-logs-{account_id}-eu-west-1/
-        description: S3 Path for cid_crcd_config table
   config_inventory_account:
     dependsOn:
       views:
@@ -1482,15 +1515,6 @@ views:
       , account_name
       FROM
         "${athena_database_name}".config_sys_account_data
-  config_sys_account_data:
-    data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_sys_account_data AS
-      SELECT
-        account_id
-      , parent_account_id payer_account_id
-      , account_name
-      FROM
-        "cid_cur"."account_map"
   config_compliance_conformance_pack:
     dependsOn:
       views:
@@ -1538,6 +1562,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_s3 AS
       WITH
@@ -1551,10 +1593,10 @@ views:
          , ARBITRARY("configurationItem"."arn") "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceName"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.name'), "configurationItem"."configurationitemcapturetime") "BucketName"
          , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
@@ -1587,6 +1629,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ebs AS
       WITH
@@ -1600,10 +1660,10 @@ views:
          , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
          , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."resourcecreationtime", "configurationItem"."configurationitemcapturetime") "CreationTime"
@@ -1670,6 +1730,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_lambda AS
       WITH
@@ -1682,10 +1760,10 @@ views:
          , ARBITRARY("configurationItem"."arn") "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX_BY(CAST(parse_datetime("configurationItem"."resourceCreationTime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionArn'), "configurationItem"."configurationitemcapturetime") "FunctionArn"
@@ -1867,6 +1945,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
       WITH
@@ -1882,10 +1978,10 @@ views:
          , ARBITRARY("configurationItem"."arn") "Arn"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceId'), "configurationItem"."configurationitemcapturetime") "InstanceId"
          , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX_BY(CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
          , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LaunchTime"
@@ -1944,6 +2040,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory AS
       WITH
@@ -1955,10 +2069,10 @@ views:
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , "configurationItem"."resourceId" "ResourceId"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , "configurationItem"."resourcetype" "ResourceType"
          , ARBITRARY("configurationItem"."arn") "Arn"
@@ -1989,6 +2103,24 @@ views:
     dependsOn:
       views:
       - cid_crcd_config
+    # CUSTOMIZATION - custom tags
+    parameters:
+      tag1:
+        default: tag1
+        description: "Enter the first tag name used to categorize workloads"
+        global: True
+      tag2:
+        default: tag2
+        description: "Enter the second tag name used to categorize workloads"
+        global: True
+      tag3:
+        default: tag3
+        description: "Enter the third tag name used to categorize workloads"
+        global: True
+      tag4:
+        default: tag4
+        description: "Enter the fourth tag name used to categorize workloads"
+        global: True
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_rds AS
       WITH
@@ -2001,10 +2133,10 @@ views:
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
          , ARBITRARY("configurationItem"."arn") "Arn"
-         , MAX_BY("configurationItem"."tags"['CostCenter'], "configurationItem"."configurationitemcapturetime") "TAG1"
-         , MAX_BY("configurationItem"."tags"['Application'], "configurationItem"."configurationitemcapturetime") "TAG2"
-         , MAX_BY("configurationItem"."tags"['Environment'], "configurationItem"."configurationitemcapturetime") "TAG3"
-         , MAX_BY("configurationItem"."tags"['Owner'], "configurationItem"."configurationitemcapturetime") "TAG4"
+         , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+         , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+         , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+         , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbiResourceId'), "configurationItem"."configurationitemcapturetime") "DatabaseResourceID"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceArn'), "configurationItem"."configurationitemcapturetime") "DatabaseInstanceArn"
