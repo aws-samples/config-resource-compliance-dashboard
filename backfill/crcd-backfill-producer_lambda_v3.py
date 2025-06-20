@@ -1,3 +1,5 @@
+# new approach working, before doing code cleanup
+
 # Buckets with many objects, or that also store CloudTrail files will make the Lambda time out before finding all the relevant AWS Config records.
 # Here we use the list_objects_v2 API with the delimiter parameter
 
@@ -27,7 +29,6 @@ DASHBOARD_BUCKET_NAME = os.environ["BUCKET_NAME_VAR"]
 SQS_QUEUE = os.environ["SQS_QUEUE_URL_VAR"]
 
 # How much in the past we want to scan (months)
-# TODO deprecated here
 CONFIG_HISTORY_TIME_LIMIT_MONTHS = 12
 CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = 6
 
@@ -104,11 +105,11 @@ def lambda_handler(event, context):
     min_config_history_date = datetime(year, month, 1)
     print (f'This is the minimum date for Config history files: {min_config_history_date}')
 
-    # TODO get the ORG-ID from env variables and then build the path below, that points to CloudTrail files, make it work on a single account too
+    # TODO get the ORG-ID from env variables and then build the path below, that points to CloudTrail files
     exclude = "o-ggc5oxbobd/AWSLogs/o-ggc5oxbobd"
     bucket = DASHBOARD_BUCKET_NAME
     # prefix = ''
-    # TODO We can directly start from this, make it work on a single account too
+    # We can directly start from this
     prefix = 'o-ggc5oxbobd/AWSLogs'
     delimiter = '/'
 
@@ -172,6 +173,125 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': f'Error: {str(e)}'
         }
+
+
+    # Intermediate code that did not work, returned ONE prefix only
+    try:
+        all_prefixes = set()
+
+        # TODO get it from env variables
+        exclude = "/o-ggc5oxbobd/AWSLogs/o-ggc5oxbobd"
+
+        while True:
+            batch_counter += 1
+            # Get next batch of prefixes
+            # bucket, prefix, delimiter, batch_size, continuation_token)
+            result = get_prefixes_batch(
+                DASHBOARD_BUCKET_NAME,
+                '',    # params['prefix'],
+                '/',   # params['delimiter'],
+                # '',    # params['exclude'], maybe try "/o-ggc5oxbobd/AWSLogs/o-ggc5oxbobd/"
+                100,   # params['batch_size'],
+                continuation_token   # params['continuation_token']
+            )
+
+            if LOGGING_ON: print(f'Received prefixes: {result}')
+            if LOGGING_ON: print(f'Processing batch {batch_counter} with {len(result.get("CommonPrefixes", []))} prefixes')
+
+            # Add prefixes from this batch (excluding any that match exclude pattern)
+            if 'CommonPrefixes' in result:
+                for common_prefix in result['CommonPrefixes']:
+                    prefix_path = common_prefix['Prefix']
+                    if not (exclude and prefix_path.startswith(exclude)):
+                        all_prefixes.add(prefix_path)
+            
+            # Check if there are more batches to process
+            if result['IsTruncated']:
+                print(f'Calling again')
+                continuation_token = result['NextContinuationToken']
+            else:
+                print(f'Finished')
+                break
+        
+        return {
+            'statusCode': 200,
+            'body': {
+                'prefixes': sorted(list(all_prefixes)),
+                'total_count': len(all_prefixes)
+            }
+        }
+            
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': f'Error: {str(e)}'
+        }
+
+
+    # TODO - for now we skip the previous code
+
+    continuation_token = None
+    while True:
+        # Get the next batch of objects
+        response = list_objects_batched(continuation_token)
+        batch_counter += 1
+
+        if 'Contents' in response:
+            # Filter objects that match the pattern before detailed processing
+            matching_objects = filter(
+                lambda obj: matches_config_pattern(obj['Key']), 
+                response['Contents']
+            )
+
+            # Process only the matching objects
+            for obj in matching_objects:
+                object_counter += 1
+                key = obj['Key']
+
+                if LOGGING_ON: print(f'Processing object {key}')
+                    
+                # Now we know it's a Config file, process based on type
+                if can_process(key, min_config_snapshot_date, min_config_history_date):
+                    if 'ConfigHistory' in key:
+                        config_history_counter += 1
+                    if 'ConfigSnapshot' in key:
+                        config_snapshot_counter += 1
+
+                    potential_object_counter += 1
+                    payload = {
+                        "Records": [{
+                            "s3": {
+                                "object": {"key": key},
+                                "bucket": {"name": DASHBOARD_BUCKET_NAME}
+                            }
+                        }]
+                    }
+                        
+                    prefix_key = f'{os.path.dirname(key)}'
+                    prefixes[prefix_key] = payload
+
+        # Check if there are more batches to process
+        if response['IsTruncated']:
+            continuation_token = response['NextContinuationToken']
+        else:
+            break
+
+    # iterate through the prefixes to add them to the SQS queue
+    # must do this at the very end, when I have mapped all the files
+    for k in prefixes:
+        actual_object_counter += 1
+        
+        sqs.send_message(
+            QueueUrl=SQS_QUEUE, 
+            MessageBody=json.dumps(prefixes[k])
+        )
+        if LOGGING_ON: print(f'Added to SQS queue the object : {k}')
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps(f'Successfully processed {object_counter} objects in the bucket. Sent to the queue for partitioning {actual_object_counter} objects out of {potential_object_counter} valid AWS Config objects, of which there were {config_history_counter} ConfigHistory and {config_snapshot_counter} ConfigSnapshot records.')
+    }
+
 
 def get_prefixes_batch(bucket, prefix, delimiter, batch_size, continuation_token=None):
     s3_client = boto3.client('s3')
