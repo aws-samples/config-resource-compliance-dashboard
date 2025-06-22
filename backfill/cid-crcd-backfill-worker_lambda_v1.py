@@ -1,14 +1,15 @@
+# Before finalizing the code, tested successfuly, not I remove the code that's not needed
 # Config Resource Compliance Dashboard
-# Backfill worker function triggered by SQS. The SQS item given here as input payload has an AWS Config prefix until the region. 
-# The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): 
-#   ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
-# This function will create full AWS Config prefixes adding the 'YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/) part until a configurable time in the past.
-# Then it will check if that prefix exists on the S3 Log Archive bucket, in which case the Athena partition will be created (if not existing).
+# Backfill worker function triggered by SQS
+
 
 # Valid prefixes
-# 1. all Config history records
+# 1. all Config history record
 # 2. Config snapshot records on all accounts an regions whose date is the last day of the month, from the last day of the month until 5 monhs ago
 # 3. Config snapshot records on all accounts an regions whose date is within the last 5 days
+
+
+# Capable of handling batches of S3 prefixes and create partitions in Athena/Glue with the same logic as the CRCD Lambda partitioner function
 
 from datetime import datetime, timedelta
 from calendar import monthrange
@@ -19,6 +20,9 @@ import re
 import time
 import json
 import boto3
+import random
+import gzip
+from urllib.parse import unquote
 from botocore.exceptions import ClientError
 
 TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
@@ -46,8 +50,10 @@ DATA_SOURCE_CONFIG_SNAPSHOT = 'ConfigSnapshot'
 # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
 # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
 # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
+# TODO this is probably deprecated and not needed anymore
+PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
-# this recognizes up to the region, it may be better for large buckets, then the processing part (this lambda)
+# TODO this recognizes up to the region, it may be better for large buckets, then the processing part (this lambda)
 # can generate the dates and add a partition in case the S3 path exists
 PATTERN_REGION = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/$'
 PATTERN_REGION_COMPILED = re.compile(PATTERN_REGION)
@@ -58,27 +64,24 @@ s3 = boto3.client('s3')
 glue_client = boto3.client('glue')
 
 def lambda_handler(event, context):
+
     # Compliance and Inventory: the dashboard reports the current month of data and the full data from the previous 5 months
     # Event history: the dashbaord has all history - we limit the history to one year
-    # This is handled in parameters CONFIG_HISTORY_TIME_LIMIT_MONTHS and CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS
     current_date = datetime.now()
     config_snapshot_dates = []
     config_history_dates = []
 
     if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
         config_snapshot_date_limit = current_date - relativedelta(months=CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS)
-        # Create datetime for the last day of the month until 6 months ago - for Config snapshot files
+        # Create datetime for last day of month 6 months ago - for Config snapshot files
         # Get year and month from limit date
         year = config_snapshot_date_limit.year
         month = config_snapshot_date_limit.month
-
         # Get last day of that month using monthrange
         _, last_day = monthrange(year, month)
-        
         # This is the date after which every AWS Config snapshot file have to be sent to SQS
         min_config_snapshot_date = datetime(year, month, last_day)
         print (f'This is the minimum date for Config snapshot files: {min_config_snapshot_date}')
-        
         config_snapshot_dates = generate_config_snapshot_date_strings(min_config_snapshot_date)
         if LOGGING_ON:
             for dt in config_snapshot_dates:
@@ -91,13 +94,12 @@ def lambda_handler(event, context):
         month = config_history_date_limit.month
         min_config_history_date = datetime(year, month, 1)
         print (f'This is the minimum date for Config history files: {min_config_history_date}')
-
         config_history_dates = generate_config_history_date_strings(min_config_history_date)
         if LOGGING_ON:
             for dt in config_history_dates:
                 print(f'Config history date: {dt}')
 
-    # Now iterates through the prefixes received by SQS
+
     for rec in event['Records']:
         print(f'CRCD Backfill ITERATION---START--------------------------------------------------')
         event_body = rec['body']
@@ -110,7 +112,7 @@ def lambda_handler(event, context):
         event_bucket_name = message['Records'][0]['s3']['bucket']['name']
         event_object_key = message['Records'][0]['s3']['object']['key']
 
-        print(f'Processing SQS payload: bucket = {event_bucket_name}, prefix = {event_object_key}')
+        print(f'Processing backfilling: bucket = {event_bucket_name}, prefix = {event_object_key}')
 
         # Backfill ConfigSnapshot records
         if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
@@ -178,6 +180,34 @@ def generate_config_history_date_strings(start_date):
     
     return date_strings
 
+# TODO maybe not needed... i iterate throught the dates anyway...
+# TODO maybe when you generate the dates, return directly all prefixes, NO because I may need to manage multiple prefixes and don't want to generate the dates every time
+def bulk_check_s3_prefixes(bucket_name, prefixes):
+    """
+    Check existence of multiple S3 prefixes efficiently.
+    Each prefix is checked individually since they're all different.
+    """
+    if not prefixes:
+        return []
+
+    s3_client = boto3.client('s3')
+    existing_prefixes = []
+
+    try:
+        for prefix in prefixes:
+            response = s3_client.list_objects_v2(
+                Bucket=bucket_name,
+                Prefix=prefix,
+                MaxKeys=1
+            )
+            if 'Contents' in response:
+                existing_prefixes.append(prefix)
+
+    except ClientError as e:
+        print(f"An error occurred: {e}")
+        raise  e # Re-raise the exception after logging   
+
+    return existing_prefixes
 
 def check_s3_prefix(bucket_name, prefix):
     """
@@ -205,20 +235,20 @@ def check_s3_prefix(bucket_name, prefix):
 
 
 def backfill(bucket_name, prefix_key, date_array, config_data_source):
-    """For the given prefix will iterate through the date_array, 
-        generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object"""
     if LOGGING_ON:
-        print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name} - datasource: {config_data_source}')
+        print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name}')
+
+    # object_key_parent_root = f's3://{bucket_name}/{prefix_key}'
 
     for dt in date_array:
         # prefix_key ends with '/'
         object_key_parent = f'{prefix_key}{dt}/{config_data_source}/'
         if LOGGING_ON:
-            print(f'Config history date: {dt} - object_key_parent = {object_key_parent}')
+            print(f'Config history date: {dt}')
+            print(f'object_key_parent = {object_key_parent}')
 
         # Checks the current prefix exists on S3
         if check_s3_prefix(bucket_name, object_key_parent):
-            # I need to run a regular expression to extract account ID and region
             match  = re.match(PATTERN_REGION, prefix_key)
             if not match:
                 # should never get here
@@ -229,24 +259,26 @@ def backfill(bucket_name, prefix_key, date_array, config_data_source):
             
             accountid = match.groupdict()['account_id']
             region = match.groupdict()['region']
+            
+            print(f'Creating partition for item: bucket = {bucket_name}, accountid = {accountid}, region = {region}, dt = {dt}')
 
-            # when handling Athena partitions, the date separator is "-" not "/"
-            dt_partition = dt.replace("/", "-")
-            print(f'Creating partition for item: bucket = {bucket_name}, accountid = {accountid}, region = {region}, dt = {dt_partition}')
-
+            # Considering the use case where many objects are added to the same s3 path at the same time
             # Check if partition exists: want both to avoid calling Athena API too much and create the partition only if it's not there already
             # There's no need to create a partition on an S3 path that already exist - Athena will find new files in there
-            if not partition_exists(accountid, dt_partition, region, config_data_source):
+            if not partition_exists(accountid, dt, region, config_data_source):
                 # Create the partition if it doesn't exist
+                # I just checked, but another Lambda running on another S3 object may come in between
+                # TODO build object_location
+                # LOCATION 's3://crcd-dashboard-bucket-058264555211-eu-north-1/AWSLogs/058264555211/Config/eu-west-1/2025/6/8/ConfigSnapshot/'
                 object_location = f's3://{bucket_name}/{object_key_parent}'
-                add_partition_if_not_exists(accountid, region, dt_partition, object_location, config_data_source)
-                print(f"Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                add_partition_if_not_exists(accountid, region, dt, object_location, config_data_source)
+                print(f"Partition created for {accountid}, {dt}, {region}, {config_data_source}")
             else:
-                print(f"Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                print(f"Partition already exists for {accountid}, {dt}, {region}, {config_data_source}")
 
         else:
             if LOGGING_ON:
-                print(f'Prefix does not exist on S3: {object_key_parent} - will not create a partition in Athena')
+                print(f'Prefix does not exist: {object_key_parent} - will not create a partition in Athena')
 
         
 def partition_exists(account_id, dt, region, data_source):
@@ -255,12 +287,7 @@ def partition_exists(account_id, dt, region, data_source):
     """
     try:
         # Define partition values in the same order as defined in the Glue table
-        # Ensures using "-" as date separator in the partitions
-        dt_partition = dt.replace("/", "-")
-        partition_values = [account_id, dt_partition, region, data_source]
-
-        if LOGGING_ON:
-            print(f'Checking if partition exists: {partition_values}')
+        partition_values = [account_id, dt, region, data_source]
         
         # Get partition
         response = glue_client.get_partition(
@@ -278,15 +305,75 @@ def partition_exists(account_id, dt, region, data_source):
         # For any other error, raise it
         raise
 
-def add_partition_if_not_exists(accountid, region, dt, location, dataSource):
-    # On S3 prefixes I needed "/" as date separator, but in the partitions I need to use "-"
-    dt_partition = dt.replace("/", "-")
+def add_partition_if_not_exists(accountid, region, date, location, dataSource):
+    # So far I needed '/' as separator, but in the partitions I need to use "-"
+    date_partition = date.replace("/", "-")
 
     execute_query(f"""
         ALTER TABLE {TABLE_NAME}
-        ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{dt_partition}', region='{region}', dataSource='{dataSource}')
+        ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{date_partition}', region='{region}', dataSource='{dataSource}')
         LOCATION '{location}'
     """)
+
+
+def backfill_legacy(event_bucket_name, event_object_key):
+    object_key_parent = f's3://{event_bucket_name}/{os.path.dirname(event_object_key)}/'
+
+    # deciding what is enabled
+    isPartitionConfigSnapshot = (PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED)
+    isPartitionConfigHistory = (PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED)
+
+    # process object key
+    match  = re.match(PATTERN, event_object_key)
+    if not match:
+        print(f'Cannot match {event_object_key} as AWS Config file, skipping.')
+        return
+    if LOGGING_ON:
+        print('match.groupdict() = ', match.groupdict())
+    
+    accountid = match.groupdict()['account_id']
+    region = match.groupdict()['region']
+    date = '{year}-{month}-{day}'.format(**match.groupdict())
+
+    if 'ConfigSnapshot' in event_object_key:
+        dataSource = 'ConfigSnapshot'
+
+        # If not enabled, I can return
+        if not isPartitionConfigSnapshot:
+            print(f'SKIPPING: {event_object_key} is a ConfigSnapshot. These records are disabled in the function\'s environment variables.')
+            return
+    elif 'ConfigHistory' in event_object_key:
+        dataSource = 'ConfigHistory'
+        # If not enabled, I can return
+        if not isPartitionConfigHistory:
+            print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
+            return
+    else:
+        # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
+        print(f'ERROR - Cannot match {event_object_key} as AWS Config file, skipping.')
+        return
+    
+    drop_partition(accountid, region, date, dataSource)
+    add_partition(accountid, region, date, object_key_parent, dataSource)
+
+# Adds an Athena partition with exponential backoff
+def add_partition_legacy(accountid, region, date, location, dataSource):
+    backoff_retry(
+        lambda: execute_query(f"""
+                ALTER TABLE {TABLE_NAME}
+                ADD PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
+                LOCATION '{location}'
+            """)
+    )
+
+# Drops an Athena partition with exponential backoff
+def drop_partition_legacy(accountid, region, date, dataSource):
+    backoff_retry(
+        lambda: execute_query(f"""
+                ALTER TABLE {TABLE_NAME}
+                DROP IF EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
+            """)
+    )
 
 # Runs an SQL statemetn against Athena
 def execute_query(query):
@@ -338,6 +425,53 @@ def execute_query(query):
     except Exception as e:
         print(f'Exception during query execution: {str(e)}')
         raise
+
+def execute_query_legacy(query):
+    print('Executing query:', query)
+    start_query_response = athena.start_query_execution(
+        QueryString=query,
+        QueryExecutionContext={
+            'Database': ATHENA_DATABASE_NAME
+        },
+        ResultConfiguration={
+            'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
+        },
+        WorkGroup=ATHENA_WORKGROUP
+    )
+    print('Query started')
+
+    is_query_running = True
+    while is_query_running:
+        time.sleep(1)
+        execution_status = athena.get_query_execution(
+            QueryExecutionId=start_query_response['QueryExecutionId']
+        )
+        query_state = execution_status['QueryExecution']['Status']['State']
+        is_query_running = query_state in ('RUNNING', 'QUEUED')
+
+        if not is_query_running and query_state != 'SUCCEEDED':
+            raise AthenaException('Query failed')
+    print('Query completed')
+
+# Exponential backoff implementation
+def backoff_retry(func, max_retries=10, base_delay=1, max_delay=120):
+    retries = 0
+    while True:
+        try:
+            return func()
+        except Exception as e:
+            print(f"Error in backoff retry: {e}")
+            retries += 1
+            if retries > max_retries:
+                raise e
+            
+            # Calculate delay with exponential backoff and jitter
+            delay = min(max_delay, base_delay * (2 ** (retries - 1)))
+            jitter = random.uniform(0, 0.1 * delay)
+            total_delay = delay + jitter
+            
+            print(f"Retry {retries} after {total_delay:.2f} seconds")
+            time.sleep(total_delay)
 
 class AthenaException(Exception):
     ''''This is raised only if the Query is not in state SUCCEEDED'''

@@ -610,6 +610,7 @@ Resources:
         Variables:
           BUCKET_NAME_VAR: !Ref DashboardBucketName
           SQS_QUEUE_URL_VAR: !Ref SQSBackfillingQueue
+          ORGANIZATION_ID: !Ref OrganizationId # TODO get it from CFN parameters
 
           # Must have all the variables of the standard partitioner
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
