@@ -59,8 +59,8 @@ spark.conf.set("spark.sql.files.ignoreCorruptFiles", "true")
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(args['tracking_table_name'])
 
-def process_file_notgoinghere():
-    """initial genai-ed approach, but it's taking me far away in circles"""
+def process_file_DEPRECATED():
+    """initial approach, but it's taking me far away in circles"""
     logger.info(f"====CRCD==== Original source path: {args['source_path']}")
     logger.info(f"====CRCD==== DDB Table name: {args['tracking_table_name']}")
 
@@ -71,11 +71,8 @@ def process_file_notgoinghere():
     destination_path = args['destination_path']
     logger.info(f"====CRCD==== Destination path: {destination_path}")
 
-    
     try:
-
         # Read the large JSON file directly with Spark
-        # For very large files, we'll read the raw file and process it manually
         raw_data = sc.textFile(source_path)
         config_content = raw_data.collect()
         config_content = "".join(config_content)
