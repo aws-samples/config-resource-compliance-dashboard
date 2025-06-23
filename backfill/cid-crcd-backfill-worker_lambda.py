@@ -25,7 +25,7 @@ TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
 ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
 ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
-LOGGING_ON = True  # enables additional logging to CloudWatch
+LOGGING_ON = False  # enables additional logging to CloudWatch
 
 # Partitioning of ConfigSnapshot and ConfigHistory records is enabled from parameters
 # Pass 0 to skip the record

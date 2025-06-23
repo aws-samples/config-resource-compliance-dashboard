@@ -1,11 +1,11 @@
 # ------------------------------------------------------------------------------------
 # Launch on Dashboard account, same region of CRCD resources 
-# Lambda function that iterates through the Dashboard bucket and creates Glue/Athena 
+# Solution that iterates through the Dashboard bucket and creates Glue/Athena 
 # partitions for your historical AWS Config records
 # ------------------------------------------------------------------------------------
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "CRCD Dashboard - Backfill function: iterates through the Dashboard S3 bucket and recreates partitions on the CRCD Glue/Athena table"
+Description: "CRCD Dashboard - Backfill function: iterates through the Dashboard S3 bucket and recreates partitions on the Glue/Athena table"
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -16,6 +16,7 @@ Metadata:
         Parameters:
           - DashboardBucketName
           - AthenaQueryResultBucketName
+          - AWSOrganizationID
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -36,13 +37,19 @@ Metadata:
       AthenaTableName:
         default: "Athena table for AWS Config data"
       LambdaBackfillProducerFunctionName:
-        default: "AWS Lambda function that finds all the AWS Config files that need to be added as partition to the CRCD dashboard"
+        default: "AWS Lambda function that finds the AWS Config prefixes that need to be added as partition to the dashboard"
       LambdaBackfillWorkerFunctionName:
-        default: "AWS Lambda function that partitions AWS Config files identified previously"
+        default: "AWS Lambda function that creates partitions"
       DashboardBucketName:
         default: "Dashboard bucket"
+      AWSOrganizationID:
+        default: "AWS Organization ID"
 
 Parameters:
+  AWSOrganizationID:
+    Type: "String"
+    Description: "The AWS Organization ID. Leave empty if you run this template on a standalone account."
+
   DashboardBucketName:
     Type: "String"
     Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard (Required)."
@@ -97,7 +104,6 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files."
     Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)."
 
-
 Rules:
   MandatoryDashboardBucketName:
     Assertions:
@@ -106,7 +112,6 @@ Rules:
           - !Ref DashboardBucketName
           - ''
         AssertDescription: "Dashboard bucket name is required"
-
 
   MandatoryAthenaDatabase:
     Assertions:
@@ -234,10 +239,8 @@ Resources:
               - Effect: Allow
                 Action:
                   - 's3:ListBucket'
-                  - 's3:GetObject'
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::${DashboardBucketName}'
-                  - !Sub 'arn:${AWS::Partition}:s3:::${DashboardBucketName}/*'
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -279,6 +282,8 @@ Resources:
         Variables:
           BUCKET_NAME_VAR: !Ref DashboardBucketName
           SQS_QUEUE_URL_VAR: !Ref SQSBackfillingQueue
+          ORGANIZATION_ID: !Ref AWSOrganizationID
+
       Handler: index.lambda_handler
       Architectures:
         - "x86_64"
@@ -296,37 +301,26 @@ Resources:
       Code:
         ZipFile: |
           # AWS Config Resource Compliance Dashboard
-          # Backfilling producer function, scans your Amazon S3 dashboard bucket and finds all files related to AWS Config that are valid.
-          # These files are sent to an SQS queue that will trigger another function to add them to the dashboard data.
-          # 
-          # Valid files
-          # 1. all Config history records (WIP: we may go back until a certain date, e.g. max 1 year)
-          # 2. Config snapshot records on all accounts an regions whose date is the last day of the month, from the last day of the month until 5 monhs ago
-          # 3. Config snapshot records on all accounts an regions whose date is within the last 5 days
+          # Backfilling producer function, scans your Amazon S3 dashboard bucket and finds all prefixes related to AWS Config.
+          # The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): 
+          #   ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
+          # For performance reasons, this function identifies all AWS Config prefixes down to REGION.
+          # These prefixes are sent to an SQS queue that will trigger another function to add them to the dashboard data.
 
           import boto3
           import json
           import os
           import re
-          from datetime import datetime, timedelta
-          from calendar import monthrange
-          from dateutil.relativedelta import relativedelta
+          from collections import deque
 
+          # Reads mandatory environment variables
           DASHBOARD_BUCKET_NAME = os.environ["BUCKET_NAME_VAR"]
           SQS_QUEUE = os.environ["SQS_QUEUE_URL_VAR"]
+          ORGANIZATION_ID = os.environ.get("ORGANIZATION_ID", "")
 
-          # How much in the past we want to scan (months)
-          CONFIG_HISTORY_TIME_LIMIT_MONTHS = 12
-          CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = 6
-
-          # SQS client
+          # SQS and S3 client
           sqs = boto3.client('sqs')
-
-          # Create an S3 client
           s3 = boto3.client('s3')
-            
-          # Define the batch size of the objects read from S3
-          batch_size = 500
 
           LOGGING_ON = False  # enables additional logging to CloudWatch
 
@@ -334,220 +328,106 @@ Resources:
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-          PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
-
-          # Regular expression to get the timestamp of the AWS Config file from its S3 prefix
-          # Used to apply filters on files depending on the date
-          DATE_PATTERN = r'^.*/(\d{4})/(\d{1,2})/(\d{1,2})/.*$'
+          # This function needs just to identify the folders until the region, then the processing part can 
+          # generate the dates and add a partition in case the S3 path exists
+          PATTERN_REGION = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/$'
+          PATTERN_REGION_COMPILED = re.compile(PATTERN_REGION)
 
           def lambda_handler(event, context):
-            # Initialize the continuation token
-            continuation_token = None
-            object_counter = 0
-            batch_counter = 0
+              # get the ORG-ID from env variables and then build the path that points to CloudTrail files, 
+              # must work on a single account too
+              exclude = None
+              if ORGANIZATION_ID:
+                  exclude = f'{ORGANIZATION_ID}/AWSLogs/{ORGANIZATION_ID}'
+                  print(f'Excluding path: {exclude}')
 
-            config_snapshot_counter = 0
-            config_history_counter = 0
-            potential_object_counter = 0
-            actual_object_counter = 0
-            
-            # This is to register all S3 prefixes that need a partition
-            # Especially with ConfigHistory records, an S3 partition (i.e. path) may contain several files and
-            # it does not make sense to create the Athena partition for each file, as the partition points to the S3 prefix
-            # KEYS: the S3 prefix, keys are unique and adding a key with the same value of an existing key will simply replace the key and its value
-            # VALUES: any S3 object belonging to the prefix
-            prefixes = dict()
+              prefix = ''
+              if ORGANIZATION_ID:
+                  # We can directly start from this and skip 2 iterations
+                  # The default value starts from the beginning of the bucket
+                  prefix = f'{ORGANIZATION_ID}/AWSLogs'
 
-            # Sends to SQS only AWS Config files 
-            # Compliance and Inventory: the dashboard reports the current month of data and the full data from the previous 5 months
-            # Event history: the dashbaord has all history - we limit the history to one year
-            current_date = datetime.now()
-            config_snapshot_date_limit = current_date - relativedelta(months=CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS)
-            config_history_date_limit = current_date - relativedelta(months=CONFIG_HISTORY_TIME_LIMIT_MONTHS)
+              try:
+                  all_prefixes = set()
+                  prefixes_to_explore = deque([prefix])
+                  paginator = s3.get_paginator('list_objects_v2')
 
-            # Create datetime for last day of month 6 months ago - for Config snapshot files
-            # Get year and month from limit date
-            year = config_snapshot_date_limit.year
-            month = config_snapshot_date_limit.month
-            # Get last day of that month using monthrange
-            _, last_day = monthrange(year, month)
+                  while prefixes_to_explore:
+                      current_prefix = prefixes_to_explore.popleft()
+                      
+                      # Buckets with many objects, or that also store CloudTrail files will make the Lambda time out 
+                      # before finding all the relevant AWS Config records
+                      # Here we use the list_objects_v2 API with the delimiter parameter
+                      page_iterator = paginator.paginate(
+                          Bucket=DASHBOARD_BUCKET_NAME,
+                          Prefix=current_prefix,
+                          Delimiter='/'
+                      )
 
-            # This is the date after which every AWS Config snapshot file have to be sent to SQS
-            min_config_snapshot_date = datetime(year, month, last_day)
-            print (f'This is the minimum date for Config snapshot files: {min_config_snapshot_date}')
+                      for page in page_iterator:
+                          if 'CommonPrefixes' in page:
+                              for common_prefix in page['CommonPrefixes']:
+                                  prefix_path = common_prefix['Prefix']
 
+                                  # these prefixes do not contain AWS Config files
+                                  if not ((exclude and prefix_path.startswith(exclude)) 
+                                          or ('/OversizedChangeNotification/' in prefix_path)
+                                          or ('/CloudTrail' in prefix_path)
+                                          or ('/CloudTrail-Digest' in prefix_path)
+                                      ):
 
-            # Create datetime for Config history records limit
-            year = config_history_date_limit.year
-            month = config_history_date_limit.month
-            min_config_history_date = datetime(year, month, 1)
-            print (f'This is the minimum date for Config history files: {min_config_history_date}')
-
-            # Iterate over the object keys in batches
-            while True:
-              # Get the next batch of objects
-              response = list_objects_batched(continuation_token)
-              batch_counter +=1
-
-              # Process the objects in the batch
-              for obj in response.get('Contents', []):
-                object_counter +=1
-                key = obj['Key']
-                    
-                # all types of Config files must be sent to the worker
-                if can_process(key, min_config_snapshot_date, min_config_history_date):
-                  if 'ConfigHistory' in key:
-                    config_history_counter +=1
-                    if LOGGING_ON: print (f'This is a ConfigHistory: {key}')
+                                      # avoiding duplicates
+                                      if prefix_path not in all_prefixes:
+                                          if matches_config_pattern_region(prefix_path):
+                                              if LOGGING_ON: print(f'Found Config prefix: {prefix_path}')
+                                              all_prefixes.add(prefix_path)
+                                              # send it directly to SQS
+                                              payload = {
+                                                  "Records": [{
+                                                      "s3": {
+                                                          "object": {"key": prefix_path},
+                                                          "bucket": {"name": DASHBOARD_BUCKET_NAME}
+                                                      }
+                                                  }]
+                                              }
+                                              sqs.send_message(
+                                                  QueueUrl=SQS_QUEUE, 
+                                                  MessageBody=json.dumps(payload)
+                                              )
+                                          else:
+                                              # still a possibly valid AWS Config prefix that needs scanning
+                                              if LOGGING_ON: print(f'Exploring prefix: {prefix_path}')
+                                              prefixes_to_explore.append(prefix_path)
+                                  else:
+                                      # the folders checked above are always excluded
+                                      if LOGGING_ON: print(f'Excluding prefix: {prefix_path}')
                   
-                  if 'ConfigSnapshot' in key:
-                    config_snapshot_counter +=1
-                    if LOGGING_ON: print (f'This is a ConfigSnapshot: {key}')
+                  print(f'Found {len(all_prefixes)} prefixes')
+                  if LOGGING_ON: print(all_prefixes)
 
-                  potential_object_counter += 1
-                  # fakes an S3 trigger as payload for the SQS message
-                  payload = {
-                    "Records": [
-                      {
-                        "s3": {
-                          "object": {
-                            "key": key
-                          },
-                          "bucket": {
-                            "name": DASHBOARD_BUCKET_NAME
-                          }
-                        }
+                  return {
+                      'statusCode': 200,
+                      'body': {
+                          'prefixes': sorted(list(all_prefixes)),
+                          'total_count': len(all_prefixes)
                       }
-                    ]
                   }
-                      
-                  # adding the S3 prefix to the list, this will be processed later
-                  # multiple files may be in te same prefix, and I need to invoke the partitioner function only once per prefix
-                  prefix_key = f'{os.path.dirname(key)}'
-                  # print('This is the object key', key)
-                  # print(f'[{batch_counter}/{object_counter}] This is the S3 path {prefix_key}')
-                  prefixes[prefix_key] = payload
 
-                  # -------------------------------------------------------------------------------
-                  # only for development
-                  # break here after a few objects
-                  # if object_counter >= 20: break
-                  # -------------------------------------------------------------------------------
-                  
+              except Exception as e:
+                  print(f'Error: {str(e)}')
+                  return {
+                      'statusCode': 500,
+                      'body': f'Error: {str(e)}'
+                  }
 
-              # Check if there are more batches to process
-              if response['IsTruncated']:
-                continuation_token = response['NextContinuationToken']
-              else:
-                break
-            
-            # iterate through the prefixes to add them to the SQS queue
-            # must do this at the very end, when I have mapped all the files
-            for k in prefixes:
-              actual_object_counter += 1
-              
-              sqs.send_message(
-                QueueUrl=SQS_QUEUE, 
-                MessageBody=json.dumps(prefixes[k])
-              )
-              if LOGGING_ON: print(f'Added to SQS queue the object : {k}')
+          def matches_config_pattern_region(key: str) -> bool:
+              """Two-stage check for Config files"""
+              # Quick check before expensive regex
+              if not ('/Config/' in key):
+                  return False
 
-            return {
-                'statusCode': 200,
-                'body': json.dumps(f'Successfully processed {object_counter} objects in the bucket. Sent to the queue for partitioning {actual_object_counter} objects out of {potential_object_counter} valid AWS Config objects, of which there were {config_history_counter} ConfigHistory and {config_snapshot_counter} ConfigSnapshot records.')
-            }
-
-          # Define the function to list objects in batches
-          def list_objects_batched(continuation_token=None):
-            try:
-              response = s3.list_objects_v2(
-                Bucket=DASHBOARD_BUCKET_NAME,
-                MaxKeys=batch_size,
-                ContinuationToken=continuation_token or ''
-              )
-            except s3.exceptions.ClientError as e:
-              if e.response['Error']['Code'] == 'InvalidArgument':
-                print('Invalid continuation token, starting from the beginning.')
-                response = s3.list_objects_v2(Bucket=DASHBOARD_BUCKET_NAME, MaxKeys=batch_size)
-              else:
-                raise e
-            
-            return response 
-
-          # returns true if the given object name corresponds to an AWS Config snapshot or history record
-          # and it is within the time frame of historical data, i.e. current month and the previous full five months
-          def can_process(object_key, min_config_snapshot_date, min_config_history_date):
-            # process object key
-            match  = re.match(PATTERN, object_key)
-
-            # if match it is a config file
-            if match:
-              if LOGGING_ON: print(f'{object_key} is an AWS Config file, checking its timestamp.')
-
-              # Use regex pattern for date extraction  
-              date_match = re.match(DATE_PATTERN, object_key)
-
-              if date_match:
-                year, month, day = map(int, date_match.groups())
-                config_file_date = datetime(year, month, day)
-
-                if 'ConfigHistory' in object_key:
-                  if config_file_date < min_config_history_date:
-                    if LOGGING_ON: print(f'ConfigHistory file is dated {config_file_date}: too old for the dashboard. Skipping.')
-                    match = False
-                  else:
-                    if LOGGING_ON: print(f'ConfigHistory file is dated {config_file_date}: will be send to the SQS queue.')
-                    match = True
-                
-                if 'ConfigSnapshot' in object_key:
-                  # only the last day of the month for the previous CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS months and the last 5-ish days
-                  match = is_config_snapshot_date_valid(config_file_date)
-              else:
-                # cannot extract the date from the prefix - should never get here
-                print(f'ERROR: Cannot extract the date from prefix {object_key}. Skipping.')
-                match = False
-            else:
-              print(f'Cannot match {object_key} as AWS Config file. Skipping.')
-              match = False
-
-            return match
-            
-
-          def is_config_snapshot_date_valid(config_file_date):
-              today = datetime.now().date()
-              
-              # Check if date is within last 5 days
-              five_days_ago = today - timedelta(days=5)
-              if five_days_ago <= config_file_date.date() <= today:
-                  if LOGGING_ON: print(f'ConfigSnapshot file is dated {config_file_date}: will be send to the SQS queue.')
-                  return True
-              
-              # Check last days of previous months
-              current_year = today.year
-              current_month = today.month
-              
-              # Check previous months until the limit
-              for i in range(1, CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS):  
-                  # Calculate the year and month we're checking
-                  check_month = current_month - i
-                  check_year = current_year
-                  
-                  # Adjust year if we need to go back to previous year
-                  if check_month <= 0:
-                      check_month += 12
-                      check_year -= 1
-                      
-                  # Get the last day of that month
-                  _, last_day = monthrange(check_year, check_month)
-                  last_date = datetime(check_year, check_month, last_day).date()
-                  
-                  # Compare with config_file_date
-                  if config_file_date.date() == last_date:
-                      if LOGGING_ON: print(f'ConfigSnapshot file is dated {config_file_date}: will be send to the SQS queue.')
-                      return True
-              
-              if LOGGING_ON: print(f'ConfigSnapshot file is dated {config_file_date}: too old or not a end of month date. Skipping.')
-              return False            
+              # Only perform regex if basic pattern matches
+              return bool(re.match(PATTERN_REGION_COMPILED, key))
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -610,7 +490,6 @@ Resources:
         Variables:
           BUCKET_NAME_VAR: !Ref DashboardBucketName
           SQS_QUEUE_URL_VAR: !Ref SQSBackfillingQueue
-          ORGANIZATION_ID: !Ref OrganizationId # TODO get it from CFN parameters
 
           # Must have all the variables of the standard partitioner
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
@@ -641,18 +520,27 @@ Resources:
       Code:
         ZipFile: |
           # Config Resource Compliance Dashboard
-          # Backfill worker function triggered by SQS
-          # Capable of handling batches of S3 prefixes and create partitions in Athena/Glue 
-          # with the same logic as the CRCD Lambda partitioner function
+          # Backfill worker function triggered by SQS. The SQS item given here as input payload has an AWS Config prefix until the region. 
+          # The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): 
+          #   ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
+          # This function will create full AWS Config prefixes adding the 'YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/) part until a configurable time in the past.
+          # Then it will check if that prefix exists on the S3 Log Archive bucket, in which case the Athena partition will be created (if not existing).
 
+          # Valid prefixes
+          # 1. all Config history records
+          # 2. Config snapshot records on all accounts an regions whose date is the last day of the month, from the last day of the month until 5 monhs ago
+          # 3. Config snapshot records on all accounts an regions whose date is within the last 5 days
+
+          from datetime import datetime, timedelta
+          from calendar import monthrange
+          from dateutil.relativedelta import relativedelta
+          import calendar
           import os
           import re
           import time
           import json
           import boto3
-          import random
-          import gzip
-          from urllib.parse import unquote
+          from botocore.exceptions import ClientError
 
           TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
@@ -668,153 +556,313 @@ Resources:
           PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
           PARTITION_CONFIG_HISTORY_RECORDS = os.environ['PARTITION_CONFIG_HISTORY_RECORDS']
 
+          # How much in the past we want to scan (months)
+          CONFIG_HISTORY_TIME_LIMIT_MONTHS = 12
+          CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = 6
+
+          DATA_SOURCE_CONFIG_HISTORY = 'ConfigHistory'
+          DATA_SOURCE_CONFIG_SNAPSHOT = 'ConfigSnapshot'
+
           # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
           # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
           # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
-          PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
+
+          # this recognizes up to the region, it may be better for large buckets, then the processing part (this lambda)
+          # can generate the dates and add a partition in case the S3 path exists
+          PATTERN_REGION = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/$'
+          PATTERN_REGION_COMPILED = re.compile(PATTERN_REGION)
 
           # create the clients that are needed
           athena = boto3.client('athena')
           s3 = boto3.client('s3')
+          glue_client = boto3.client('glue')
 
           def lambda_handler(event, context):
+              # Compliance and Inventory: the dashboard reports the current month of data and the full data from the previous 5 months
+              # Event history: the dashbaord has all history - we limit the history to one year
+              # This is handled in parameters CONFIG_HISTORY_TIME_LIMIT_MONTHS and CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS
+              current_date = datetime.now()
+              config_snapshot_dates = []
+              config_history_dates = []
 
+              if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
+                  config_snapshot_date_limit = current_date - relativedelta(months=CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS)
+                  # Create datetime for the last day of the month until 6 months ago - for Config snapshot files
+                  # Get year and month from limit date
+                  year = config_snapshot_date_limit.year
+                  month = config_snapshot_date_limit.month
+
+                  # Get last day of that month using monthrange
+                  _, last_day = monthrange(year, month)
+                  
+                  # This is the date after which every AWS Config snapshot file have to be sent to SQS
+                  min_config_snapshot_date = datetime(year, month, last_day)
+                  print (f'This is the minimum date for Config snapshot files: {min_config_snapshot_date}')
+                  
+                  config_snapshot_dates = generate_config_snapshot_date_strings(min_config_snapshot_date)
+                  if LOGGING_ON:
+                      for dt in config_snapshot_dates:
+                          print(f'Config snapshot date: {dt}')
+              
+              if PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED:
+                  config_history_date_limit = current_date - relativedelta(months=CONFIG_HISTORY_TIME_LIMIT_MONTHS)
+                  # Create datetime for Config history records limit
+                  year = config_history_date_limit.year
+                  month = config_history_date_limit.month
+                  min_config_history_date = datetime(year, month, 1)
+                  print (f'This is the minimum date for Config history files: {min_config_history_date}')
+
+                  config_history_dates = generate_config_history_date_strings(min_config_history_date)
+                  if LOGGING_ON:
+                      for dt in config_history_dates:
+                          print(f'Config history date: {dt}')
+
+              # Now iterates through the prefixes received by SQS
               for rec in event['Records']:
-                  print(f'ITERATION---START--------------------------------------------------')
-                  print(f'rec = {rec}')
+                  print(f'CRCD Backfill ITERATION---START--------------------------------------------------')
                   event_body = rec['body']
-                  print(f'event_body = {event_body}')
+                  
+                  if LOGGING_ON:
+                      print(f'rec = {rec}')
+                      print(f'event_body = {event_body}')
+
                   message = json.loads(event_body)
                   event_bucket_name = message['Records'][0]['s3']['bucket']['name']
-                  # print(f'event_bucket_name = {event_bucket_name}')
                   event_object_key = message['Records'][0]['s3']['object']['key']
-                  # print(f'event_object_key = {event_object_key}')
 
-                  print(f'Backfilling item: bucket = {event_bucket_name}, object = {event_object_key}')
+                  print(f'Processing SQS payload: bucket = {event_bucket_name}, prefix = {event_object_key}')
 
-                  backfill(event_bucket_name, event_object_key)
+                  # Backfill ConfigSnapshot records
+                  if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
+                      backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
 
-                  print(f'ITERATION---END--------------------------------------------------')
+                  # Backfill ConfigHistory records
+                  if PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED:
+                      backfill(event_bucket_name, event_object_key, config_history_dates, DATA_SOURCE_CONFIG_HISTORY)
+
+                  print(f'CRCD Backfill ITERATION---END--------------------------------------------------')
 
               print(f'CRCD Backfill Worker DONE')
+
               return {
                   'statusCode': 200,
                   'body': 'CRCD Backfill complete.'
               }
 
+          def generate_config_snapshot_date_strings(start_date):
+              """Generates the last day of the month for every month between start_date and today, plus the last 5 days"""
+              today = datetime.now()
+              
+              date_strings = []
+              current_date = start_date
+              
+              while current_date <= today:
+                  # Get the last day of the current month
+                  _, last_day = calendar.monthrange(current_date.year, current_date.month)
+                  last_date_of_month = datetime(current_date.year, current_date.month, last_day)
+                  
+                  # If the last day of the month is not in the future, add it to the list
+                  if last_date_of_month <= today:
+                      # I need the '/' separator until creating the actual partition in Athena
+                      date_strings.append(last_date_of_month.strftime("%Y/%-m/%-d"))
+                      # date_strings.append(last_date_of_month.strftime("%Y-%-m-%-d"))
+                  
+                  # Move to the first day of the next month
+                  if current_date.month == 12:
+                      current_date = datetime(current_date.year + 1, 1, 1)
+                  else:
+                      current_date = datetime(current_date.year, current_date.month + 1, 1)
+              
+              # Add last 5 days (excluding today if it's already in the list)
+              for i in range(5, 0, -1):
+                  recent_date = today - timedelta(days=i)
+                  # I need the '/' separator until creating the actual partition in Athena
+                  date_str = recent_date.strftime("%Y/%-m/%-d")
+                  # date_str = recent_date.strftime("%Y-%-m-%-d")
+                  if date_str not in date_strings:  # Avoid duplicates
+                      date_strings.append(date_str)
 
-          def backfill(event_bucket_name, event_object_key):
-              object_key_parent = f's3://{event_bucket_name}/{os.path.dirname(event_object_key)}/'
+              return date_strings
 
-              # deciding what is enabled
-              isPartitionConfigSnapshot = (PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED)
-              isPartitionConfigHistory = (PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED)
+          def generate_config_history_date_strings(start_date):
+              """Returns an array of dates from the start_date to today"""
+              today = datetime.now()
+              date_strings = []
+              current_date = start_date
+              
+              while current_date <= today:
+                  # I need the '/' separator until creating the actual partition in Athena
+                  date_strings.append(current_date.strftime("%Y/%-m/%-d"))
+                  # date_strings.append(current_date.strftime("%Y-%-m-%-d"))
+                  current_date += timedelta(days=1)
+              
+              return date_strings
 
-              # process object key
-              match  = re.match(PATTERN, event_object_key)
-              if not match:
-                  print(f'Cannot match {event_object_key} as AWS Config file, skipping.')
-                  return
+
+          def check_s3_prefix(bucket_name, prefix):
+              """
+              Check existence of the given S3 prefix.
+              Each prefix is checked individually since they're all different.
+              """
               if LOGGING_ON:
-                  print('match.groupdict() = ', match.groupdict())
-              
-              accountid = match.groupdict()['account_id']
-              region = match.groupdict()['region']
-              date = '{year}-{month}-{day}'.format(**match.groupdict())
+                  print(f'Checking prefix: {prefix} on bucket: {bucket_name}')
 
-              if 'ConfigSnapshot' in event_object_key:
-                  dataSource = 'ConfigSnapshot'
+              prefix_exists = False
+              try:
+                  response = s3.list_objects_v2(
+                      Bucket=bucket_name,
+                      Prefix=prefix,
+                      MaxKeys=1
+                  )
+                  if 'Contents' in response:
+                      prefix_exists = True
 
-                  # If not enabled, I can return
-                  if not isPartitionConfigSnapshot:
-                      print(f'SKIPPING: {event_object_key} is a ConfigSnapshot. These records are disabled in the function\'s environment variables.')
-                      return
-              elif 'ConfigHistory' in event_object_key:
-                  dataSource = 'ConfigHistory'
-                  # If not enabled, I can return
-                  if not isPartitionConfigHistory:
-                      print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
-                      return
-              else:
-                  # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
-                  print(f'ERROR - Cannot match {event_object_key} as AWS Config file, skipping.')
-                  return
-              
-              drop_partition(accountid, region, date, dataSource)
-              add_partition(accountid, region, date, object_key_parent, dataSource)
+              except ClientError as e:
+                  print(f"An error occurred: {e}")
+                  raise  e # Re-raise the exception after logging   
 
-          # Adds an Athena partition with exponential backoff
-          def add_partition(accountid, region, date, location, dataSource):
-              backoff_retry(
-                  lambda: execute_query(f"""
-                          ALTER TABLE {TABLE_NAME}
-                          ADD PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
-                          LOCATION '{location}'
-                      """)
-              )
+              return prefix_exists
 
-          # Drops an Athena partition with exponential backoff
-          def drop_partition(accountid, region, date, dataSource):
-              backoff_retry(
-                  lambda: execute_query(f"""
-                          ALTER TABLE {TABLE_NAME}
-                          DROP IF EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
-                      """)
-              )
+
+          def backfill(bucket_name, prefix_key, date_array, config_data_source):
+              """For the given prefix will iterate through the date_array, 
+                  generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object"""
+              if LOGGING_ON:
+                  print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name} - datasource: {config_data_source}')
+
+              for dt in date_array:
+                  # prefix_key ends with '/'
+                  object_key_parent = f'{prefix_key}{dt}/{config_data_source}/'
+                  if LOGGING_ON:
+                      print(f'Config history date: {dt} - object_key_parent = {object_key_parent}')
+
+                  # Checks the current prefix exists on S3
+                  if check_s3_prefix(bucket_name, object_key_parent):
+                      # I need to run a regular expression to extract account ID and region
+                      match  = re.match(PATTERN_REGION, prefix_key)
+                      if not match:
+                          # should never get here
+                          print(f'Cannot match {prefix_key} as AWS Config file, skipping.')
+                          continue
+                      if LOGGING_ON:
+                          print('Prefix exists! match.groupdict() = ', match.groupdict())
+                      
+                      accountid = match.groupdict()['account_id']
+                      region = match.groupdict()['region']
+
+                      # when handling Athena partitions, the date separator is "-" not "/"
+                      dt_partition = dt.replace("/", "-")
+                      print(f'Creating partition for item: bucket = {bucket_name}, accountid = {accountid}, region = {region}, dt = {dt_partition}')
+
+                      # Check if partition exists: want both to avoid calling Athena API too much and create the partition only if it's not there already
+                      # There's no need to create a partition on an S3 path that already exist - Athena will find new files in there
+                      if not partition_exists(accountid, dt_partition, region, config_data_source):
+                          # Create the partition if it doesn't exist
+                          object_location = f's3://{bucket_name}/{object_key_parent}'
+                          add_partition_if_not_exists(accountid, region, dt_partition, object_location, config_data_source)
+                          print(f"Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                      else:
+                          print(f"Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}")
+
+                  else:
+                      if LOGGING_ON:
+                          print(f'Prefix does not exist on S3: {object_key_parent} - will not create a partition in Athena')
+
+                  
+          def partition_exists(account_id, dt, region, data_source):
+              """
+              Check if a partition exists using the Glue API
+              """
+              try:
+                  # Define partition values in the same order as defined in the Glue table
+                  # Ensures using "-" as date separator in the partitions
+                  dt_partition = dt.replace("/", "-")
+                  partition_values = [account_id, dt_partition, region, data_source]
+
+                  if LOGGING_ON:
+                      print(f'Checking if partition exists: {partition_values}')
+                  
+                  # Get partition
+                  response = glue_client.get_partition(
+                      DatabaseName=ATHENA_DATABASE_NAME,
+                      TableName=TABLE_NAME,
+                      PartitionValues=partition_values
+                  )
+                  
+                  # If we get here, the partition exists
+                  return True
+              except ClientError as e:
+                  # If the error is EntityNotFoundException, the partition doesn't exist
+                  if e.response['Error']['Code'] == 'EntityNotFoundException':
+                      return False
+                  # For any other error, raise it
+                  raise
+
+          def add_partition_if_not_exists(accountid, region, dt, location, dataSource):
+              # On S3 prefixes I needed "/" as date separator, but in the partitions I need to use "-"
+              dt_partition = dt.replace("/", "-")
+
+              execute_query(f"""
+                  ALTER TABLE {TABLE_NAME}
+                  ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{dt_partition}', region='{region}', dataSource='{dataSource}')
+                  LOCATION '{location}'
+              """)
 
           # Runs an SQL statemetn against Athena
           def execute_query(query):
+              """
+                  Executes an Athena query (to create a partition) with additional logging and troubleshooting
+                  It may happen that multiple objects are added to the bucket at the same time
+                  Every object may need to create an Athena partition, and we need to handle concurrency and limit the impact on Athena API
+              """
               print('Executing query:', query)
-              start_query_response = athena.start_query_execution(
-                  QueryString=query,
-                  QueryExecutionContext={
-                      'Database': ATHENA_DATABASE_NAME
-                  },
-                  ResultConfiguration={
-                      'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
-                  },
-                  WorkGroup=ATHENA_WORKGROUP
-              )
-              print('Query started')
-
-              is_query_running = True
-              while is_query_running:
-                  time.sleep(1)
-                  execution_status = athena.get_query_execution(
-                      QueryExecutionId=start_query_response['QueryExecutionId']
+              try:
+                  start_query_response = athena.start_query_execution(
+                      QueryString=query,
+                      QueryExecutionContext={
+                          'Database': ATHENA_DATABASE_NAME
+                      },
+                      ResultConfiguration={
+                          'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}',
+                      },
+                      WorkGroup=ATHENA_WORKGROUP
                   )
-                  query_state = execution_status['QueryExecution']['Status']['State']
-                  is_query_running = query_state in ('RUNNING', 'QUEUED')
+                  query_execution_id = start_query_response['QueryExecutionId']
+                  print(f'Query started with execution ID: {query_execution_id}')
 
-                  if not is_query_running and query_state != 'SUCCEEDED':
-                      raise AthenaException('Query failed')
-              print('Query completed')
+                  is_query_running = True
+                  while is_query_running:
+                      time.sleep(1)
+                      execution_status = athena.get_query_execution(
+                          QueryExecutionId=query_execution_id
+                      )
+                      query_execution = execution_status['QueryExecution']
+                      query_state = query_execution['Status']['State']
+                      is_query_running = query_state in ('RUNNING', 'QUEUED')
 
-          # Exponential backoff implementation
-          def backoff_retry(func, max_retries=10, base_delay=1, max_delay=120):
-              retries = 0
-              while True:
-                  try:
-                      return func()
-                  except Exception as e:
-                      print(f"Error in backoff retry: {e}")
-                      retries += 1
-                      if retries > max_retries:
-                          raise e
-                      
-                      # Calculate delay with exponential backoff and jitter
-                      delay = min(max_delay, base_delay * (2 ** (retries - 1)))
-                      jitter = random.uniform(0, 0.1 * delay)
-                      total_delay = delay + jitter
-                      
-                      print(f"Retry {retries} after {total_delay:.2f} seconds")
-                      time.sleep(total_delay)
+                      if not is_query_running and query_state != 'SUCCEEDED':
+                          error_reason = query_execution['Status'].get('StateChangeReason', 'No reason provided')
+                          error_details = {
+                              'QueryExecutionId': query_execution_id,
+                              'State': query_state,
+                              'StateChangeReason': error_reason,
+                              'Database': ATHENA_DATABASE_NAME,
+                              'WorkGroup': ATHENA_WORKGROUP,
+                              'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}'
+                          }
+                          print(f'Query failed: {json.dumps(error_details)}')
+                          raise AthenaException(f'Query failed: {error_reason}')
+                  
+                  print(f'Query completed successfully. Execution ID: {query_execution_id}')
+                  return query_execution_id
+              except Exception as e:
+                  print(f'Exception during query execution: {str(e)}')
+                  raise
 
           class AthenaException(Exception):
               ''''This is raised only if the Query is not in state SUCCEEDED'''
               pass
-
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -968,19 +1016,14 @@ Resources:
     Properties:
       ManagedPolicyName: "crcd-backfill-s3-configfile-policy"
       Path: "/"
-      Description: "CRCD Dashboard - Policy that allows CRCD backfill Lambda to read objects from the Config S3 bucket"
+      Description: "CRCD Dashboard - Policy that allows CRCD backfill Lambda to read prefixes from the Config S3 bucket"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
         - Resource:
           - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
-          - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/*"
           Action:
-          - "s3:GetObject"
           - "s3:ListBucket"
-          - "s3:ListBucketVersions"
-          - "s3:GetObjectVersion"
-          - "s3:GetLifecycleConfiguration"
           Effect: "Allow"
           Sid: "S3ConfigFileObject"
     Metadata:
@@ -991,6 +1034,10 @@ Resources:
 
 
 Outputs:
+  BackfillLambdaARN:
+    Description: "ARN of the Lambda function that will run the backfill of AWS Config"
+    Value: !GetAtt LambdaBackfillProducerFunction.Arn
+
   SQSBackfillQueueArn:
     Description: ARN of the SQS Queue
-    Value: !Ref SQSBackfillingQueue
+    Value: !GetAtt SQSBackfillingQueue.Arn

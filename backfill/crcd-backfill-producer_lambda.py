@@ -19,9 +19,6 @@ ORGANIZATION_ID = os.environ["ORGANIZATION_ID"]
 # SQS and S3 client
 sqs = boto3.client('sqs')
 s3 = boto3.client('s3')
-  
-# Define the batch size of the objects read from S3
-batch_size = 500 # was: 500
 
 LOGGING_ON = False  # enables additional logging to CloudWatch
 
@@ -102,6 +99,9 @@ def lambda_handler(event, context):
                         else:
                             # the folders checked above are always excluded
                             if LOGGING_ON: print(f'Excluding prefix: {prefix_path}')
+        
+        print(f'Found {len(all_prefixes)} prefixes')
+
         return {
             'statusCode': 200,
             'body': {
