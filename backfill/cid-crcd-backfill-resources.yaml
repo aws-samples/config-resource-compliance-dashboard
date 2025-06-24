@@ -490,12 +490,14 @@ Resources:
         Variables:
           BUCKET_NAME_VAR: !Ref DashboardBucketName
           SQS_QUEUE_URL_VAR: !Ref SQSBackfillingQueue
-
           # Must have all the variables of the standard partitioner
           ATHENA_DATABASE_NAME: !Ref AthenaDatabaseName
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucketName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
-          CONFIG_TABLE_NAME: !Ref AthenaTableName
+          CRCD_TABLE_NAME: !Ref AthenaTableName
+          # Reommended values for the lookback period of Config records
+          CONFIG_HISTORY_TIME_LIMIT_MONTHS: 12
+          CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS: 6
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
           # By default: both ConfigSnapshot and ConfigHistory are enabled 
           # Pass 0 to skip the record
@@ -524,7 +526,7 @@ Resources:
           # The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): 
           #   ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
           # This function will create full AWS Config prefixes adding the 'YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/) part until a configurable time in the past.
-          # Then it will check if that prefix exists on the S3 Log Archive bucket, in which case the Athena partition will be created (if not existing).
+          # Then it will check if that prefix exists on the S3 Dashboard bucket, in which case the Athena partition will be created (if not existing).
 
           # Valid prefixes
           # 1. all Config history records
@@ -542,7 +544,7 @@ Resources:
           import boto3
           from botocore.exceptions import ClientError
 
-          TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
+          CRCD_TABLE_NAME = os.environ["CRCD_TABLE_NAME"]
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
           ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
           ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
@@ -553,12 +555,14 @@ Resources:
           # Pass 1 to partition the record
           PARTITION_ENABLED = '1'
           PARTITION_DISABLED = '0'
-          PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
-          PARTITION_CONFIG_HISTORY_RECORDS = os.environ['PARTITION_CONFIG_HISTORY_RECORDS']
+          PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ["PARTITION_CONFIG_SNAPSHOT_RECORDS"]
+          PARTITION_CONFIG_HISTORY_RECORDS = os.environ["PARTITION_CONFIG_HISTORY_RECORDS"]
 
           # How much in the past we want to scan (months)
-          CONFIG_HISTORY_TIME_LIMIT_MONTHS = 12
-          CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = 6
+          env_parameter = os.environ.get("CONFIG_HISTORY_TIME_LIMIT_MONTHS", "12")
+          CONFIG_HISTORY_TIME_LIMIT_MONTHS = int(env_parameter.strip()) if env_parameter.isdigit() else 12
+          env_parameter = os.environ.get("CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS", "6")
+          CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = int(env_parameter.strip()) if env_parameter.isdigit() else 6
 
           DATA_SOURCE_CONFIG_HISTORY = 'ConfigHistory'
           DATA_SOURCE_CONFIG_SNAPSHOT = 'ConfigSnapshot'
@@ -786,7 +790,7 @@ Resources:
                   # Get partition
                   response = glue_client.get_partition(
                       DatabaseName=ATHENA_DATABASE_NAME,
-                      TableName=TABLE_NAME,
+                      TableName=CRCD_TABLE_NAME,
                       PartitionValues=partition_values
                   )
                   
@@ -804,7 +808,7 @@ Resources:
               dt_partition = dt.replace("/", "-")
 
               execute_query(f"""
-                  ALTER TABLE {TABLE_NAME}
+                  ALTER TABLE {CRCD_TABLE_NAME}
                   ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{dt_partition}', region='{region}', dataSource='{dataSource}')
                   LOCATION '{location}'
               """)
@@ -863,6 +867,7 @@ Resources:
           class AthenaException(Exception):
               ''''This is raised only if the Query is not in state SUCCEEDED'''
               pass
+
     Metadata:
       cfn_nag:
         rules_to_suppress:

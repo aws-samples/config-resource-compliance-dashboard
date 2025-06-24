@@ -3,7 +3,7 @@
 # The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): 
 #   ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
 # This function will create full AWS Config prefixes adding the 'YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/) part until a configurable time in the past.
-# Then it will check if that prefix exists on the S3 Log Archive bucket, in which case the Athena partition will be created (if not existing).
+# Then it will check if that prefix exists on the S3 Dashboard bucket, in which case the Athena partition will be created (if not existing).
 
 # Valid prefixes
 # 1. all Config history records
@@ -21,7 +21,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-TABLE_NAME = os.environ.get("CONFIG_TABLE_NAME")
+CRCD_TABLE_NAME = os.environ["CRCD_TABLE_NAME"]
 ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
 ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
@@ -32,12 +32,14 @@ LOGGING_ON = False  # enables additional logging to CloudWatch
 # Pass 1 to partition the record
 PARTITION_ENABLED = '1'
 PARTITION_DISABLED = '0'
-PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
-PARTITION_CONFIG_HISTORY_RECORDS = os.environ['PARTITION_CONFIG_HISTORY_RECORDS']
+PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ["PARTITION_CONFIG_SNAPSHOT_RECORDS"]
+PARTITION_CONFIG_HISTORY_RECORDS = os.environ["PARTITION_CONFIG_HISTORY_RECORDS"]
 
 # How much in the past we want to scan (months)
-CONFIG_HISTORY_TIME_LIMIT_MONTHS = 12
-CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = 6
+env_parameter = os.environ.get("CONFIG_HISTORY_TIME_LIMIT_MONTHS", "12")
+CONFIG_HISTORY_TIME_LIMIT_MONTHS = int(env_parameter.strip()) if env_parameter.isdigit() else 12
+env_parameter = os.environ.get("CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS", "6")
+CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS = int(env_parameter.strip()) if env_parameter.isdigit() else 6
 
 DATA_SOURCE_CONFIG_HISTORY = 'ConfigHistory'
 DATA_SOURCE_CONFIG_SNAPSHOT = 'ConfigSnapshot'
@@ -98,6 +100,7 @@ def lambda_handler(event, context):
                 print(f'Config history date: {dt}')
 
     # Now iterates through the prefixes received by SQS
+    added_prefixes = set() # Collects new prefixes here
     for rec in event['Records']:
         print(f'CRCD Backfill ITERATION---START--------------------------------------------------')
         event_body = rec['body']
@@ -114,15 +117,21 @@ def lambda_handler(event, context):
 
         # Backfill ConfigSnapshot records
         if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
-            backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
+            prefixes = backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
+            for p in prefixes:
+                added_prefixes.add(p)
 
         # Backfill ConfigHistory records
         if PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED:
-            backfill(event_bucket_name, event_object_key, config_history_dates, DATA_SOURCE_CONFIG_HISTORY)
+            prefixes = backfill(event_bucket_name, event_object_key, config_history_dates, DATA_SOURCE_CONFIG_HISTORY)            
+            for p in prefixes:
+                added_prefixes.add(p)
 
         print(f'CRCD Backfill ITERATION---END--------------------------------------------------')
 
-    print(f'CRCD Backfill Worker DONE')
+    print(f'CRCD Backfill Worker DONE - added {len(added_prefixes)} prefixes.')
+    for prefix in added_prefixes:
+        print(f'Added prefix: {prefix}')
 
     return {
         'statusCode': 200,
@@ -205,8 +214,13 @@ def check_s3_prefix(bucket_name, prefix):
 
 
 def backfill(bucket_name, prefix_key, date_array, config_data_source):
-    """For the given prefix will iterate through the date_array, 
-        generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object"""
+    """
+    For the given prefix will iterate through the date_array, 
+    generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object
+    """
+    # tracking
+    added_prefixes = set()
+    
     if LOGGING_ON:
         print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name} - datasource: {config_data_source}')
 
@@ -240,13 +254,16 @@ def backfill(bucket_name, prefix_key, date_array, config_data_source):
                 # Create the partition if it doesn't exist
                 object_location = f's3://{bucket_name}/{object_key_parent}'
                 add_partition_if_not_exists(accountid, region, dt_partition, object_location, config_data_source)
-                print(f"Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                added_prefixes.add(f'{object_key_parent}')
+                print(f'Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}')
             else:
-                print(f"Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                print(f'Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}')
 
         else:
             if LOGGING_ON:
                 print(f'Prefix does not exist on S3: {object_key_parent} - will not create a partition in Athena')
+    
+    return added_prefixes
 
         
 def partition_exists(account_id, dt, region, data_source):
@@ -265,7 +282,7 @@ def partition_exists(account_id, dt, region, data_source):
         # Get partition
         response = glue_client.get_partition(
             DatabaseName=ATHENA_DATABASE_NAME,
-            TableName=TABLE_NAME,
+            TableName=CRCD_TABLE_NAME,
             PartitionValues=partition_values
         )
         
@@ -283,7 +300,7 @@ def add_partition_if_not_exists(accountid, region, dt, location, dataSource):
     dt_partition = dt.replace("/", "-")
 
     execute_query(f"""
-        ALTER TABLE {TABLE_NAME}
+        ALTER TABLE {CRCD_TABLE_NAME}
         ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{dt_partition}', region='{region}', dataSource='{dataSource}')
         LOCATION '{location}'
     """)
