@@ -623,6 +623,7 @@ Resources:
                           print(f'Config history date: {dt}')
 
               # Now iterates through the prefixes received by SQS
+              added_prefixes = set() # Collects new prefixes here
               for rec in event['Records']:
                   print(f'CRCD Backfill ITERATION---START--------------------------------------------------')
                   event_body = rec['body']
@@ -639,15 +640,21 @@ Resources:
 
                   # Backfill ConfigSnapshot records
                   if PARTITION_CONFIG_SNAPSHOT_RECORDS == PARTITION_ENABLED:
-                      backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
+                      prefixes = backfill(event_bucket_name, event_object_key, config_snapshot_dates, DATA_SOURCE_CONFIG_SNAPSHOT)
+                      for p in prefixes:
+                          added_prefixes.add(p)
 
                   # Backfill ConfigHistory records
                   if PARTITION_CONFIG_HISTORY_RECORDS == PARTITION_ENABLED:
-                      backfill(event_bucket_name, event_object_key, config_history_dates, DATA_SOURCE_CONFIG_HISTORY)
+                      prefixes = backfill(event_bucket_name, event_object_key, config_history_dates, DATA_SOURCE_CONFIG_HISTORY)            
+                      for p in prefixes:
+                          added_prefixes.add(p)
 
                   print(f'CRCD Backfill ITERATION---END--------------------------------------------------')
 
-              print(f'CRCD Backfill Worker DONE')
+              print(f'CRCD Backfill Worker DONE - added {len(added_prefixes)} prefixes, listed below:')
+              for prefix in added_prefixes:
+                  print(f'{prefix}')
 
               return {
                   'statusCode': 200,
@@ -730,8 +737,13 @@ Resources:
 
 
           def backfill(bucket_name, prefix_key, date_array, config_data_source):
-              """For the given prefix will iterate through the date_array, 
-                  generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object"""
+              """
+              For the given prefix will iterate through the date_array, 
+              generates S3 prefixes and create Athena partitions if the prefix is an actual S3 object
+              """
+              # tracking
+              added_prefixes = set()
+              
               if LOGGING_ON:
                   print(f'Backfilling prefix: {prefix_key} on bucket: {bucket_name} - datasource: {config_data_source}')
 
@@ -765,13 +777,16 @@ Resources:
                           # Create the partition if it doesn't exist
                           object_location = f's3://{bucket_name}/{object_key_parent}'
                           add_partition_if_not_exists(accountid, region, dt_partition, object_location, config_data_source)
-                          print(f"Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                          added_prefixes.add(f'{object_key_parent}')
+                          print(f'Partition created for {accountid}, {dt_partition}, {region}, {config_data_source}')
                       else:
-                          print(f"Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}")
+                          print(f'Partition already exists for {accountid}, {dt_partition}, {region}, {config_data_source}')
 
                   else:
                       if LOGGING_ON:
                           print(f'Prefix does not exist on S3: {object_key_parent} - will not create a partition in Athena')
+              
+              return added_prefixes
 
                   
           def partition_exists(account_id, dt, region, data_source):
@@ -867,6 +882,7 @@ Resources:
           class AthenaException(Exception):
               ''''This is raised only if the Query is not in state SUCCEEDED'''
               pass
+
 
     Metadata:
       cfn_nag:
@@ -1039,10 +1055,14 @@ Resources:
 
 
 Outputs:
-  BackfillLambdaARN:
-    Description: "ARN of the Lambda function that will run the backfill of AWS Config"
+  BackfillProducerLambdaARN:
+    Description: "ARN of the Lambda function that will kick off the backfill of AWS Config data"
     Value: !GetAtt LambdaBackfillProducerFunction.Arn
+  
+  BackfillWorkerLambdaARN:
+    Description: "ARN of the Lambda backfill worker function"
+    Value: !GetAtt LambdaBackfillWorkerFunction.Arn
 
   SQSBackfillQueueArn:
-    Description: ARN of the SQS Queue
+    Description: "ARN of the backfill SQS Queue"
     Value: !GetAtt SQSBackfillingQueue.Arn

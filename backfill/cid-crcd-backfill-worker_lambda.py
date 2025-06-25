@@ -129,9 +129,9 @@ def lambda_handler(event, context):
 
         print(f'CRCD Backfill ITERATION---END--------------------------------------------------')
 
-    print(f'CRCD Backfill Worker DONE - added {len(added_prefixes)} prefixes.')
+    print(f'CRCD Backfill Worker DONE - added {len(added_prefixes)} prefixes, listed below:')
     for prefix in added_prefixes:
-        print(f'Added prefix: {prefix}')
+        print(f'{prefix}')
 
     return {
         'statusCode': 200,
