@@ -14,7 +14,7 @@ Metadata:
         Parameters:
           # TODO ask for the LogArchive account id and validate it is THE CURRENT account - LogArchiveAccountId
           - LogArchiveBucketName
-          # TODO support KMS encrypted log archive bucket - LogArchiveBucketKmsKeyArn
+          # TODO support KMS encrypted log archive bucket, see if additional permissions are needed at all - LogArchiveBucketKmsKeyArn
       -
         Label:
           # TODO remove default: "Dashboard bucket - destination bucket of the pre-processing job and source of data for the dashboard" 
@@ -505,7 +505,7 @@ Resources:
                   - "s3:PutObject"
                 Resource:
                   # TODO check it works 
-                  - !Ref DashboardBucket
+                  - !GetAtt DashboardBucket.Arn
                   - !Sub '${DashboardBucket.Arn}/*'
                   # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
                   # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}/*"
