@@ -1,5 +1,5 @@
 # CRCD
-# This Lambda is configured for being triggered by Config on resource change
+# This Lambda is configured for being triggered by Config for perioding evaluation (tentatively both that and at resource change)
 
 # This Lambda function is an AWS Config custom rule that enforces IAM security by detecting users with programmatic access keys.
 # Security purpose:
@@ -35,8 +35,6 @@ def lambda_handler(event, context):
     check_defined(event, 'event')
     logger.debug('CRCD-CIRT: Received event: ' + json.dumps(event))
 
-
-    # Parse invokingEvent to get configuration item
     invoking_event = json.loads(event['invokingEvent'])
     logger.info('CRCD-CIRT: Received invoking event: ' + json.dumps(invoking_event))
 
@@ -44,26 +42,59 @@ def lambda_handler(event, context):
     if 'ruleParameters' in event:
         rule_parameters = json.loads(event['ruleParameters'])
 
-    compliance_value = 'NOT_APPLICABLE'
     AWS_CONFIG_CLIENT = get_client('config', event)
-
-    configuration_item = get_configuration_item(invoking_event)
-    logger.debug('CRCD-CIRT: Received configuration item: ' + json.dumps(configuration_item))
     
-    if is_applicable(configuration_item, event):
-        compliance_value = evaluate_change_notification_compliance(
-                configuration_item, rule_parameters, event)
+    # Handle periodic evaluation
+    if invoking_event['messageType'] == 'ScheduledNotification':
+        evaluate_periodic_compliance(rule_parameters, event)
+    else:
+        # Handle configuration change notification
+        configuration_item = get_configuration_item(invoking_event)
+        logger.debug('CRCD-CIRT: Received configuration item: ' + json.dumps(configuration_item))
+        
+        compliance_value = 'NOT_APPLICABLE'
+        if is_applicable(configuration_item, event):
+            compliance_value = evaluate_change_notification_compliance(
+                    configuration_item, rule_parameters, event)
 
-    response = AWS_CONFIG_CLIENT.put_evaluations(
-       Evaluations=[
-           {
-               'ComplianceResourceType': invoking_event['configurationItem']['resourceType'],
-               'ComplianceResourceId': invoking_event['configurationItem']['resourceId'],
-               'ComplianceType': compliance_value,
-               'OrderingTimestamp': invoking_event['configurationItem']['configurationItemCaptureTime']
-           },
-       ],
-       ResultToken=event['resultToken'])
+        AWS_CONFIG_CLIENT.put_evaluations(
+           Evaluations=[
+               {
+                   'ComplianceResourceType': invoking_event['configurationItem']['resourceType'],
+                   'ComplianceResourceId': invoking_event['configurationItem']['resourceId'],
+                   'ComplianceType': compliance_value,
+                   'OrderingTimestamp': invoking_event['configurationItem']['configurationItemCaptureTime']
+               },
+           ],
+           ResultToken=event['resultToken'])
+
+def evaluate_periodic_compliance(rule_parameters, event):
+    """Evaluate all IAM users in the account during periodic evaluation"""
+    iam_client = get_client('iam', event)
+    evaluations = []
+    
+    try:
+        paginator = iam_client.get_paginator('list_users')
+        for page in paginator.paginate():
+            for user in page['Users']:
+                user_name = user['UserName']
+                logger.info('CRCD-CIRT: periodic compliance, checking IAM user ' + user_name)
+                compliance_type = evaluate_user_compliance(user_name, iam_client)
+                
+                evaluations.append({
+                    'ComplianceResourceType': 'AWS::IAM::User',
+                    'ComplianceResourceId': user_name, # user['Arn'], TODO remove
+                    'ComplianceType': compliance_type,
+                    'OrderingTimestamp': datetime.datetime.utcnow()
+                })
+    except Exception as e:
+        logger.error(f'CRCD-CIRT: Error during periodic evaluation: {str(e)}')
+    
+    if evaluations:
+        AWS_CONFIG_CLIENT.put_evaluations(
+            Evaluations=evaluations,
+            ResultToken=event['resultToken']
+        )
 
 def evaluate_change_notification_compliance(configuration_item, rule_parameters, event):
     """
@@ -77,28 +108,31 @@ def evaluate_change_notification_compliance(configuration_item, rule_parameters,
 
     resource_type = configuration_item['resourceType']
     
-    # Check IAM users for access key compliance - COMPLIANT if no access keys or access key is disabled, NON_COMPLIANT if active access keys exist
+    # Check IAM users for access key compliance
     if resource_type == 'AWS::IAM::User':
         iam_client = get_client('iam', event)
-
         user_name = configuration_item['resourceName']
-        logger.info('CRCD-CIRT: checking IAM user ' + user_name)
-        
-        try:
-            response = iam_client.list_access_keys(UserName=user_name)
-            access_keys = response.get('AccessKeyMetadata', [])
-            
-            # Check for active access keys only
-            active_keys = [key for key in access_keys if key['Status'] == 'Active']
-            logger.info('CRCD-CIRT: Access keys found: ' + str(len(access_keys)) + ', Active keys: ' + str(len(active_keys)))
-            
-            if active_keys:
-                return 'NON_COMPLIANT'
-            return 'COMPLIANT'
-        except Exception:
-            return 'NOT_APPLICABLE'
+        return evaluate_user_compliance(user_name, iam_client)
     
     return 'NOT_APPLICABLE'
+
+def evaluate_user_compliance(user_name, iam_client):
+    """Evaluate a single IAM user's compliance"""
+    logger.info('CRCD-CIRT: checking IAM user ' + user_name)
+    
+    try:
+        response = iam_client.list_access_keys(UserName=user_name)
+        access_keys = response.get('AccessKeyMetadata', [])
+        
+        # Check for active access keys only
+        active_keys = [key for key in access_keys if key['Status'] == 'Active']
+        logger.info('CRCD-CIRT: Access keys found: ' + str(len(access_keys)) + ', Active keys: ' + str(len(active_keys)))
+        
+        if active_keys:
+            return 'NON_COMPLIANT'
+        return 'COMPLIANT'
+    except Exception:
+        return 'NOT_APPLICABLE'
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
