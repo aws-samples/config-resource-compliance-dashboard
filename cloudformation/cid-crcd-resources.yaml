@@ -1152,22 +1152,26 @@ Resources:
       DatabaseName: !Ref GlueDatabase
       TableInput:
         Name: !Ref AthenaTableName
+        Description: "CRCD Dashboard - Athena Table for AWS Config records"
         TableType: EXTERNAL_TABLE
         StorageDescriptor:
           Columns:
             - Name: fileversion
               Type: string
+              Comment: ""
             - Name: configsnapshotid
               Type: string
+              Comment: ""
             - Name: configurationitems
               Type: array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>>
+              Comment: ""
           Location: !Sub 's3://${DashboardBucketName}/'
           InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
           OutputFormat: 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
           SerdeInfo:
             SerializationLibrary: 'org.openx.data.jsonserde.JsonSerDe'
             Parameters:
-              case.insensitive: 'false'
+              case.insensitive: 'true'
               mapping.arn: 'ARN'
               mapping.availabilityzone: 'availabilityZone'
               mapping.awsaccountid: 'awsAccountId'
@@ -1184,17 +1188,20 @@ Resources:
               mapping.resourcename: 'resourceName'
               mapping.resourcetype: 'resourceType'
               mapping.supplementaryconfiguration: 'supplementaryConfiguration'
-          Compressed: false
-          NumberOfBuckets: -1
+          Compressed: true # S3 has json.gz files
         PartitionKeys:
           - Name: accountid
             Type: string
+            Comment: ""
           - Name: dt
             Type: string
+            Comment: ""
           - Name: region
             Type: string
+            Comment: ""
           - Name: dataSource
             Type: string
+            Comment: "Config Snapshot or History record"
 
   # Allows the S3 bucket that contains the Config files to invoke the lambda function
   # not needed if the S3 bucket does not send object notifications directly to lambda
