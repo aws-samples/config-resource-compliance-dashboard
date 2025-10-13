@@ -1,7 +1,24 @@
 
+# [4.0.0] - 
+## Added
+- Account names
+- **Cost Contributors** tab, to find the contributors to AWS Config cost, for example the most evaluated rules, or most changing resources.
+- Tooltip text everywhere have meaningful field names.
 
-see work log for more
+## Changed
+- Lambda partitioner function: reduced the number of Amazon Athena API calls by checking if a partition exists already before creating it.
+- **Configuration Items** tab renamed to **Resource Inventory**
+- **Resource Inventory** tab, icons of AWS services and count of total resources currently in the list (after filters are applied)
+- **Resource Inventory** tab, graphs showing the distribution of EC2 instances across Availability Zones
+- **Resource Inventory** tab, removed **Last Modified** column from Lambda inventory. Resource events are accessible on **Configuration Items Events** tab.
+- **Resource Inventory** tab, added filters on Lambda (runtime) and RDS (engine, engine version certificate authority)
+- **Tag Compliance** tab moved as second tab from the left. All visuals now include all AWS Config rules whose name starts with `required-tags`, `required-tag`, `requiredtags` or `requiredtag`. The filtering is also case insensitive.
+- Athena table is now case-insensitive in the `case.insensitive` property in the SerDe (Serializer/Deserializer) configuration. This configuration specifically affects how field names in the JSON data are matched to column names in the Athena table. With this new configuration, case is ignored when matching JSON field names to the expected column names
+- When deploying AWS Config rules and conformance packs across an organization, you may notice that the names often have random postfixes added to them. This is actually by design and serves several important purposes within the AWS infrastructure.
+The dashboard removes that part on all graph so that all rule names can be correlated. For example, `my-rule-[random-text]` is displayed as `my-rule`. When AWS Config rules and conformance packs are listed on tables, both the normalized and the original name are reported, so that you have a full reference to the ruls or conformance pack if you download the data of the table.
 
+
+## Fixed
 
 
 # [3.0.0] - 2025-03-27
