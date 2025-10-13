@@ -887,18 +887,21 @@ Resources:
           import boto3
           from urllib.parse import unquote
           from botocore.exceptions import ClientError
-          import gzip
+          import logging
 
-          # Reading environment parameters, all are required and will raise a KeyError if the environment variable doesn't exist
+          # Configure the logger
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)  # Set the minimum logging level to INFO in Production
+
           CRCD_TABLE_NAME = os.environ["CRCD_TABLE_NAME"]
           ATHENA_DATABASE_NAME = os.environ["ATHENA_DATABASE_NAME"]
           ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
           ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
-          LOGGING_ON = False  # enables additional logging to CloudWatch
+
 
           # Partitioning of ConfigSnapshot and ConfigHistory records is enabled from parameters
           # Pass 0 to skip the record
-          # Pass 1 to partition the record (recommended)
+          # Pass 1 to partition the record
           PARTITION_ENABLED = '1'
           PARTITION_DISABLED = '0'
           PARTITION_CONFIG_SNAPSHOT_RECORDS = os.environ['PARTITION_CONFIG_SNAPSHOT_RECORDS']
@@ -924,7 +927,7 @@ Resources:
               pass
 
           def lambda_handler(event, context):
-              if LOGGING_ON: print('This is the event', event)
+              logger.debug(f'CRCD Partitioner - event: {event}')
 
               event_object_key = None
               event_bucket_name = None
@@ -939,55 +942,55 @@ Resources:
               try:
                   event_object_key = event['Records'][0]['s3']['object']['key']
                   event_bucket_name = event['Records'][0]['s3']['bucket']['name']
-                  if LOGGING_ON: print('This is an S3 event')
+                  logger.debug('This is an S3 event')
                   found_event = True
               except KeyError:
                   # key doesn't exist
-                  if LOGGING_ON: print('This is not an S3 event, trying SNS')
+                  logger.warning('This is not an S3 event, trying SNS.')
                   pass
 
               if not found_event:
                   # Is this called via SNS topic?
                   try:
                       message = json.loads(event['Records'][0]['Sns']['Message'])
-                      if LOGGING_ON: print('This is an SNS event, and this is the message', message)
+                      logger.debug(f'This is an SNS event, and this is the message: {message}')
                       event_bucket_name = message['Records'][0]['s3']['bucket']['name']
                       event_object_key = message['Records'][0]['s3']['object']['key']
                   except KeyError:
                       # key doesn't exist
-                      print('This is not an SNS event either!!')
+                      logger.error('This is not an SNS event either!! Exiting.')
                       # at this point I cannot continue
                       return {
                           'statusCode': 200,
                           'body': 'Function was called with an unsupported event type.'
                       }
 
-              if LOGGING_ON:
-                  print('This is the object key', event_object_key)
-                  print('This is the bucket', event_bucket_name)
-
+              logger.debug(f'This is the object key: {event_object_key}')
+              logger.debug(f'This is the bucket: {event_bucket_name}')
               object_key_parent = f's3://{event_bucket_name}/{os.path.dirname(event_object_key)}/'
 
               # process object key
               match  = re.match(PATTERN, event_object_key)
               if not match:
-                  print(f'SKIPPING: Cannot match {event_object_key} as AWS Config file, skipping.')
+                  logger.info(f'SKIPPING: Cannot match {event_object_key} as AWS Config file, skipping.')
                   return {
                       'statusCode': 200,
                       'body': 'Object key is not supported, this is not an AWS Config file.'
                   }
-              if LOGGING_ON:
-                  print('match.groupdict() = ', match.groupdict())
+              
+              logger.debug(f'match.groupdict() = {match.groupdict()}')
                   
               accountid = match.groupdict()['account_id']
               region = match.groupdict()['region']
               date = '{year}-{month}-{day}'.format(**match.groupdict())
+              table = CRCD_TABLE_NAME # Athena table for Config History and Snapshot records
+
               if 'ConfigSnapshot' in event_object_key:
                   dataSource = 'ConfigSnapshot'
 
                   # If not enabled, I can return
                   if not isPartitionConfigSnapshot:
-                      print(f'SKIPPING: {event_object_key} is a ConfigSnapshot. These records are disabled in the function\'s environment variables.')
+                      logger.info(f'SKIPPING: {event_object_key} is a ConfigSnapshot. These records are disabled in the function\'s environment variables.')
                       return {
                           'statusCode': 200,
                           'body': 'ConfigSnapshot files are disabled in the function\'s environment variables.'
@@ -996,36 +999,39 @@ Resources:
                   dataSource = 'ConfigHistory'
                   # If not enabled, I can return
                   if not isPartitionConfigHistory:
-                      print(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
+                      logger.info(f'SKIPPING: {event_object_key} is a ConfigHistory. These records are disabled in the function\'s environment variables.')
                       return {
                           'statusCode': 200,
                           'body': 'ConfigHistory files are disabled in the function\'s environment variables.'
                       }
               else:
-                  # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checks
-                  print(f'ERROR: {event_object_key} is neither ConfigSnapshot nor ConfigHistory')
+                  # I can never get here, if the string passed the regex where ConfigSnapshot and ConfigHistory are checked
+                  logger.error(f'ERROR: {event_object_key} is neither ConfigSnapshot nor ConfigHistory')
                   return {
                       'statusCode': 200,
                       'body': 'Object key is not supported, this is not an AWS Config file.'
                   }
 
+              logger.info(f'Working on Athena table {table}')
+
               # Considering the use case where many objects are added to the same s3 path at the same time
               # Check if partition exists: need both to avoid calling Athena API too much and create the partition only if it's not there
               # There's no need to create a partition on an S3 path that already exist - Athena will find new files in there
-              if not partition_exists(accountid, date, region, dataSource):
+              if not partition_exists(table, accountid, date, region, dataSource):
                   # Create the partition if it doesn't exist
                   # I just checked, but another Lambda running on another S3 object may come in between
-                  add_partition_if_not_exists(accountid, region, date, object_key_parent, dataSource)
-                  print(f"Partition created for {accountid}, {date}, {region}, {dataSource}")
+                  add_partition_if_not_exists(table, accountid, region, date, object_key_parent, dataSource)
+                  logger.info(f"Partition created for {accountid}, {date}, {region}, {dataSource}")
               else:
-                  print(f"Partition already exists for {accountid}, {date}, {region}, {dataSource}")
+                  logger.info(f"Partition already exists for {accountid}, {date}, {region}, {dataSource}")
 
               return {
                       'statusCode': 200,
                       'body': 'Partition available for {accountid}, {date}, {region}, {dataSource}.'
                   }
 
-          def partition_exists(account_id, dt, region, data_source):
+
+          def partition_exists(table, account_id, dt, region, data_source):
               """
               Check if a partition exists using the Glue API
               """
@@ -1036,7 +1042,7 @@ Resources:
                   # Get partition
                   response = glue_client.get_partition(
                       DatabaseName=ATHENA_DATABASE_NAME,
-                      TableName=CRCD_TABLE_NAME,
+                      TableName=table,
                       PartitionValues=partition_values
                   )
                   
@@ -1049,9 +1055,9 @@ Resources:
                   # For any other error, raise it
                   raise
 
-          def add_partition_if_not_exists(accountid, region, date, location, dataSource):
+          def add_partition_if_not_exists(table, accountid, region, date, location, dataSource):
               execute_query(f"""
-                  ALTER TABLE {CRCD_TABLE_NAME}
+                  ALTER TABLE {table}
                   ADD IF NOT EXISTS PARTITION (accountid='{accountid}', dt='{date}', region='{region}', dataSource='{dataSource}')
                   LOCATION '{location}'
               """)
@@ -1062,7 +1068,7 @@ Resources:
                   It may happen that multiple objects are added to the bucket at the same time
                   Every object may need to create an Athena partition, and we need to handle concurrency and limit the impact on Athena API
               """
-              print('Executing query:', query)
+              logger.info(f'Executing query: {query}')
               try:
                   start_query_response = athena.start_query_execution(
                       QueryString=query,
@@ -1075,7 +1081,7 @@ Resources:
                       WorkGroup=ATHENA_WORKGROUP
                   )
                   query_execution_id = start_query_response['QueryExecutionId']
-                  print(f'Query started with execution ID: {query_execution_id}')
+                  logger.info(f'Query started with execution ID: {query_execution_id}')
 
                   is_query_running = True
                   while is_query_running:
@@ -1097,13 +1103,13 @@ Resources:
                               'WorkGroup': ATHENA_WORKGROUP,
                               'OutputLocation': f's3://{ATHENA_QUERY_RESULTS_BUCKET_NAME}'
                           }
-                          print(f'Query failed: {json.dumps(error_details)}')
+                          logger.error(f'Query failed: {json.dumps(error_details)}')
                           raise AthenaException(f'Query failed: {error_reason}')
                   
-                  print(f'Query completed successfully. Execution ID: {query_execution_id}')
+                  logger.info(f'Query completed successfully. Execution ID: {query_execution_id}')
                   return query_execution_id
               except Exception as e:
-                  print(f'Exception during query execution: {str(e)}')
+                  logger.error(f'Exception during query execution: {str(e)}')
                   raise
 
     Metadata:
@@ -1910,6 +1916,7 @@ Resources:
             Action:
               - "glue:UpdateTable"
               - "glue:CreateTable"
+              - "glue:DeleteTable"
             Effect: "Allow"
             Sid: "AddSystemView"
     Metadata:
@@ -1936,6 +1943,7 @@ Resources:
     # Must be sure the Glue table and Athena database are there when this function creates a view
     DependsOn:
       - GlueTable
+      - AthenaWorkgroup
     Properties:
       FunctionName: "crcd-support-configure-account-names"
       Description: "CRCD Dashboard - Configures a system view that contains account names (one-time execution)"
@@ -1978,15 +1986,20 @@ Resources:
           import os
           import boto3
           import time
+          import logging
 
-          LOGGING_ON = False  # enables additional logging to CloudWatch
+          # Configure the logger
+          # This lambda is run once
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
 
           class AthenaException(Exception):
               ''''This is raised in case of Exception while running queries on Athena or Glue'''
               pass
 
           def lambda_handler(event, context):
-              print("Request received:\n", json.dumps(event))
+              logger.info(f"Request received:\n{json.dumps(event)}")
 
               organization_table_exists = False
               account_map_exists = False 
@@ -2008,14 +2021,36 @@ Resources:
 
 
               if event['RequestType'] == 'Delete':
-                  # TODO remove view CRCD_ACCOUNT_NAMES_VIEW_NAME
-                  send_response(event, context, 'SUCCESS', {})
+                  # remove view CRCD_ACCOUNT_NAMES_VIEW_NAME
+                  delete_view_query = f"""
+                  DROP VIEW IF EXISTS {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME}
+                  """
+
+                  logger.info(f"Deleting view with SQL: {delete_view_query}")
+
+                  try:
+                      # Execute the view creation query    
+                      success = execute_athena_query(athena, delete_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+                      if success:
+                          logger.info(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} deleted successfully.")
+                          # Send a successful response back to CloudFormation
+                          send_response(event, context, 'SUCCESS', {})
+                      else:
+                          logger.error(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} was not deleted successfully.")
+                          send_response(event, context, 'FAILED', {'Error': 'Athena query was not successful: cloud not delete view.'})
+                  except AthenaException as ae:
+                      # Send a failed response back to CloudFormation
+                      logger.error(f'Exception during query execution: {str(ae)}')
+                      send_response(event, context, 'FAILED', {'Error': str(ae)})
+                  except Exception as e:
+                      # Send a failed response back to CloudFormation
+                      logger.error(f'Exception during function execution: {str(e)}')
+                      send_response(event, context, 'FAILED', {'Error': str(e)})
 
               else:
                   try:
                       # Check which tables exist
-                      # TODO due to a bug organization_data does not work for the moment - make account map first choice?
-                      if False and check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+                      if check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
                           organization_table_exists = True
                       else:
                           account_map_exists = check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
@@ -2053,39 +2088,39 @@ Resources:
                       # Execute the view creation query    
                       success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
                       if success:
-                          print(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} created successfully. Data sources: organization_table_exists {organization_table_exists}, account_map_exists {account_map_exists}")
+                          logger.info(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} created successfully. Data sources: organization_table_exists {organization_table_exists}, account_map_exists {account_map_exists}")
                           # Send a successful response back to CloudFormation
                           send_response(event, context, 'SUCCESS', {})
                       else:
                           send_response(event, context, 'FAILED', {'Error': 'Athena query was not successful'})
                   except AthenaException as ae:
                       # Send a failed response back to CloudFormation
+                      logger.error(f'Exception during query execution: {str(ae)}')
                       send_response(event, context, 'FAILED', {'Error': str(ae)})
                   except Exception as e:
                       # Send a failed response back to CloudFormation
+                      logger.error(f'Exception during function execution: {str(e)}')
                       send_response(event, context, 'FAILED', {'Error': str(e)})
 
 
           def check_table_exists(glue, database_name, table_name):
               """Check if table exists in Glue Data Catalog"""
-              print(f"Checking existence of table {table_name} on database {database_name}")
+              logger.info(f"Checking existence of table {table_name} on database {database_name}")
               
               try:
                   glue.get_table(DatabaseName=database_name, Name=table_name)
-                  if LOGGING_ON:
-                      print("Table exists")
+                  logger.info("Table exists")
                   return True
               except glue.exceptions.EntityNotFoundException:
-                  if LOGGING_ON:
-                      print("Table does not exist")
+                  logger.info("Table does not exist")
                   return False
               except Exception as e:
-                  print(f"Error checking table existence: {str(e)}")
+                  logger.error(f"Error checking table existence: {str(e)}")
                   raise AthenaException(f'Query failed: {str(e)}')
 
           def execute_athena_query(athena, query, athena_workgroup, crcd_database, athena_bucket):
-              print(f"Executing query: {query}")
-              print(f"ATHENA_WORKGROUP = {athena_workgroup}")
+              logger.info(f"Executing query: {query}")
+              logger.info(f"ATHENA_WORKGROUP = {athena_workgroup}")
 
               try:
                   start_query_response = athena.start_query_execution(
@@ -2099,7 +2134,7 @@ Resources:
                       WorkGroup=athena_workgroup
                   )
                   query_execution_id = start_query_response['QueryExecutionId']
-                  print(f'Query started with execution ID: {query_execution_id}')
+                  logger.debug(f'Query started with execution ID: {query_execution_id}')
 
                   is_query_running = True
                   while is_query_running:
@@ -2121,13 +2156,13 @@ Resources:
                               'WorkGroup': athena_workgroup,
                               'OutputLocation': f's3://{athena_bucket}'
                           }
-                          print(f'Query failed: {json.dumps(error_details)}')
+                          logger.error(f'Query failed: {json.dumps(error_details)}')
                           raise AthenaException(f'Query failed: {error_reason}')
                   
-                  print(f'Query completed successfully. Execution ID: {query_execution_id}')
+                  logger.debug(f'Query completed successfully. Execution ID: {query_execution_id}')
                   return query_execution_id
               except Exception as e:
-                  print(f'Exception during query execution: {str(e)}')
+                  logger.error(f'Exception during query execution: {str(e)}')
                   raise
 
           def send_response(event, context, response_status, response_data):
