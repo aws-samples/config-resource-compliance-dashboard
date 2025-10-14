@@ -43,6 +43,7 @@ dashboards:
         default: tag4
         description: "Enter the fourth tag name used to categorize workloads"
         global: True
+
 datasets:
   config_compliance_conformance_pack:
     data:
@@ -1338,7 +1339,6 @@ datasets:
     schedules:
     # CUSTOMIZATION - configure daily incremental refresh, remove default
     - incremental-daily-config-event-rule
-
   config_inventory_ec2:
     data:
       DataSetId: bff53ae6-246a-479a-8d36-3ab03c4ef1f0
