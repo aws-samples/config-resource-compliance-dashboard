@@ -171,8 +171,6 @@ DataSetIdentifierDeclarations:
   Identifier: 2config_inventory_ec2-1
 - DataSetArn: arn:aws:quicksight:::dataset/99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
   Identifier: newconfig_compliance_resource_fixed
-- DataSetArn: arn:aws:quicksight:::dataset/ee416ca1-09b9-4b70-953b-262db9de8b48
-  Identifier: config_compliance_cirt
 - DataSetArn: arn:aws:quicksight:::dataset/78d5f479-44d4-4763-b901-0de3d48a0098
   Identifier: config_inventory_s3
 - DataSetArn: arn:aws:quicksight:::dataset/e296cb2f-878a-4884-8813-21afeb26db8d
@@ -5115,27 +5113,6 @@ FilterGroups:
         - 9da92301-2c4c-4243-b655-08393f54e9d3
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
-  FilterGroupId: 64c7dfdf-ef84-48f6-8a22-4dc774231dc1
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: cirt-classification-lv1
-        DataSetIdentifier: config_compliance_cirt
-      Configuration:
-        FilterListConfiguration:
-          MatchOperator: CONTAINS
-          NullOption: NON_NULLS_ONLY
-          SelectAllOptions: FILTER_ALL_VALUES
-      FilterId: f7e846dd-1168-4621-9e02-257c41f585e5
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: 32204a4f-494c-4f3c-a23a-4c15895c8ca0
-        VisualIds:
-        - bf77ed85-a7b5-4c05-8f72-732e22a6beb3
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
   FilterGroupId: d9b5790e-4d8d-43bf-8943-e2f2796e4bdc
   Filters:
   - CategoryFilter:
@@ -10053,8 +10030,8 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 52.08333333333319
-                To: 93.74999999999997
+                From: 39.58333333333313
+                To: 81.24999999999991
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -11621,7 +11598,9 @@ Sheets:
         - FilterOperation:
             SelectedFieldsConfiguration:
               SelectedFields:
+              - 455db54f-191c-41da-b9d7-06b18eebc3ce.region.1.1727791509399
               - 455db54f-191c-41da-b9d7-06b18eebc3ce.resourceid.3.1727791518198
+              - bc1a06e0-3b8e-41d7-a65f-73225198faf3.5.1750177877408
             TargetVisualsConfiguration:
               SameSheetTargetVisualConfiguration:
                 TargetVisuals:
@@ -13916,172 +13895,6 @@ Sheets:
         Visibility: HIDDEN
       VisualId: b19a19ac-e309-49fd-817d-a9bffc8d70e9
 - ContentType: INTERACTIVE
-  Layouts:
-  - Configuration:
-      GridLayout:
-        CanvasSizeOptions:
-          ScreenCanvasSizeOptions:
-            OptimizedViewPortWidth: 1600px
-            ResizeOption: FIXED
-        Elements:
-        - ColumnIndex: 0
-          ColumnSpan: 36
-          ElementId: 26c5eb67-7007-4d20-8dc6-88f820850b0e
-          ElementType: TEXT_BOX
-          RowIndex: 0
-          RowSpan: 6
-        - ColumnIndex: 0
-          ColumnSpan: 25
-          ElementId: aa7a956c-b5ce-48ed-9d60-f1980d7eedd4
-          ElementType: TEXT_BOX
-          RowIndex: 6
-          RowSpan: 3
-        - ColumnIndex: 0
-          ColumnSpan: 23
-          ElementId: bf77ed85-a7b5-4c05-8f72-732e22a6beb3
-          ElementType: VISUAL
-          RowIndex: 9
-          RowSpan: 12
-  Name: CIRT
-  SheetId: 32204a4f-494c-4f3c-a23a-4c15895c8ca0
-  TextBoxes:
-  - Content: "<text-box>\n  <inline font-size=\"36px\">AWS Customer Incident Response\
-      \ Team (CIRT)</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
-      16px\">The AWS CIRT is a specialized 24/7 global\_</inline>\n  <inline font-size=\"\
-      16px\">\n    <a href=\"https://aws.amazon.com/\" target=\"_blank\">Amazon Web\
-      \ Services (AWS)</a>\n  </inline>\n  <inline font-size=\"16px\">\_</inline>\n\
-      \  <inline color=\"#bdbdbd\" font-size=\"16px\">team that provides support to\
-      \ customers during active security events on the customer side of the</inline>\n\
-      \  <inline font-size=\"16px\">\_</inline>\n  <inline font-size=\"16px\">\n \
-      \   <a href=\"https://aws.amazon.com/compliance/shared-responsibility-model/\"\
-      \ target=\"_blank\">AWS Shared Responsibility Model</a>\n  </inline>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">. The team is made up of AWS Global Services\
-      \ Consultants and Solutions Architects with experience in incident response.</inline>\n\
-      \  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">When the AWS\
-      \ CIRT supports you, you will receive assistance with triage and recovery for\
-      \ an active security event on AWS. We will assist in root cause analysis through\
-      \ the use of AWS service logs and provide you with recommendations for recovery.\
-      \ We will also provide security tips and best practices to help you avoid security\
-      \ events in the future.</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\"\
-      \ font-size=\"16px\">This dashboard collects the most commont risks that cause\
-      \ security incidents across all customers that connect with the CIRT team. Read\
-      \ more about CIRT\_</inline>\n  <inline font-size=\"16px\">\n    <a href=\"\
-      https://aws.amazon.com/blogs/security/welcoming-the-aws-customer-incident-response-team/\"\
-      \ target=\"_blank\">here</a>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
-      16px\">.</inline>\n</text-box>"
-    SheetTextBoxId: 26c5eb67-7007-4d20-8dc6-88f820850b0e
-  - Content: |-
-      <text-box>
-        <inline font-size="32px">Initial Access</inline>
-        <br/>
-        <br/>
-        <inline color="#bdbdbd" font-size="16px">These recommendations cover the highly critical vulnerabilities...</inline>
-      </text-box>
-    SheetTextBoxId: aa7a956c-b5ce-48ed-9d60-f1980d7eedd4
-  Visuals:
-  - BarChartVisual:
-      Actions: []
-      ChartConfiguration:
-        BarsArrangement: STACKED
-        CategoryAxis:
-          ScrollbarOptions:
-            Visibility: HIDDEN
-        CategoryLabelOptions:
-          AxisLabelOptions:
-          - ApplyTo:
-              Column:
-                ColumnName: cirt-classification-lv2
-                DataSetIdentifier: config_compliance_cirt
-              FieldId: 807e7962-a543-420e-a607-bcf4ff0b77f6.0.1746619646401
-            CustomLabel: CIRT Classification
-          SortIconVisibility: HIDDEN
-        DataLabels:
-          LabelFontConfiguration:
-            FontSize:
-              Relative: LARGE
-          Overlap: DISABLE_OVERLAP
-          Visibility: VISIBLE
-        FieldWells:
-          BarChartAggregatedFieldWells:
-            Category:
-            - CategoricalDimensionField:
-                Column:
-                  ColumnName: cirt-classification-lv2
-                  DataSetIdentifier: config_compliance_cirt
-                FieldId: 807e7962-a543-420e-a607-bcf4ff0b77f6.0.1746619646401
-            Colors:
-            - CategoricalDimensionField:
-                Column:
-                  ColumnName: compliancetype
-                  DataSetIdentifier: config_compliance_cirt
-                FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.compliancetype.2.1746619664778
-            Values:
-            - CategoricalMeasureField:
-                AggregationFunction: DISTINCT_COUNT
-                Column:
-                  ColumnName: pkresourceid
-                  DataSetIdentifier: config_compliance_cirt
-                FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkresourceid.1.1746619654148
-        Legend:
-          Position: BOTTOM
-          Title:
-            Visibility: HIDDEN
-        Orientation: HORIZONTAL
-        SortConfiguration:
-          CategoryItemsLimit:
-            OtherCategories: EXCLUDE
-          CategorySort:
-          - FieldSort:
-              Direction: DESC
-              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkresourceid.1.1746619654148
-          ColorItemsLimit:
-            OtherCategories: EXCLUDE
-          SmallMultiplesLimitConfiguration:
-            OtherCategories: EXCLUDE
-        Tooltip:
-          FieldBasedTooltip:
-            AggregationVisibility: HIDDEN
-            TooltipFields:
-            - FieldTooltipItem:
-                FieldId: 807e7962-a543-420e-a607-bcf4ff0b77f6.0.1746619646401
-                Visibility: VISIBLE
-            - FieldTooltipItem:
-                FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkresourceid.1.1746619654148
-                Visibility: VISIBLE
-            - FieldTooltipItem:
-                FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.compliancetype.2.1746619664778
-                Visibility: VISIBLE
-            TooltipTitleType: PRIMARY_VALUE
-          SelectedTooltipType: DETAILED
-          TooltipVisibility: VISIBLE
-        ValueLabelOptions:
-          AxisLabelOptions:
-          - ApplyTo:
-              Column:
-                ColumnName: pkresourceid
-                DataSetIdentifier: config_compliance_cirt
-              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkresourceid.1.1746619654148
-            CustomLabel: Number of resources
-          SortIconVisibility: HIDDEN
-        VisualPalette:
-          ColorMap:
-          - Color: '#0E6C0E'
-            Element:
-              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.compliancetype.2.1746619664778
-              FieldValue: COMPLIANT
-          - Color: '#B32728'
-            Element:
-              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.compliancetype.2.1746619664778
-              FieldValue: NON_COMPLIANT
-      ColumnHierarchies: []
-      Subtitle:
-        Visibility: VISIBLE
-      Title:
-        FormatText:
-          RichText: <visual-title>Initial Access Compliance by CIRT Classification</visual-title>
-        Visibility: VISIBLE
-      VisualId: bf77ed85-a7b5-4c05-8f72-732e22a6beb3
-- ContentType: INTERACTIVE
   FilterControls:
   - Dropdown:
       DisplayOptions:
@@ -14341,7 +14154,7 @@ Sheets:
           RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 29
-          ColumnSpan: 6
+          ColumnSpan: 7
           ElementId: ad78e426-c1d5-4e6c-89b2-0551a371a120
           ElementType: FILTER_CONTROL
           RowIndex: 16
@@ -19649,13 +19462,12 @@ Sheets:
         BarsArrangement: CLUSTERED
         CategoryAxis:
           AxisLineVisibility: VISIBLE
-          AxisOffset: 22px
           ScrollbarOptions:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 59.05456570155903
-                To: 69.05456570155903
+                From: 79.8858574610245
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -19710,18 +19522,16 @@ Sheets:
             AggregationVisibility: HIDDEN
             TooltipFields:
             - FieldTooltipItem:
-                FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.pkruleid.1.1757329624305
-                Label: Evaluations
-                Visibility: VISIBLE
-            - FieldTooltipItem:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.normalizedrulename.1.1757405222938
                 Label: Rule
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.pkruleid.1.1757329624305
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
           TooltipVisibility: VISIBLE
         ValueAxis:
-          AxisOffset: 169px
           TickLabelOptions:
             LabelOptions:
               Visibility: VISIBLE
@@ -20330,6 +20140,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.pkruleid.2.1760113995656
+                Label: Events
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -20734,61 +20545,61 @@ Sheets:
           ColumnSpan: 27
           ElementId: ede04840-0cf1-44e0-8c32-832f4d1249b8
           ElementType: TEXT_BOX
-          RowIndex: 209
+          RowIndex: 23
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: 79e0d1aa-7ef4-43b4-94c2-cf69fe0db537
           ElementType: FILTER_CONTROL
-          RowIndex: 209
+          RowIndex: 23
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: de05350d-37fb-4372-b3ab-e2d214463ad6
           ElementType: VISUAL
-          RowIndex: 212
-          RowSpan: 12
+          RowIndex: 26
+          RowSpan: 9
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 436b8bf8-b694-4471-885a-a68827caa257
           ElementType: VISUAL
-          RowIndex: 224
+          RowIndex: 35
           RowSpan: 7
         - ColumnIndex: 0
           ColumnSpan: 8
           ElementId: 980118a0-9b17-4b24-9b90-e9e90b53ef12
           ElementType: TEXT_BOX
-          RowIndex: 231
+          RowIndex: 42
           RowSpan: 3
         - ColumnIndex: 8
           ColumnSpan: 6
           ElementId: 2db734d1-e651-471c-a3d1-b22794b125d3
           ElementType: FILTER_CONTROL
-          RowIndex: 231
+          RowIndex: 42
           RowSpan: 3
         - ColumnIndex: 14
           ColumnSpan: 5
           ElementId: f5f78ee3-d3ee-42fc-a7c7-a3f6b4811199
           ElementType: FILTER_CONTROL
-          RowIndex: 231
+          RowIndex: 42
           RowSpan: 3
         - ColumnIndex: 19
           ColumnSpan: 8
           ElementId: ea815318-9638-4314-a8fe-136ac119132a
           ElementType: FILTER_CONTROL
-          RowIndex: 231
+          RowIndex: 42
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: bbaa21f1-44e6-452e-8477-36a23d8dc0e3
           ElementType: FILTER_CONTROL
-          RowIndex: 231
+          RowIndex: 42
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: a5f69b91-ec68-4714-9673-9aa47545189a
           ElementType: VISUAL
-          RowIndex: 234
+          RowIndex: 45
           RowSpan: 12
   Name: Configuration Item Events
   ParameterControls:
@@ -21471,16 +21282,18 @@ Sheets:
       \ QuickSight, Amazon Athena, Amazon S3, AWS Lambda</inline>\n  <br/>\n  <br/>\n\
       \  <inline color=\"#bdbdbd\">Learn more about the AWS Config Resource Compliance\
       \ Dashboard (CRCD) at our Cloud Intelligence Dashboards Framework</inline>\n\
-      \  <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
-      \ target=\"_blank\">AWS documentation page</a>\n  <inline color=\"#bdbdbd\"\
-      >, share a\_</inline>\n  <a href=\"https://cid.workshops.aws.dev/demo/?dashboard=cid-crcd\"\
-      \ target=\"_blank\">public demo</a>\n  <inline color=\"#bdbdbd\">of the dashboard,\
-      \ check the source code and contribute to the roadmap by getting in touch with\
-      \ the developers on\_</inline>\n  <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard\"\
-      \ target=\"_blank\">GitHub</a>\n  <inline color=\"#bdbdbd\" font-size=\"14px\"\
-      >.\_</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\"\
-      >If you wish to provide feedback or report an error please email\_</inline>\n\
-      \  <a href=\"mailto:aws-config-dashboard@amazon.com\" target=\"_self\">aws-config-dashboard@amazon.com</a>\n\
-      \  <inline color=\"#bdbdbd\" font-size=\"14px\">.</inline>\n</text-box>"
+      \  <inline color=\"#2f8ee7\">\n    <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
+      \ target=\"_blank\">AWS documentation page</a>\n  </inline>\n  <inline color=\"\
+      #bdbdbd\">, share a\_</inline>\n  <inline color=\"#2f8ee7\">\n    <a href=\"\
+      https://cid.workshops.aws.dev/demo/?dashboard=cid-crcd\" target=\"_blank\">public\
+      \ demo</a>\n  </inline>\n  <inline color=\"#bdbdbd\">of the dashboard, check\
+      \ the source code and contribute to the roadmap by getting in touch with the\
+      \ developers on\_</inline>\n  <inline color=\"#2f8ee7\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard\"\
+      \ target=\"_blank\">GitHub</a>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">.\_</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">If you wish to provide feedback or report an error please email\_</inline>\n\
+      \  <inline color=\"#2f8ee7\">\n    <a href=\"mailto:aws-config-dashboard@amazon.com\"\
+      \ target=\"_self\">aws-config-dashboard@amazon.com</a>\n  </inline>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"14px\">.</inline>\n</text-box>"
     SheetTextBoxId: 8349bfc9-8d07-4101-a47d-434036237bbb
   Visuals: []
