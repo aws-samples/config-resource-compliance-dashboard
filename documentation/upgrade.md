@@ -1,6 +1,8 @@
 # Upgrade Instructions
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
+## Upgrade to v4.0.0
+You have to destroy the resources of the current versions and redeploy.
 
 ## Upgrade to v3.0.0
 
