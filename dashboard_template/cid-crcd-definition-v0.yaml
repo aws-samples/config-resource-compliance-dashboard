@@ -171,8 +171,6 @@ DataSetIdentifierDeclarations:
   Identifier: 2config_inventory_ec2-1
 - DataSetArn: arn:aws:quicksight:::dataset/99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
   Identifier: newconfig_compliance_resource_fixed
-- DataSetArn: arn:aws:quicksight:::dataset/ee416ca1-09b9-4b70-953b-262db9de8b48
-  Identifier: config_compliance_cirt
 - DataSetArn: arn:aws:quicksight:::dataset/78d5f479-44d4-4763-b901-0de3d48a0098
   Identifier: config_inventory_s3
 - DataSetArn: arn:aws:quicksight:::dataset/e296cb2f-878a-4884-8813-21afeb26db8d
@@ -1669,7 +1667,7 @@ FilterGroups:
       MinimumGranularity: DAY
       NullOption: NON_NULLS_ONLY
       RelativeDateType: LAST
-      RelativeDateValue: 7
+      RelativeDateValue: 3
       TimeGranularity: DAY
   ScopeConfiguration:
     SelectedSheets:
@@ -9655,7 +9653,7 @@ Sheets:
       \ compliance score is calculated by the number of compliant rule-resources over\
       \ the total number of possible\_</inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
       14px\">rule-resource combinations (see</inline>\n  <inline color=\"#9d9d9d\"\
-      \ font-size=\"14px\">\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"14px\"\
+      \ font-size=\"14px\">\_</inline>\n  <inline color=\"#6288d6\" font-size=\"14px\"\
       >\n    <a href=\"https://aws.amazon.com/blogs/mt/announcing-aws-config-compliance-scores-for-conformance-pack/\"\
       \ target=\"_blank\">\n      <u>documentation</u>\n    </a>\n  </inline>\n  <inline\
       \ color=\"#9d9d9d\" font-size=\"14px\">\_</inline>\n  <inline color=\"#bdbdbd\"\
@@ -11083,11 +11081,6 @@ Sheets:
                   IconOptions:
                     Icon: CHECKMARK
       Subtitle:
-        FormatText:
-          RichText: |-
-            <visual-subtitle>
-              <inline color="#bdbdbd">Click on a conformance pack to see the corresponding AWS Config rules below.</inline>
-            </visual-subtitle>
         Visibility: VISIBLE
       Title:
         FormatText:
@@ -11483,8 +11476,8 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 70.0
-                To: 90.0
+                From: 80.0
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -11710,11 +11703,8 @@ Sheets:
                     Icon: X
       Subtitle:
         FormatText:
-          RichText: |-
-            <visual-subtitle>
-              <inline color="#bdbdbd">Click on a resource to see the corresponding AWS Config rules below.</inline>
-            </visual-subtitle>
-        Visibility: VISIBLE
+          RichText: <visual-subtitle>Overall compliance of resources</visual-subtitle>
+        Visibility: HIDDEN
       Title:
         FormatText:
           RichText: |-
@@ -11849,7 +11839,7 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-subtitle>
-              <inline color="#bdbdbd">Compliance of each AWS Config rule applied to each resource.</inline>
+              <inline color="#bdbdbd">Compliance of each AWS Config rule that apply to each resource.</inline>
             </visual-subtitle>
         Visibility: VISIBLE
       Title:
@@ -12383,90 +12373,90 @@ Sheets:
           ElementId: 96d55e28-e5bf-4c8d-ad1a-a516a5d0f88a
           ElementType: TEXT_BOX
           RowIndex: 0
-          RowSpan: 3
+          RowSpan: 4
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 365e85ee-d4d6-4d4b-8adb-e49498c016a9
           ElementType: VISUAL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 6
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: ed0b3301-fa3b-4551-bf36-8410e2cfcf4c
           ElementType: VISUAL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: eb5e4f66-6813-46d5-8a8d-c3600f8dc469
           ElementType: VISUAL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: f3727828-eb23-44e7-a92d-4899241d3446
           ElementType: VISUAL
-          RowIndex: 6
+          RowIndex: 7
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: ee7edcb9-da66-464e-8445-76df9e624e31
           ElementType: VISUAL
-          RowIndex: 6
+          RowIndex: 7
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 070603ff-c9a0-4608-90df-4c351bc8e6c3
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 10
           RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 91d69dff-04fa-4f39-bf5e-9fb90b23b7b6
           ElementType: VISUAL
-          RowIndex: 19
+          RowIndex: 20
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 29e2c3ee-4521-466b-a909-cb9f697fa9d5
           ElementType: VISUAL
-          RowIndex: 19
+          RowIndex: 20
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: c3983f9f-9977-4ea5-ab73-762d3f6c2659
           ElementType: VISUAL
-          RowIndex: 31
+          RowIndex: 32
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 745ee1fe-2bb2-42d6-9595-8403fa095317
           ElementType: VISUAL
-          RowIndex: 31
+          RowIndex: 32
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 00f62680-a42b-4a23-83f6-c0937fb3775c
           ElementType: VISUAL
-          RowIndex: 43
+          RowIndex: 44
           RowSpan: 13
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 54a314cf-821d-4ef4-95cd-c81702af05b4
           ElementType: VISUAL
-          RowIndex: 43
+          RowIndex: 44
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 13d1e79a-21af-4d52-853c-471cabd7817b
           ElementType: TEXT_BOX
-          RowIndex: 56
+          RowIndex: 57
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: b19a19ac-e309-49fd-817d-a9bffc8d70e9
           ElementType: VISUAL
-          RowIndex: 59
+          RowIndex: 60
           RowSpan: 12
   Name: Tag Compliance
   ParameterControls:
@@ -12615,13 +12605,14 @@ Sheets:
       #bdbdbd\" font-family=\"Amazon Ember\" font-size=\"16px\">required-tag</inline>\n\
       \  <inline color=\"#bdbdbd\" font-size=\"16px\">\", \"requiredtags\" or \"requiredtag\"\
       \ (case insensitive) created from the managed rule</inline>\n  <inline color=\"\
-      #9d9d9d\" font-size=\"16px\">\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"\
+      #9d9d9d\" font-size=\"16px\">\_</inline>\n  <inline color=\"#6288d6\" font-size=\"\
       16px\">\n    <a href=\"https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html\"\
       \ target=\"_blank\">\n      <u>REQUIRED_TAGS</u>\n    </a>\n  </inline>\n  <inline\
       \ color=\"#bdbdbd\" font-size=\"16px\">.\_</inline>\n  <br/>\n  <inline color=\"\
       #bdbdbd\" font-size=\"16px\">Identify untagged resources across accounts, regions,\
-      \ resource types. Use controls at the top to filter by account, AWS Region,\
-      \ resource type and compliance type.</inline>\n</text-box>"
+      \ resource types.</inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      16px\">Use controls at the top to filter by account, AWS Region, resource type\
+      \ and compliance type.</inline>\n</text-box>"
     SheetTextBoxId: 96d55e28-e5bf-4c8d-ad1a-a516a5d0f88a
   - Content: "<text-box>\n  <br/>\n  <inline font-size=\"20px\">\n    <b>Tag compliance\
       \ tracker</b>\n  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
@@ -13805,7 +13796,7 @@ Sheets:
             FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.resourcetype.3.1727884940853
           - CustomLabel: Resource ID
             FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.resourceid.4.1727884942806
-            Width: 391px
+            Width: 475px
           - CustomLabel: Compliance Type
             FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.5.1727884969602
           - CustomLabel: Rule Name (full)
@@ -14095,264 +14086,264 @@ Sheets:
           ElementId: 2f26a9ad-2297-4dee-8bc3-b9880f62013a
           ElementType: TEXT_BOX
           RowIndex: 0
-          RowSpan: 3
+          RowSpan: 4
         - ColumnIndex: 0
           ColumnSpan: 10
           ElementId: f87fab62-71c6-462e-ac85-93babceb7ed2
           ElementType: TEXT_BOX
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 10
           ColumnSpan: 7
           ElementId: 968624d0-841e-469f-a406-293c65d2a6af
           ElementType: VISUAL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 17
           ColumnSpan: 6
           ElementId: 5e40f7a1-69de-4753-b487-cc8f3078d083
           ElementType: FILTER_CONTROL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 23
           ColumnSpan: 4
           ElementId: 3b6c461b-ce26-485a-b80d-204474136304
           ElementType: FILTER_CONTROL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 4
           ElementId: 8f2868ac-b778-4f15-a1b9-dd06a6111565
           ElementType: FILTER_CONTROL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 31
           ColumnSpan: 5
           ElementId: 22eb3411-a514-4c17-86dd-a20360316098
           ElementType: FILTER_CONTROL
-          RowIndex: 3
+          RowIndex: 4
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: c2cabfac-3bc4-4351-a652-005f58063531
           ElementType: VISUAL
-          RowIndex: 6
+          RowIndex: 7
           RowSpan: 9
         - ColumnIndex: 0
           ColumnSpan: 10
           ElementId: 508915ae-cf35-408f-80c1-0a5a91c29b4a
           ElementType: TEXT_BOX
-          RowIndex: 15
+          RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 10
           ColumnSpan: 7
           ElementId: 27d19e2b-dcac-42a4-9e01-9c1d69d464b8
           ElementType: VISUAL
-          RowIndex: 15
+          RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 17
           ColumnSpan: 6
           ElementId: 1b8d968c-9760-491e-844f-ac4c496ebef1
           ElementType: FILTER_CONTROL
-          RowIndex: 15
+          RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 23
           ColumnSpan: 6
           ElementId: 0cc5000f-3422-47b5-a978-2b3c16c454e8
           ElementType: FILTER_CONTROL
-          RowIndex: 15
+          RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 29
           ColumnSpan: 7
           ElementId: ad78e426-c1d5-4e6c-89b2-0551a371a120
           ElementType: FILTER_CONTROL
-          RowIndex: 15
+          RowIndex: 16
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 26e27f88-3ef6-4f21-bd83-f80ad4ce2ae6
           ElementType: VISUAL
-          RowIndex: 18
+          RowIndex: 19
           RowSpan: 9
         - ColumnIndex: 0
           ColumnSpan: 10
           ElementId: e0becb35-1887-475f-b67c-4d083f96de4f
           ElementType: TEXT_BOX
-          RowIndex: 27
+          RowIndex: 28
           RowSpan: 3
         - ColumnIndex: 10
           ColumnSpan: 7
           ElementId: 0c8c5a5e-46fe-4ad5-97c6-ddbd299c427e
           ElementType: VISUAL
-          RowIndex: 27
+          RowIndex: 28
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 2f456cd2-139b-4e52-91d9-82738c49e3ca
           ElementType: VISUAL
-          RowIndex: 30
+          RowIndex: 31
           RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 10
           ElementId: 916f2aff-a9b7-4b89-95b8-100815691043
           ElementType: TEXT_BOX
-          RowIndex: 38
+          RowIndex: 39
           RowSpan: 3
         - ColumnIndex: 10
           ColumnSpan: 7
           ElementId: 9ce67200-3c79-4be6-ac9c-ee06fab637cd
           ElementType: VISUAL
-          RowIndex: 38
+          RowIndex: 39
           RowSpan: 3
         - ColumnIndex: 17
           ColumnSpan: 7
           ElementId: 902ec644-c893-4ec8-8fdc-c975184a28e4
           ElementType: FILTER_CONTROL
-          RowIndex: 38
+          RowIndex: 39
           RowSpan: 3
         - ColumnIndex: 24
           ColumnSpan: 6
           ElementId: c0c58838-74b1-45c2-90bf-c6053e16794c
           ElementType: FILTER_CONTROL
-          RowIndex: 38
+          RowIndex: 39
           RowSpan: 3
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: a2672b55-9e99-4a68-9532-59258a1fbe70
           ElementType: FILTER_CONTROL
-          RowIndex: 38
+          RowIndex: 39
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 6b893abf-4607-4cf6-91d4-a6e547007346
           ElementType: VISUAL
-          RowIndex: 41
+          RowIndex: 42
           RowSpan: 7
         - ColumnIndex: 0
           ColumnSpan: 11
           ElementId: b1ddee91-b695-4e57-a6e9-e08d67d9f934
           ElementType: TEXT_BOX
-          RowIndex: 48
+          RowIndex: 49
           RowSpan: 3
         - ColumnIndex: 11
           ColumnSpan: 7
           ElementId: 1f727cff-058d-463f-840c-fd76f593760f
           ElementType: VISUAL
-          RowIndex: 48
+          RowIndex: 49
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 6
           ElementId: 33e219e3-88d2-4268-a351-5894049faaca
           ElementType: FILTER_CONTROL
-          RowIndex: 48
+          RowIndex: 49
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: da65ff42-e903-43f5-9f34-7ceb66318645
           ElementType: VISUAL
-          RowIndex: 51
+          RowIndex: 52
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 7941aeaa-6084-4ec4-a368-ffa8b1b1195d
           ElementType: TEXT_BOX
-          RowIndex: 63
+          RowIndex: 64
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 5b5a345e-e73d-4e86-be87-06563296dce6
           ElementType: VISUAL
-          RowIndex: 65
+          RowIndex: 66
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 340a661c-346a-4028-a825-4044826df0a5
           ElementType: VISUAL
-          RowIndex: 65
+          RowIndex: 66
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 116f57dc-8438-4dd4-aaad-46c282710917
           ElementType: VISUAL
-          RowIndex: 77
+          RowIndex: 78
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: edab30a7-e0e4-4186-bb45-c5f71b5cb214
           ElementType: VISUAL
-          RowIndex: 77
+          RowIndex: 78
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: f4ec8bf2-649a-4fe9-8935-3498c7caf110
           ElementType: TEXT_BOX
-          RowIndex: 89
+          RowIndex: 90
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 59e24564-0096-425c-ab38-264cfc23ea45
           ElementType: VISUAL
-          RowIndex: 91
+          RowIndex: 92
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: c373d3d1-b073-4537-9862-c2e93ed7cc72
           ElementType: VISUAL
-          RowIndex: 91
+          RowIndex: 92
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 33ed9ba2-71ee-4800-b9e6-28b3c78eb9d3
           ElementType: VISUAL
-          RowIndex: 103
+          RowIndex: 104
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 55257853-5f77-4b85-a34b-498dce7c6cc0
           ElementType: VISUAL
-          RowIndex: 103
+          RowIndex: 104
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 53d73ffe-c86f-4170-bf64-8bc21922d0e6
           ElementType: VISUAL
-          RowIndex: 115
+          RowIndex: 116
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 66e44a8a-4337-4ab9-b75a-1bca4632f829
           ElementType: VISUAL
-          RowIndex: 115
+          RowIndex: 116
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 245be966-460a-4143-a4fe-7fab24f1f800
           ElementType: VISUAL
-          RowIndex: 127
+          RowIndex: 128
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 1110926a-7459-4a90-bdee-cb065b4a5102
           ElementType: VISUAL
-          RowIndex: 127
+          RowIndex: 128
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: af22c4dc-aeba-4d9c-8a4c-32e53e004b5f
           ElementType: TEXT_BOX
-          RowIndex: 139
+          RowIndex: 140
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 7d64e7cc-cf23-4607-ad4b-62fb91a73481
           ElementType: VISUAL
-          RowIndex: 141
+          RowIndex: 142
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: de77a3e8-cd32-4c79-9f1b-086f49440e54
           ElementType: VISUAL
-          RowIndex: 141
+          RowIndex: 142
           RowSpan: 12
   Name: Resource Inventory
   ParameterControls:
@@ -15324,15 +15315,6 @@ Sheets:
               FontConfiguration:
                 FontSize:
                   Relative: LARGE
-        CategoryLabelOptions:
-          AxisLabelOptions:
-          - ApplyTo:
-              Column:
-                ColumnName: region
-                DataSetIdentifier: config_inventory_all
-              FieldId: 76631aed-f8d7-41a3-b0a4-75dd1028e10e.region.1.1726645461561
-            CustomLabel: Region
-          Visibility: HIDDEN
         DataLabels:
           LabelFontConfiguration:
             FontSize:
@@ -16321,7 +16303,7 @@ Sheets:
           SelectedFieldOptions:
           - CustomLabel: Account
             FieldId: 31c6c68a-3245-483a-901b-a2792df82dc8.13.1750236448403
-            Width: 156px
+            Width: 192px
           - CustomLabel: Region
             FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
             Width: 87px
@@ -17467,7 +17449,7 @@ Sheets:
       \ redundant evaluations, governance complexity that complicates compliance management,\
       \ and potentially inconsistent remediation actions for the same compliance issues.\
       \ To optimize compliance efforts and reduce costs, organizations should develop\
-      \ a strategic approach that eliminates rule duplication across their AWS environments.\_\
+      \ a strategic approach that eliminates rule duplication across their AWS ${tag3}s.\_\
       </inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\">This section supports\
       \ regular auditing of rules and conformance packs to eliminate redundancy. Review\
       \ and consolidate overlapping rules across different compliance standards and\
@@ -20297,7 +20279,7 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 89.58024944973424
+                From: 96.29629629629629
                 To: 100.0
         CategoryLabelOptions:
           SortIconVisibility: HIDDEN
@@ -20393,8 +20375,6 @@ Sheets:
             FieldId: a1de46bb-2295-4333-9049-ef07de0902d8.0.1758106014921
           - CustomLabel: Region
             FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.region.1.1758106017531
-          - FieldId: 00fa86a7-85c3-4281-89ad-52bd37f0b1d4.5.1760381198350
-            Visibility: HIDDEN
           - CustomLabel: Most Recent Evaluation
             FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.configitemcapturetime.4.1758181394334
             Width: 200px
@@ -20720,7 +20700,7 @@ Sheets:
       \ deleted and see which accounts and AWS Regions are delivering AWS Config data.\_\
       </inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\"\
       >Except where otherwise noted, the visuals are based on all events from your\
-      \ AWS environments, sourced from AWS Config configuration history records. These\
+      \ AWS ${tag3}s, sourced from AWS Config configuration history records. These\
       \ files are generated each time a resource is being changed and its compliance\
       \ evaluated. The fields\_</inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
       16px\">\n    <b>Event Timestamp</b>\n  </inline>\n  <inline color=\"#bdbdbd\"\
@@ -21017,7 +20997,6 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 54f76dcd-a791-4ded-8b10-d18e1e3590e4.resourceid.2.1727271077233
-                Label: Resources
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 081cbc29-bb46-4df0-b30c-a2d84de339d9.2.1750238185011
@@ -21269,22 +21248,22 @@ Sheets:
             ResizeOption: FIXED
         Elements:
         - ColumnIndex: 0
-          ColumnSpan: 36
+          ColumnSpan: 35
           ElementId: a1f587ee-2c8c-491d-87c3-96b07a02856d
           ElementType: TEXT_BOX
           RowIndex: 0
           RowSpan: 6
         - ColumnIndex: 0
-          ColumnSpan: 36
+          ColumnSpan: 35
           ElementId: 8349bfc9-8d07-4101-a47d-434036237bbb
           ElementType: TEXT_BOX
           RowIndex: 6
-          RowSpan: 17
+          RowSpan: 9
   Name: About
   SheetId: 8051a153-8e6c-490a-97c1-df821e9fe5d7
   TextBoxes:
-  - Content: "<text-box>\n  <inline font-size=\"36px\">Notes</inline>\n  <br/>\n \
-      \ <br/>\n  <inline color=\"#bdbdbd\" font-size=\"18px\">Customers are responsible\
+  - Content: "<text-box>\n  <inline font-size=\"36px\">Notices</inline>\n  <br/>\n\
+      \  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">Customers are responsible\
       \ for making their own independent assessment of\_this dashboard and its content.\_\
       This dashboard and its content: (a) is for informational purposes only, (b)\
       \ represents current AWS product offerings and practices, which are subject\
@@ -21296,44 +21275,25 @@ Sheets:
       \ and this document is not part of, nor does it modify, any agreement between\
       \ AWS and its customers.</inline>\n</text-box>"
     SheetTextBoxId: a1f587ee-2c8c-491d-87c3-96b07a02856d
-  - Content: "<text-box>\n  <br/>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ font-size=\"72px\">\n      <b>CID-CRDC</b>\n    </inline>\n  </block>\n  <br/>\n\
-      \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ font-size=\"32px\">\n      <b>AWS Config Resource Compliance Dashboard\_</b>\n\
-      \    </inline>\n  </block>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ font-size=\"32px\">\n      <b>v4.0.0</b>\n    </inline>\n  </block>\n  <br/>\n\
-      \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n\
-      \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ color=\"#2f8ee7\" font-size=\"24px\">\n      <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
-      \ target=\"_blank\">Documentation</a>\n    </inline>\n    <inline font-size=\"\
-      24px\">\_|\_</inline>\n    <inline color=\"#2f8ee7\" font-size=\"24px\">\n \
-      \     <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/CHANGELOG.md\"\
-      \ target=\"_blank\">Changelog</a>\n    </inline>\n    <inline font-size=\"24px\"\
-      >\_|\_</inline>\n    <inline color=\"#2f8ee7\" font-size=\"24px\">\n      <a\
-      \ href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-prerequisites.html\"\
-      \ target=\"_blank\">Deployment</a>\n    </inline>\n    <inline font-size=\"\
-      24px\">\_|\_</inline>\n    <inline color=\"#2f8ee7\" font-size=\"24px\">\n \
-      \     <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/feedback-support.html\"\
-      \ target=\"_blank\">Feedback</a>\n    </inline>\n    <inline font-size=\"24px\"\
-      >\_</inline>\n  </block>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n  <block\
-      \ align=\"center\"/>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n  <block\
-      \ align=\"center\"/>\n  <br/>\n  <br/>\n  <block align=\"right\">\n    <inline\
-      \ color=\"#bdbdbd\" font-size=\"18px\">Built by: Luca Casarini\_</inline>\n\
-      \  </block>\n  <br/>\n  <block align=\"right\">\n    <inline color=\"#bdbdbd\"\
-      \ font-size=\"18px\">Learn more about AWS Cloud Intelligence Dashboards (CID)\
-      \ on</inline>\n    <inline font-size=\"18px\">\_</inline>\n    <inline color=\"\
-      #2f8ee7\" font-size=\"18px\">\n      <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/getting-started.html\"\
-      \ target=\"_blank\">AWS CID implementation guide</a>\n    </inline>\n    <inline\
-      \ color=\"#bdbdbd\" font-size=\"18px\">\_and\_</inline>\n    <inline color=\"\
-      #2f8ee7\" font-size=\"18px\">\n      <a href=\"https://www.youtube.com/channel/UCl0O3ASMCwA_gw0QIKzoU3Q\"\
-      \ target=\"_blank\">CID YouTube Channel</a>\n    </inline>\n    <inline color=\"\
-      #bdbdbd\" font-size=\"18px\">\_</inline>\n  </block>\n  <br/>\n  <block align=\"\
-      right\">\n    <inline color=\"#bdbdbd\" font-size=\"18px\">If you wish to provide\
-      \ feedback or report an error please email\_</inline>\n    <inline color=\"\
-      #2f8ee7\" font-size=\"18px\">\n      <a href=\"mailto:aws-config-dashboard@amazon.com\"\
-      \ target=\"_self\">aws-config-dashboard@amazon.com</a>\n    </inline>\n  </block>\n\
-      \  <br/>\n  <block align=\"right\">\n    <inline color=\"#bdbdbd\" font-size=\"\
-      18px\">Powered by: Amazon QuickSight, Amazon Athena, Amazon S3, AWS Lambda,\
-      \ AWS Config\_</inline>\n  </block>\n</text-box>"
+  - Content: "<text-box>\n  <inline font-size=\"32px\">\n    <b>AWS Config Resource\
+      \ Compliance Dashboard (CRCD) v4.0.0</b>\n  </inline>\n  <br/>\n  <br/>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"16px\">Created by: Luca Casarini</inline>\n\
+      \  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">Powered by: Amazon\
+      \ QuickSight, Amazon Athena, Amazon S3, AWS Lambda</inline>\n  <br/>\n  <br/>\n\
+      \  <inline color=\"#bdbdbd\">Learn more about the AWS Config Resource Compliance\
+      \ Dashboard (CRCD) at our Cloud Intelligence Dashboards Framework</inline>\n\
+      \  <inline color=\"#2f8ee7\">\n    <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
+      \ target=\"_blank\">AWS documentation page</a>\n  </inline>\n  <inline color=\"\
+      #bdbdbd\">, share a\_</inline>\n  <inline color=\"#2f8ee7\">\n    <a href=\"\
+      https://cid.workshops.aws.dev/demo/?dashboard=cid-crcd\" target=\"_blank\">public\
+      \ demo</a>\n  </inline>\n  <inline color=\"#bdbdbd\">of the dashboard, check\
+      \ the source code and contribute to the roadmap by getting in touch with the\
+      \ developers on\_</inline>\n  <inline color=\"#2f8ee7\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard\"\
+      \ target=\"_blank\">GitHub</a>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">.\_</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">If you wish to provide feedback or report an error please email\_</inline>\n\
+      \  <inline color=\"#2f8ee7\">\n    <a href=\"mailto:aws-config-dashboard@amazon.com\"\
+      \ target=\"_self\">aws-config-dashboard@amazon.com</a>\n  </inline>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"14px\">.</inline>\n</text-box>"
     SheetTextBoxId: 8349bfc9-8d07-4101-a47d-434036237bbb
   Visuals: []

@@ -4,6 +4,7 @@ dashboards:
     dependsOn:
       datasets:
       - config_compliance
+      - config_compliance_cirt
       - config_compliance_conformance_pack
       - config_compliance_resource
       - config_event
@@ -43,7 +44,7 @@ dashboards:
         default: tag4
         description: "Enter the fourth tag name used to categorize workloads"
         global: True
-    
+
 datasets:
   config_compliance_conformance_pack:
     data:
@@ -1086,6 +1087,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_event_rule_evaluation:
     data:
       DataSetId: 5c060ba7-4f02-4b10-8f55-a8672eb6eab0
@@ -1496,11 +1498,12 @@ schedules:
           SizeUnit: DAY
 
 crawlers: {}
+
 views:
   config_compliance_conformance_pack:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_conformance_pack AS 
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_compliance_conformance_pack" AS 
       WITH
         conformance_pack_compliance AS (
         SELECT
@@ -1538,22 +1541,19 @@ views:
       , CAST(ccp.TotalRuleCount AS INTEGER) TotalRuleCount
       , concat(concat(concat(concat(ccp.AccountId, '-'), ccp.Region), '-'), ccp.ConformancePackId) "PKConformancePackId"
       FROM
-        conformance_pack_compliance ccp
-
+        conformance_pack_compliance ccp  
   config_inventory_account:
     dependsOn:
       views:
       - config_sys_account_data
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_account AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."${athena_database_name}".config_inventory_account AS
       SELECT
         account_id
       , payer_account_id
       , account_name
       FROM
         "${athena_database_name}".config_sys_account_data
-
-  # , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state'), "configurationItem"."configurationitemcapturetime") "State"
   config_inventory_ebs:
     dependsOn: {}
     data: |-
@@ -1587,14 +1587,7 @@ views:
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumetype'), "configurationItem"."configurationitemcapturetime") "VolumeType"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.fastrestored'), "configurationItem"."configurationitemcapturetime") "FastRestored"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiattachenabled'), "configurationItem"."configurationitemcapturetime") "MultiAttachEnabled"
-        
-
-        , CASE 
-          WHEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime") IS NOT NULL 
-          THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime")
-          ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state'), "configurationItem"."configurationitemcapturetime")
-        END "State"
-
+        , (CASE WHEN (MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime") IS NOT NULL) THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime") ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state'), "configurationItem"."configurationitemcapturetime") END) "State"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].device'), "configurationItem"."configurationitemcapturetime") "AttachmentDevice"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].instanceid'), "configurationItem"."configurationitemcapturetime") "AttachmentInstanceId"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].deleteontermination'), "configurationItem"."configurationitemcapturetime") "DeleteOnTermination"
@@ -1641,7 +1634,6 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
-
   config_inventory_s3:
     dependsOn: {}
     data: |-
@@ -1688,33 +1680,31 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
-
   config_inventory:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory" AS 
       WITH
-      resource_info AS (
-      SELECT
-        "accountId" "AccountId"
-      , "region" "Region"
-      , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
-      , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-      , "configurationItem"."resourceid" "ResourceId"
-      , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-      , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-      , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-      , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-      , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
-
-      , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
-      , "configurationItem"."resourcetype" "ResourceType"
-      , ARBITRARY("configurationItem"."arn") "Arn"
-      FROM
-        (cid_crcd_config
-      CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-      WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-      GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceid"
+        resource_info AS (
+        SELECT
+          "accountId" "AccountId"
+        , "region" "Region"
+        , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+        , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+        , "configurationItem"."resourceid" "ResourceId"
+        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
+        , "configurationItem"."resourcetype" "ResourceType"
+        , ARBITRARY("configurationItem"."arn") "Arn"
+        FROM
+          (cid_crcd_config
+        CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+        WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+        GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceid"
       ) 
       SELECT
         r.AccountId
@@ -1733,13 +1723,12 @@ views:
       , concat(concat(concat(concat(concat(concat(r.AccountId, '-'), r.Region), '-'), r.ResourceType), '-'), r.ResourceId) "PKResourceId"
       FROM
         resource_info r
-
   config_inventory_rds:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_rds AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory_rds" AS 
       WITH
-      resource_info AS (
+        resource_info AS (
         SELECT
           ARBITRARY("accountId") "AccountId"
         , ARBITRARY("region") "Region"
@@ -1826,11 +1815,10 @@ views:
       , r.BackupRetention
       FROM
         resource_info r
-
   config_event_delivery:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_event_delivery AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_event_delivery" AS 
       WITH
         resource_info AS (
         SELECT
@@ -1850,12 +1838,11 @@ views:
       , r.LatestPartitionDate
       , r.LatestConfigItemCaptureTime
       FROM
-        resource_info r
-
+        resource_info r    
   config_inventory_lambda:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_lambda AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory_lambda" AS 
       WITH
         resource_info AS (
         SELECT
@@ -1920,8 +1907,6 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
-
-
   config_event:
     dependsOn: {}
     data: |-
@@ -1953,8 +1938,6 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
-
-
   config_compliance_resource:
     dependsOn: {}
     data: |-
@@ -1990,8 +1973,6 @@ views:
       , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.ResourceId) "PKResourceID"
       FROM
         resource_compliance rc
-
-
   config_compliance:
     dependsOn: {}
     data: |-
@@ -2048,12 +2029,10 @@ views:
       FROM
         (resource_compliance rc
       LEFT JOIN conformance_packs cp ON (cp.ConformancePackRuleName = rc.RuleName))
-
-
   config_event_rule_evaluation:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_event_rule_evaluation AS
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_event_rule_evaluation AS 
       WITH
         conformance_packs AS (
         SELECT
@@ -2111,10 +2090,8 @@ views:
       FROM
         (rule_evaluations r
       LEFT JOIN conformance_packs cp ON (cp.ConformancePackRuleName = r.RuleName))
-     
   config_inventory_ec2:
     dependsOn: {}
-    # -- , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.name'), "configurationItem"."configurationitemcapturetime") "State" WIP
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
       WITH
@@ -2147,15 +2124,7 @@ views:
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateipaddress'), "configurationItem"."configurationitemcapturetime") "PrivateIp"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicipaddress'), "configurationItem"."configurationitemcapturetime") "PublicIp"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.ipv6address'), "configurationItem"."configurationitemcapturetime") "IPv6Address"
-        
-
-        , CASE 
-          WHEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime") IS NOT NULL 
-          THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime")
-          ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.name'), "configurationItem"."configurationitemcapturetime")
-        END "State"
-
-
+        , (CASE WHEN (MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime") IS NOT NULL) THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime") ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.name'), "configurationItem"."configurationitemcapturetime") END) "State"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privatednsname'), "configurationItem"."configurationitemcapturetime") "PrivateDnsName"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicdnsname'), "configurationItem"."configurationitemcapturetime") "PublicDnsName"
         FROM

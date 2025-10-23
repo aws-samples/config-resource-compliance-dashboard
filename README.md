@@ -78,7 +78,7 @@ An Amazon Athena table is used to extract data from the AWS Config configuration
 The solution provides Athena views, which are SQL queries that extract data from Amazon S3 using the schema defined in the Athena table. Finally, you can visualize the data in a QuickSight dashboard that uses these views through Amazon QuickSight datasets.
 
 ## Deployment
-Deployment guide available at the [Cloud Intelligence Dashboards Framework workshops](https://catalog.workshops.aws/awscid/en-US/dashboards/additional/config-resource-compliance-dashboard).
+Deployment guide available at the [Cloud Intelligence Dashboards on AWS Implementation Guide](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html).
 
 ## Upgrade
 Upgrading from an older version? Read [this](./documentation/upgrade.md) first.
