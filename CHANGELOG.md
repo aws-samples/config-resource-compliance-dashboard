@@ -19,7 +19,7 @@
 - Improved installation of the dashboard resources with `cid-cmd` tool: it is not necessary anymore to download the YAML template.
 
 ## Fixed
-- Tooltip text everywhere have meaningful field names.
+- Tooltip texts of visuals have meaningful field names.
 
 # [3.0.0] - 2025-03-27
 ## Added
