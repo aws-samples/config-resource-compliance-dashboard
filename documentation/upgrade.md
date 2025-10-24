@@ -35,7 +35,7 @@ cid-cmd delete --resources cid-crcd.yaml
 Follow the installation steps to deploy the dashboard resources using the `cid-cmd` tool. This is either **Step 2** in case of Log Archive account deployment, or **Step 3** in case of Dashboard account deployment.
 
 #### Step 4: Optionally change the retention period of the Lambda Partitioner CloudWatch logs
-AWS Config Dashboard v1.2.1 and v2.1.0 did not configure a retention period for the CloudWatch logs of the Lambda Partitioner function. From version 3.0.0, logs are kept for 14 days. We recommend that you configure a retention period for your logs. Follow these steps:
+AWS Config Dashboard v2.2.1 and v2.1.0 did not configure a retention period for the CloudWatch logs of the Lambda Partitioner function. From version 3.0.0, logs are kept for 14 days. We recommend that you configure a retention period for your logs. Follow these steps:
 
 1. Open the CloudWatch Console on the AWS account and region where you deployed the dashboard.
 1. Click on `Logs/Log groups`.

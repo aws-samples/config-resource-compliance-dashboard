@@ -1,16 +1,16 @@
 
-# [4.0.0] - 2025-10
+# [4.0.0] - 2025-10-30
 ## Added
 - Account names
 - **Cost Contributors** tab, to find the contributors to AWS Config cost, for example the most evaluated rules, or most changing resources.
-- **Configuration Items** tab renamed to **Resource Inventory**
+- (**Configuration Items** tab renamed to **Resource Inventory**).
 - **Resource Inventory** tab, count of total resources currently in the list (after filters at the top are applied).
 - **Resource Inventory** tab, graphs showing the distribution of EC2 instances across Availability Zones.
 
 
 ## Changed
 - Lambda partitioner function: optimized Amazon Athena API calls by checking if a partition exists already before creating it.
-- **Resource Inventory** tab, removed **Last Modified** column from Lambda inventory. Resource events information is accessible from **Configuration Items Events** tab.
+- **Resource Inventory** tab, removed **Last Modified** column from Lambda inventory. Resource event information is accessible from **Configuration Items Events** tab.
 - **Resource Inventory** tab, added filters on Lambda (runtime) and RDS (engine, engine version, certificate authority).
 - **Tag Compliance** tab, moved as second tab from the left. All visuals now include all AWS Config rules whose name starts with `required-tags`, `required-tag`, `requiredtags` or `requiredtag`. The filtering is also case insensitive.
 - Athena table is now case-insensitive in the `case.insensitive` property in the SerDe (Serializer/Deserializer) configuration. This configuration specifically affects how field names in the JSON data are matched to column names in the Athena table. With this new configuration, case is ignored when matching JSON field names to the expected column names.
