@@ -3,7 +3,7 @@ dashboards:
   CID-CRCD:
     dependsOn:
       datasets:
-      - config_compliance
+      #- config_compliance
       - config_compliance_conformance_pack
       - config_compliance_resource
       - config_event
