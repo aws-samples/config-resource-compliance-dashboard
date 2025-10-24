@@ -1804,7 +1804,6 @@ Resources:
                       send_response(event, context, 'FAILED', {'Error': error_message})
                       return
 
-              
               try:
                   # Configure the bucket notification
                   s3.put_bucket_notification_configuration(
@@ -2184,6 +2183,11 @@ Resources:
               with urllib.request.urlopen(req) as f:
                   print(f.read())
                   print(f.info())
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W92
+            reason: "This function runs only once and does not need reserved concurrent executions"
 
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
