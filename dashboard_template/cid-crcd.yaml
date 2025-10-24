@@ -4,7 +4,6 @@ dashboards:
     dependsOn:
       datasets:
       - config_compliance
-      - config_compliance_cirt
       - config_compliance_conformance_pack
       - config_compliance_resource
       - config_event
@@ -1547,7 +1546,7 @@ views:
       views:
       - config_sys_account_data
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}"."${athena_database_name}".config_inventory_account AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory_account" AS
       SELECT
         account_id
       , payer_account_id
@@ -1910,7 +1909,7 @@ views:
   config_event:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_event AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_event" AS
       WITH
         resource_info AS (
         SELECT
@@ -1941,7 +1940,7 @@ views:
   config_compliance_resource:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_resource AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_compliance_resource" AS
       WITH
         resource_compliance AS (
         SELECT
@@ -1976,7 +1975,7 @@ views:
   config_compliance:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_compliance" AS
       WITH
         conformance_packs AS (
         SELECT
@@ -2032,7 +2031,7 @@ views:
   config_event_rule_evaluation:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_event_rule_evaluation AS 
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_event_rule_evaluation" AS 
       WITH
         conformance_packs AS (
         SELECT
@@ -2093,7 +2092,7 @@ views:
   config_inventory_ec2:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory_ec2" AS
       WITH
         resource_info AS (
         SELECT

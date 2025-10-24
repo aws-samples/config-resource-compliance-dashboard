@@ -171,8 +171,6 @@ DataSetIdentifierDeclarations:
   Identifier: 2config_inventory_ec2-1
 - DataSetArn: arn:aws:quicksight:::dataset/99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
   Identifier: newconfig_compliance_resource_fixed
-- DataSetArn: arn:aws:quicksight:::dataset/ee416ca1-09b9-4b70-953b-262db9de8b48
-  Identifier: config_compliance_cirt
 - DataSetArn: arn:aws:quicksight:::dataset/78d5f479-44d4-4763-b901-0de3d48a0098
   Identifier: config_inventory_s3
 - DataSetArn: arn:aws:quicksight:::dataset/e296cb2f-878a-4884-8813-21afeb26db8d
