@@ -21328,8 +21328,8 @@ Sheets:
       #bdbdbd\" font-size=\"18px\">\_</inline>\n  </block>\n  <br/>\n  <block align=\"\
       right\">\n    <inline color=\"#bdbdbd\" font-size=\"18px\">If you wish to provide\
       \ feedback or report an error please email\_</inline>\n    <inline color=\"\
-      #2f8ee7\" font-size=\"18px\">\n      <a href=\"mailto:aws-config-dashboard@amazon.com\"\
-      \ target=\"_self\">aws-config-dashboard@amazon.com</a>\n    </inline>\n  </block>\n\
+      #2f8ee7\" font-size=\"18px\">\n      <a href=\"mailto:cloud-intelligence-dashboards@amazon.com\"\
+      \ target=\"_self\">cloud-intelligence-dashboards@amazon.com</a>\n    </inline>\n  </block>\n\
       \  <br/>\n  <block align=\"right\">\n    <inline color=\"#bdbdbd\" font-size=\"\
       18px\">Powered by: Amazon QuickSight, Amazon Athena, Amazon S3, AWS Lambda,\
       \ AWS Config\_</inline>\n  </block>\n</text-box>"
