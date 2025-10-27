@@ -2807,7 +2807,7 @@ FilterGroups:
         CustomFilterConfiguration:
           MatchOperator: EQUALS
           NullOption: NON_NULLS_ONLY
-          ParameterName: ComComformancePack
+          ParameterName: ComConformancePack
       FilterId: 5d8e3ebd-334a-4922-9820-4e62340bfae9
   ScopeConfiguration:
     SelectedSheets:
@@ -4425,7 +4425,7 @@ FilterGroups:
         CustomFilterConfiguration:
           MatchOperator: EQUALS
           NullOption: NON_NULLS_ONLY
-          ParameterName: ComComformancePack
+          ParameterName: ComConformancePack
       FilterId: c00de7fc-51bb-433f-a128-118402455f8e
   ScopeConfiguration:
     SelectedSheets:
@@ -9106,7 +9106,7 @@ ParameterDeclarations:
       ValueWhenUnsetOption: RECOMMENDED_VALUE
 - StringParameterDeclaration:
     DefaultValues: {}
-    Name: ComComformancePack
+    Name: ComConformancePack
     ParameterValueType: MULTI_VALUED
     ValueWhenUnset:
       ValueWhenUnsetOption: RECOMMENDED_VALUE
@@ -9530,7 +9530,7 @@ Sheets:
         LinkToDataSetColumn:
           ColumnName: conformancepackname
           DataSetIdentifier: config_compliance
-      SourceParameterName: ComComformancePack
+      SourceParameterName: ComConformancePack
       Title: Conformance Pack
       Type: MULTI_SELECT
   - Dropdown:
