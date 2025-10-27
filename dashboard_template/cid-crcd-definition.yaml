@@ -17399,7 +17399,7 @@ Sheets:
         </inline>
         <br/>
         <br/>
-        <inline color="#bdbdbd">Shows the AWS Config rule evaluatins and resource change events recorded in the specified time window. Use controls at the top to filter by account and AWS Region. Use the sliders on the right to control how many weeks of data are displayed on the weekly evolution controls, and how many days of data are displayed in the other controls in this section.</inline>
+        <inline color="#bdbdbd">Shows the AWS Config rule evaluations and resource change events recorded in the specified time window. Use controls at the top to filter by account and AWS Region. Use the sliders on the right to control how many weeks of data are displayed on the weekly evolution controls, and how many days of data are displayed in the other controls in this section.</inline>
       </text-box>
     SheetTextBoxId: bdf39d29-79a2-48ea-a43d-094f2186f6a3
   - Content: "<text-box>\n  <br/>\n  <inline font-family=\"Amazon Ember\" font-size=\"\
