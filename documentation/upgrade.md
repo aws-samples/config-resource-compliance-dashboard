@@ -4,6 +4,9 @@ With the exception of the cases reported here, you should remove the dashboard c
 ## Upgrade to v4.0.0
 You have to destroy the resources of the current versions and redeploy.
 
+## Upgrade to v3.0.1
+There are no functional changes over v3.0.0. The new version allows CRCD to be easier to install together with other CID dashboards, if you are already running v3.0.0 there is no reason to upgrade.
+
 ## Upgrade to v3.0.0
 
 ### Upgrade to v3.0.0 from v2.1.1 or v2.1.0
