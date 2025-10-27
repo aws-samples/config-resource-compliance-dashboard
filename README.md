@@ -46,7 +46,7 @@ Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Servi
 Graphs from the AWS Config [Aggregator Dashboard](https://docs.aws.amazon.com/config/latest/developerguide/viewing-the-aggregate-dashboard.html#aggregate-compliance-dashboard) are added here, so that you can share it without managing read-only access to the AWS Config Console.
 
 #### Tag compliance
-Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can deploy this rule to find resources in your accounts that were not launched with your desired tag configurations by specifying which resource types should have tags and the expected value for each tag. The rule can be deployed multiple times in AWS Config. To display data on the dashboard, the rules must have a name that starts with `required-tags` (this is case-sensitive).
+Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can deploy this rule to find resources in your accounts that were not launched with your desired tag configurations by specifying which resource types should have tags and the expected value for each tag. The rule can be deployed multiple times in AWS Config.
 
 ![CRCD](images/tag-compliance-summary.png "AWS Config Dashboard, Tag Compliance")
 
@@ -78,7 +78,7 @@ An Amazon Athena table is used to extract data from the AWS Config configuration
 The solution provides Athena views, which are SQL queries that extract data from Amazon S3 using the schema defined in the Athena table. Finally, you can visualize the data in a QuickSight dashboard that uses these views through Amazon QuickSight datasets.
 
 ## Deployment
-Deployment guide available at the [Cloud Intelligence Dashboards Framework workshops](https://catalog.workshops.aws/awscid/en-US/dashboards/additional/config-resource-compliance-dashboard).
+Deployment guide available at the [Cloud Intelligence Dashboards on AWS Implementation Guide](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html).
 
 ## Upgrade
 Upgrading from an older version? Read [this](./documentation/upgrade.md) first.
