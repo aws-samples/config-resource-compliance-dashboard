@@ -17813,13 +17813,7 @@ Sheets:
           Colors:
           - Color: '#BDBDBD'
           - Color: '#FFB500'
-        ColumnAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
-              Visibility: VISIBLE
+
         ColumnLabelOptions:
           SortIconVisibility: HIDDEN
           Visibility: HIDDEN
@@ -17852,12 +17846,6 @@ Sheets:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.compliancetype.2.1757697064531
         Legend:
           Visibility: HIDDEN
-        RowAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         RowLabelOptions:
           SortIconVisibility: HIDDEN
           Visibility: HIDDEN
@@ -17911,12 +17899,6 @@ Sheets:
           Colors:
           - Color: '#BDBDBD'
           - Color: '#B32728'
-        ColumnAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         ColumnLabelOptions:
           SortIconVisibility: HIDDEN
           Visibility: HIDDEN
@@ -17949,12 +17931,6 @@ Sheets:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.compliancetype.2.1757697064531
         Legend:
           Visibility: HIDDEN
-        RowAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         RowLabelOptions:
           Visibility: HIDDEN
         SortConfiguration:
@@ -19988,12 +19964,6 @@ Sheets:
           Colors:
           - Color: '#BDBDBD'
           - Color: '#0E6C0E'
-        ColumnAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         ColumnLabelOptions:
           Visibility: HIDDEN
         DataLabels:
@@ -20025,13 +19995,6 @@ Sheets:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.compliancetype.2.1757697064531
         Legend:
           Visibility: HIDDEN
-        RowAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
-              Visibility: VISIBLE
         RowLabelOptions:
           SortIconVisibility: HIDDEN
           Visibility: HIDDEN
@@ -21058,12 +21021,6 @@ Sheets:
           - Color: '#C6F0D7'
           - Color: '#9FDEF1'
           - Color: '#219FD7'
-        ColumnAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         ColumnLabelOptions:
           AxisLabelOptions:
           - ApplyTo:
@@ -21106,12 +21063,6 @@ Sheets:
           Title:
             CustomLabel: Events
           Visibility: VISIBLE
-        RowAxisDisplayOptions:
-          TickLabelOptions:
-            LabelOptions:
-              FontConfiguration:
-                FontSize:
-                  Relative: LARGE
         RowLabelOptions:
           AxisLabelOptions:
           - ApplyTo:
