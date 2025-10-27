@@ -17382,13 +17382,18 @@ Sheets:
       \ item changes being recorded. AWS Config cost are complex and calculating them\
       \ precisely is outside the scope of this dashboard. This section reports the\
       \ number of configuration items changes that are recorded and the number of\
-      \ AWS Config rule evaluations over time.\_</inline>\n  <br/>\n  <br/>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">Use the controls at the top to filter\
-      \ by account and AWS Region. All graphs show normalized AWS Config rule and\
-      \ conformance pack names. For example, the rule '</inline>\n  <inline color=\"\
-      #bdbdbd\" font-family=\"Amazon Ember\" font-size=\"16px\">a-rule-[random-text]</inline>\n\
-      \  <inline color=\"#bdbdbd\" font-size=\"16px\">' is displayed as 'a-rule',\
-      \ the conformance pack 'a-conformance-pack-[random-text]' is displayed as 'a-conformance-pack'.</inline>\n\
+      \ AWS Config rule evaluations over time. You can track AWS Config cost per operation\
+      \ on the AWS Config section under the Monitoring &amp; Observability tab of\
+      \ the\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"\
+      https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/cudos-cid-kpi.html\"\
+      \ target=\"_blank\">CUDOS dashboard</a>\n  </inline>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"16px\">.</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"16px\">Use the controls at the top to filter by account and AWS\
+      \ Region. All graphs show normalized AWS Config rule and conformance pack names.\
+      \ For example, the rule '</inline>\n  <inline color=\"#bdbdbd\" font-family=\"\
+      Amazon Ember\" font-size=\"16px\">a-rule-[random-text]</inline>\n  <inline color=\"\
+      #bdbdbd\" font-size=\"16px\">' is displayed as 'a-rule', the conformance pack\
+      \ 'a-conformance-pack-[random-text]' is displayed as 'a-conformance-pack'.</inline>\n\
       </text-box>"
     SheetTextBoxId: 57ea5aa2-1148-42df-afae-0629253bd39a
   - Content: |-
