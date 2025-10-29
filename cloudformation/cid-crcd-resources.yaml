@@ -2247,12 +2247,6 @@ Outputs:
     Value: !Ref IAMManagedPolicyQuickSightDataSource
     Export: { Name: "cid-CRCDConfigDashboard-ReadAccessPolicyARN" }
 
-  ReadAccessPolicyARN:
-    Description: "Access Policy for CRCD Dashboard data pipeline"
-    Condition: IsCreateDashboardResources
-    Value: !Ref IAMManagedPolicyQuickSightDataSource
-    Export: { Name: "cid-CRCDConfigDashboard-ReadAccessPolicyARN" }
-
   # these are great for development 
 #  ConditionIsConfigureS3EventNotificationToLambda:
 #    Description: "Development parameter: user selected to create Lambda trigger from S3"
