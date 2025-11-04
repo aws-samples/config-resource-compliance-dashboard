@@ -7,7 +7,7 @@
 
 # Valid prefixes
 # 1. all Config history records
-# 2. Config snapshot records on all accounts an regions whose date is the last day of the month, from the last day of the month until 5 monhs ago
+# 2. Config snapshot records on all accounts an regions whose date is the last day of the month, from the last day of the month until 5 months ago
 # 3. Config snapshot records on all accounts an regions whose date is within the last 5 days
 
 from datetime import datetime, timedelta
