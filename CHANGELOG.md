@@ -1,5 +1,11 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [4.0.1] - 2025-11-10
+Bugfix release
+
+## Fixed
+- The Athena table is case sensitive
+
 # [4.0.0] - 2025-10-30
 ## Added
 - Account names
