@@ -1510,19 +1510,19 @@ views:
         , "region" "Region"
         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , "configurationItem"."resourceid" "ConformancePackId"
-        , MAX_BY("configurationItem"."resourcename", "configurationItem"."configurationitemcapturetime") "ConformancePackName"
+        , "configurationItem"."resourceId" "ConformancePackId"
+        , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConformancePackName"
         , 'AWS::Config::ConformancePackCompliance' "ResourceType"
         , MAX_BY("configurationItem"."arn", "configurationItem"."configurationitemcapturetime") "Arn"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliancetype'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliantrulecount'), "configurationItem"."configurationitemcapturetime") "CompliantRuleCount"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.noncompliantrulecount'), "configurationItem"."configurationitemcapturetime") "NonCompliantRuleCount"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.totalrulecount'), "configurationItem"."configurationitemcapturetime") "TotalRuleCount"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliantRuleCount'), "configurationItem"."configurationitemcapturetime") "CompliantRuleCount"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.nonCompliantRuleCount'), "configurationItem"."configurationitemcapturetime") "NonCompliantRuleCount"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount'), "configurationItem"."configurationitemcapturetime") "TotalRuleCount"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "accountId", "region", "dt", "configurationItem"."resourceid"
+        GROUP BY "accountId", "region", "dt", "configurationItem"."resourceId"
       ) 
       SELECT
         ccp.AccountId
@@ -1540,7 +1540,7 @@ views:
       , CAST(ccp.TotalRuleCount AS INTEGER) TotalRuleCount
       , concat(concat(concat(concat(ccp.AccountId, '-'), ccp.Region), '-'), ccp.ConformancePackId) "PKConformancePackId"
       FROM
-        conformance_pack_compliance ccp  
+        conformance_pack_compliance ccp   
   config_inventory_account:
     dependsOn:
       views:
@@ -1552,7 +1552,7 @@ views:
       , payer_account_id
       , account_name
       FROM
-        "${athena_database_name}".config_sys_account_data
+        "${athena_database_name}"."config_sys_account_data"
   config_inventory_ebs:
     dependsOn: {}
     data: |-
@@ -1564,39 +1564,39 @@ views:
         , ARBITRARY("region") "Region"
         , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
         , ARBITRARY("configurationItem"."arn") "Arn"
-        , "configurationItem"."resourceid" "ConfigEventResourceId"
-        , MAX_BY("configurationItem"."resourcename", "configurationItem"."configurationitemcapturetime") "ResourceName"
+        , "configurationItem"."resourceId" "ConfigEventResourceId"
+        , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
-        , MAX_BY("configurationItem"."tags"[lower('Name')], "configurationItem"."configurationitemcapturetime") "TagName"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
         , MAX_BY("configurationItem"."resourcecreationtime", "configurationItem"."configurationitemcapturetime") "CreationTime"
-        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.createtime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreateTime"
+        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.createTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreateTime"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.encrypted'), "configurationItem"."configurationitemcapturetime") "Encrypted"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmskeyid'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmsKeyId'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.iops'), "configurationItem"."configurationitemcapturetime") "Iops"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.throughput'), "configurationItem"."configurationitemcapturetime") "Throughput"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.size'), "configurationItem"."configurationitemcapturetime") "Size"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.snapshotid'), "configurationItem"."configurationitemcapturetime") "SnapshotId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumeid'), "configurationItem"."configurationitemcapturetime") "VolumeId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumetype'), "configurationItem"."configurationitemcapturetime") "VolumeType"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.fastrestored'), "configurationItem"."configurationitemcapturetime") "FastRestored"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiattachenabled'), "configurationItem"."configurationitemcapturetime") "MultiAttachEnabled"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.snapshotId'), "configurationItem"."configurationitemcapturetime") "SnapshotId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumeId'), "configurationItem"."configurationitemcapturetime") "VolumeId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.volumeType'), "configurationItem"."configurationitemcapturetime") "VolumeType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.fastRestored'), "configurationItem"."configurationitemcapturetime") "FastRestored"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiAttachEnabled'), "configurationItem"."configurationitemcapturetime") "MultiAttachEnabled"
         , (CASE WHEN (MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime") IS NOT NULL) THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.string'), "configurationItem"."configurationitemcapturetime") ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state'), "configurationItem"."configurationitemcapturetime") END) "State"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].device'), "configurationItem"."configurationitemcapturetime") "AttachmentDevice"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].instanceid'), "configurationItem"."configurationitemcapturetime") "AttachmentInstanceId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].deleteontermination'), "configurationItem"."configurationitemcapturetime") "DeleteOnTermination"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].instanceId'), "configurationItem"."configurationitemcapturetime") "AttachmentInstanceId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].deleteOnTermination'), "configurationItem"."configurationitemcapturetime") "DeleteOnTermination"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].state'), "configurationItem"."configurationitemcapturetime") "AttachmentState"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].volumeid'), "configurationItem"."configurationitemcapturetime") "AttachmentVolumeId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].volumeId'), "configurationItem"."configurationitemcapturetime") "AttachmentVolumeId"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Volume') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "configurationItem"."resourceid"
+        GROUP BY "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
@@ -1644,22 +1644,22 @@ views:
         , ARBITRARY("region") "Region"
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
         , ARBITRARY("configurationItem"."arn") "Arn"
-        , "configurationItem"."resourceid" "ConfigEventResourceId"
-        , MAX_BY("configurationItem"."resourcename", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceName"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , "configurationItem"."resourceId" "ConfigEventResourceId"
+        , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceName"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.name'), "configurationItem"."configurationitemcapturetime") "BucketName"
-        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationdate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
+        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::S3::Bucket') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "configurationItem"."resourceid"
+        GROUP BY "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
@@ -1690,12 +1690,12 @@ views:
         , "region" "Region"
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , "configurationItem"."resourceid" "ResourceId"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , "configurationItem"."resourceId" "ResourceId"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
         , "configurationItem"."resourcetype" "ResourceType"
         , ARBITRARY("configurationItem"."arn") "Arn"
@@ -1703,7 +1703,7 @@ views:
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceid"
+        GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
@@ -1721,7 +1721,7 @@ views:
       , r.ConfigItemStatus
       , concat(concat(concat(concat(concat(concat(r.AccountId, '-'), r.Region), '-'), r.ResourceType), '-'), r.ResourceId) "PKResourceId"
       FROM
-        resource_info r
+        resource_info r      
   config_inventory_rds:
     dependsOn: {}
     data: |-
@@ -1731,47 +1731,47 @@ views:
         SELECT
           ARBITRARY("accountId") "AccountId"
         , ARBITRARY("region") "Region"
-        , ARBITRARY("configurationItem"."availabilityzone") "AvailabilityZone"
+        , ARBITRARY("configurationItem"."availabilityZone") "AvailabilityZone"
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
         , ARBITRARY("configurationItem"."arn") "Arn"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbiresourceid'), "configurationItem"."configurationitemcapturetime") "DatabaseResourceID"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbinstancearn'), "configurationItem"."configurationitemcapturetime") "DatabaseInstanceArn"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.cacertificateidentifier'), "configurationItem"."configurationitemcapturetime") "CACertificateIdentifier"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbiResourceId'), "configurationItem"."configurationitemcapturetime") "DatabaseResourceID"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceArn'), "configurationItem"."configurationitemcapturetime") "DatabaseInstanceArn"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.cACertificateIdentifier'), "configurationItem"."configurationitemcapturetime") "CACertificateIdentifier"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.endpoint.address'), "configurationItem"."configurationitemcapturetime") "EndPoint"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.endpoint.port'), "configurationItem"."configurationitemcapturetime") "Port"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.deletionprotection'), "configurationItem"."configurationitemcapturetime") "DeletionProtection"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredbackupwindow'), "configurationItem"."configurationitemcapturetime") "BackupWindow"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredmaintenancewindow'), "configurationItem"."configurationitemcapturetime") "MaintenanceWindow"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.backupretentionperiod'), "configurationItem"."configurationitemcapturetime") "BackupRetention"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbinstanceclass'), "configurationItem"."configurationitemcapturetime") "DatabaseInstance"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbinstancestatus'), "configurationItem"."configurationitemcapturetime") "DatabaseStatus"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dbname'), "configurationItem"."configurationitemcapturetime") "DatabaseName"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.deletionProtection'), "configurationItem"."configurationitemcapturetime") "DeletionProtection"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredBackupWindow'), "configurationItem"."configurationitemcapturetime") "BackupWindow"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.preferredMaintenanceWindow'), "configurationItem"."configurationitemcapturetime") "MaintenanceWindow"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.backupRetentionPeriod'), "configurationItem"."configurationitemcapturetime") "BackupRetention"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceClass'), "configurationItem"."configurationitemcapturetime") "DatabaseInstance"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBInstanceStatus'), "configurationItem"."configurationitemcapturetime") "DatabaseStatus"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.dBName'), "configurationItem"."configurationitemcapturetime") "DatabaseName"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.engine'), "configurationItem"."configurationitemcapturetime") "Engine"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.engineversion'), "configurationItem"."configurationitemcapturetime") "EngineVersion"
-        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.instancecreatetime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "InstanceCreateTime"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmskeyid'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
-        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.latestrestorabletime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LatestRestorableTime"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.masterusername'), "configurationItem"."configurationitemcapturetime") "Username"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiaz'), "configurationItem"."configurationitemcapturetime") "IsMultiAZ"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publiclyaccessible'), "configurationItem"."configurationitemcapturetime") "IsPubliclyAccessible"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storageencrypted'), "configurationItem"."configurationitemcapturetime") "IsStorageEncrypted"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storagetype'), "configurationItem"."configurationitemcapturetime") "StorageType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.engineVersion'), "configurationItem"."configurationitemcapturetime") "EngineVersion"
+        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.instanceCreateTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "InstanceCreateTime"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kmsKeyId'), "configurationItem"."configurationitemcapturetime") "KmsKeyId"
+        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.latestRestorableTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LatestRestorableTime"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.masterUsername'), "configurationItem"."configurationitemcapturetime") "Username"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.multiAZ'), "configurationItem"."configurationitemcapturetime") "IsMultiAZ"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publiclyAccessible'), "configurationItem"."configurationitemcapturetime") "IsPubliclyAccessible"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storageEncrypted'), "configurationItem"."configurationitemcapturetime") "IsStorageEncrypted"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.storageType'), "configurationItem"."configurationitemcapturetime") "StorageType"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timezone'), "configurationItem"."configurationitemcapturetime") "TimeZone"
-        , MAX_BY("configurationItem"."resourcecreationtime", "configurationItem"."configurationitemcapturetime") "ResourceCreateTime"
-        , "configurationItem"."resourceid" "ConfigEventResourceId"
-        , MAX_BY("configurationItem"."resourcename", "configurationItem"."configurationitemcapturetime") "ResourceName"
+        , MAX_BY("configurationItem"."resourceCreationTime", "configurationItem"."configurationitemcapturetime") "ResourceCreateTime"
+        , "configurationItem"."resourceId" "ConfigEventResourceId"
+        , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::RDS::DBInstance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "configurationItem"."resourceid"
+        GROUP BY "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
@@ -1837,7 +1837,7 @@ views:
       , r.LatestPartitionDate
       , r.LatestConfigItemCaptureTime
       FROM
-        resource_info r    
+        resource_info r
   config_inventory_lambda:
     dependsOn: {}
     data: |-
@@ -1850,32 +1850,32 @@ views:
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
         , ARBITRARY("configurationItem"."arn") "Arn"
-        , "configurationItem"."resourceid" "ConfigEventResourceId"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , "configurationItem"."resourceId" "ConfigEventResourceId"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
-        , MAX_BY(CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionarn'), "configurationItem"."configurationitemcapturetime") "FunctionArn"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionname'), "configurationItem"."configurationitemcapturetime") "FunctionName"
+        , MAX_BY(CAST(parse_datetime("configurationItem"."resourceCreationTime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionArn'), "configurationItem"."configurationitemcapturetime") "FunctionArn"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.functionName'), "configurationItem"."configurationitemcapturetime") "FunctionName"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.description'), "configurationItem"."configurationitemcapturetime") "Description"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.runtime'), "configurationItem"."configurationitemcapturetime") "Runtime"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.role'), "configurationItem"."configurationitemcapturetime") "RoleARN"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.handler'), "configurationItem"."configurationitemcapturetime") "Handler"
         , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.lastModified'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LastModified"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.lastupdatestatus'), "configurationItem"."configurationitemcapturetime") "LastUpdateStatus"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.memorysize'), "configurationItem"."configurationitemcapturetime") "MemorySize"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.packagetype'), "configurationItem"."configurationitemcapturetime") "PackageType"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.revisionid'), "configurationItem"."configurationitemcapturetime") "RevisionId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.lastUpdateStatus'), "configurationItem"."configurationitemcapturetime") "LastUpdateStatus"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.memorySize'), "configurationItem"."configurationitemcapturetime") "MemorySize"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.packageType'), "configurationItem"."configurationitemcapturetime") "PackageType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.revisionId'), "configurationItem"."configurationitemcapturetime") "RevisionId"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timeout'), "configurationItem"."configurationitemcapturetime") "Timeout"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.version'), "configurationItem"."configurationitemcapturetime") "LambdaVersion"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::Lambda::Function') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "accountId", "region", "configurationItem"."resourceid"
+        GROUP BY "accountId", "region", "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
@@ -1918,8 +1918,8 @@ views:
         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "PartitionDate"
         , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
         , "configurationItem"."resourceId" "ResourceId"
-        , "configurationItem"."configurationitemstatus" "ConfigItemStatus"
-        , "configurationItem"."resourcetype" "ResourceType"
+        , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
+        , "configurationItem"."resourceType" "ResourceType"
         , "configurationItem"."arn" "Arn"
         FROM
           (cid_crcd_config
@@ -1947,17 +1947,17 @@ views:
           "accountId" "AccountId"
         , "region" "Region"
         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "EventType"
-        , MAX_BY("configurationItem"."resourceid", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "EventType"
+        , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , "json_extract_scalar"("configurationItem"."configuration", '$.targetresourceid') "ResourceId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetresourcetype'), "configurationItem"."configurationitemcapturetime") "ResourceType"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliancetype'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+        , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "accountId", "region", "dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetresourcetype'), "json_extract_scalar"("configurationItem"."configuration", '$.targetresourceid')
+        GROUP BY "accountId", "region", "dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
       ) 
       SELECT
         rc.AccountId
@@ -1975,19 +1975,21 @@ views:
   config_compliance:
     dependsOn: {}
     data: |-
-      CREATE OR REPLACE VIEW "${athena_database_name}"."config_compliance" AS
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_compliance" AS 
       WITH
         conformance_packs AS (
         SELECT
-          ARBITRARY("configurationItem"."resourceid") "ConformancePackId"
-        , ARBITRARY("configurationItem"."resourcename") "ConformancePackName"
-        , "json_extract_scalar"(rule, '$.configrulename') "ConformancePackRuleName"
+          ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
+        , ARBITRARY("configurationItem"."resourceName") "ConformancePackName"
+        , "json_extract_scalar"(rule, '$.configRuleName') "ConformancePackRuleName"
         FROM
           ((cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configrulelist') AS array(json))) u (rule))
-        WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
-        GROUP BY "json_extract_scalar"(rule, '$.configrulename')
+        WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') 
+        AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date))))
+        )
+        GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
       ) 
       , resource_compliance AS (
         SELECT
@@ -1995,18 +1997,20 @@ views:
         , "region" "Region"
         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , MAX_BY("configurationItem"."resourceid", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetresourcetype'), "configurationItem"."configurationitemcapturetime") "ResourceType"
-        , MAX_BY("json_extract_scalar"(rule, '$.compliancetype'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
-        , "json_extract_scalar"(rule, '$.configruleid') "RuleId"
-        , ARBITRARY("json_extract_scalar"(rule, '$.configrulename')) "RuleName"
-        , "json_extract_scalar"("configurationItem"."configuration", '$.targetresourceid') "ResourceId"
+        , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+        , MAX_BY("json_extract_scalar"(rule, '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+        , "json_extract_scalar"(rule, '$.configRuleId') "RuleId"
+        , ARBITRARY("json_extract_scalar"(rule, '$.configRuleName')) "RuleName"
+        , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
         FROM
           ((cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configrulelist') AS array(json))) u (rule))
-        WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configruleid'), "json_extract_scalar"("configurationItem"."configuration", '$.targetresourceid')
+        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+        WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') 
+        AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) 
+        AND (datasource = 'ConfigSnapshot'))
+        GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
       ) 
       SELECT
         rc.AccountId
@@ -2037,13 +2041,13 @@ views:
         SELECT
           ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
         , ARBITRARY("configurationItem"."resourceName") "ConformancePackName"
-        , "json_extract_scalar"(rule, '$.configrulename') "ConformancePackRuleName"
+        , "json_extract_scalar"(rule, '$.configRuleName') "ConformancePackRuleName"
         FROM
           ((cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configrulelist') AS array(json))) u (rule))
+        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -12, current_date))))
-        GROUP BY "json_extract_scalar"(rule, '$.configrulename')
+        GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
       ) 
       , rule_evaluations AS (
         SELECT
@@ -2051,20 +2055,20 @@ views:
         , "region" "Region"
         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "PartitionDate"
         , CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp) "ConfigItemCaptureTime"
-        , "configurationItem"."resourceid" "ResourceId"
-        , "json_extract_scalar"("configurationItem"."configuration", '$.targetresourceid') "EventTargetResourceId"
-        , "json_extract_scalar"("configurationItem"."configuration", '$.targetresourcetype') "EventTargetResourceType"
-        , "configurationItem"."configurationitemstatus" "ConfigItemStatus"
+        , "configurationItem"."resourceId" "ResourceId"
+        , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "EventTargetResourceId"
+        , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType') "EventTargetResourceType"
+        , "configurationItem"."configurationItemStatus" "ConfigItemStatus"
         , "configurationItem"."resourcetype" "EvaluationSource"
-        , "json_extract_scalar"(rule, '$.compliancetype') "ComplianceType"
-        , "json_extract_scalar"(rule, '$.configruleid') "RuleId"
-        , "json_extract_scalar"(rule, '$.configrulename') "RuleName"
-        , "json_extract_scalar"(rule, '$.configrulearn') "RuleArn"
+        , "json_extract_scalar"(rule, '$.complianceType') "ComplianceType"
+        , "json_extract_scalar"(rule, '$.configRuleId') "RuleId"
+        , "json_extract_scalar"(rule, '$.configRuleName') "RuleName"
+        , "json_extract_scalar"(rule, '$.configRuleArn') "RuleArn"
         FROM
           ((cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configrulelist') AS array(json))) u (rule))
-        WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -180, current_date)) AND (datasource = 'ConfigHistory') AND (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') OR (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND ("json_extract_scalar"(rule, '$.compliancetype') = 'INSUFFICIENT_DATA'))))
+        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+        WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -180, current_date)) AND (datasource = 'ConfigHistory') AND (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') OR (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND ("json_extract_scalar"(rule, '$.complianceType') = 'INSUFFICIENT_DATA'))))
       ) 
       SELECT
         r.AccountId
@@ -2098,39 +2102,39 @@ views:
         SELECT
           ARBITRARY("accountId") "AccountId"
         , ARBITRARY("region") "Region"
-        , ARBITRARY("configurationItem"."availabilityzone") "AvailabilityZone"
+        , ARBITRARY("configurationItem"."availabilityZone") "AvailabilityZone"
         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
-        , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
-        , "configurationItem"."resourceid" "ConfigEventResourceId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.statetransitionreason'), "configurationItem"."configurationitemcapturetime") "StateTransitionReason"
+        , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
+        , "configurationItem"."resourceId" "ConfigEventResourceId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.stateTransitionReason'), "configurationItem"."configurationitemcapturetime") "StateTransitionReason"
         , ARBITRARY("configurationItem"."arn") "Arn"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceid'), "configurationItem"."configurationitemcapturetime") "InstanceId"
-        , MAX_BY("configurationItem"."tags"[lower('Name')], "configurationItem"."configurationitemcapturetime") "TagName"
-        , MAX_BY("configurationItem"."tags"[lower('${tag1}')], "configurationItem"."configurationitemcapturetime") "TAG1"
-        , MAX_BY("configurationItem"."tags"[lower('${tag2}')], "configurationItem"."configurationitemcapturetime") "TAG2"
-        , MAX_BY("configurationItem"."tags"[lower('${tag3}')], "configurationItem"."configurationitemcapturetime") "TAG3"
-        , MAX_BY("configurationItem"."tags"[lower('${tag4}')], "configurationItem"."configurationitemcapturetime") "TAG4"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceId'), "configurationItem"."configurationitemcapturetime") "InstanceId"
+        , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
+        , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
+        , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
+        , MAX_BY("configurationItem"."tags"['${tag3}'], "configurationItem"."configurationitemcapturetime") "TAG3"
+        , MAX_BY("configurationItem"."tags"['${tag4}'], "configurationItem"."configurationitemcapturetime") "TAG4"
         , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
         , MAX_BY(CAST(parse_datetime("configurationItem"."resourcecreationtime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationTime"
-        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchtime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LaunchTime"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instancetype'), "configurationItem"."configurationitemcapturetime") "InstanceType"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kernelid'), "configurationItem"."configurationitemcapturetime") "KernelId"
+        , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.launchTime'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "LaunchTime"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.instanceType'), "configurationItem"."configurationitemcapturetime") "InstanceType"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.kernelId'), "configurationItem"."configurationitemcapturetime") "KernelId"
         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.platform'), "configurationItem"."configurationitemcapturetime") "Platform"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.platformdetails'), "configurationItem"."configurationitemcapturetime") "PlatformDetails"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.keyname'), "configurationItem"."configurationitemcapturetime") "KeyName"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.imageid'), "configurationItem"."configurationitemcapturetime") "AmiId"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateipaddress'), "configurationItem"."configurationitemcapturetime") "PrivateIp"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicipaddress'), "configurationItem"."configurationitemcapturetime") "PublicIp"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.ipv6address'), "configurationItem"."configurationitemcapturetime") "IPv6Address"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.platformDetails'), "configurationItem"."configurationitemcapturetime") "PlatformDetails"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.keyName'), "configurationItem"."configurationitemcapturetime") "KeyName"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.imageId'), "configurationItem"."configurationitemcapturetime") "AmiId"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateIpAddress'), "configurationItem"."configurationitemcapturetime") "PrivateIp"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicIpAddress'), "configurationItem"."configurationitemcapturetime") "PublicIp"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.ipv6Address'), "configurationItem"."configurationitemcapturetime") "IPv6Address"
         , (CASE WHEN (MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime") IS NOT NULL) THEN MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.struct.name'), "configurationItem"."configurationitemcapturetime") ELSE MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.state.name'), "configurationItem"."configurationitemcapturetime") END) "State"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privatednsname'), "configurationItem"."configurationitemcapturetime") "PrivateDnsName"
-        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicdnsname'), "configurationItem"."configurationitemcapturetime") "PublicDnsName"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateDnsName'), "configurationItem"."configurationitemcapturetime") "PrivateDnsName"
+        , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicDnsName'), "configurationItem"."configurationitemcapturetime") "PublicDnsName"
         FROM
           (cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Instance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-        GROUP BY "configurationItem"."resourceid"
+        GROUP BY "configurationItem"."resourceId"
       ) 
       SELECT
         r.AccountId
