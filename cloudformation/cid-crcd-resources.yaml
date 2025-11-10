@@ -1164,20 +1164,20 @@ Resources:
           Columns:
             - Name: fileversion
               Type: string
-              Comment: ""
+              Comment: "File Version"
             - Name: configsnapshotid
               Type: string
-              Comment: ""
+              Comment: "Config Snapshot ID"
             - Name: configurationitems
               Type: array<struct<configurationitemversion:string,configurationitemcapturetime:string,configurationstateid:bigint,awsaccountid:string,configurationitemstatus:string,resourcetype:string,resourceid:string,resourcename:string,arn:string,awsregion:string,availabilityzone:string,configurationstatemd5hash:string,configuration:string,supplementaryconfiguration:map<string,string>,tags:map<string,string>,resourcecreationtime:string>>
-              Comment: ""
+              Comment: "Configuration Items"
           Location: !Sub 's3://${DashboardBucketName}/'
           InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
           OutputFormat: 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
           SerdeInfo:
             SerializationLibrary: 'org.openx.data.jsonserde.JsonSerDe'
             Parameters:
-              case.insensitive: 'true'
+              case.insensitive: 'false'
               mapping.arn: 'ARN'
               mapping.availabilityzone: 'availabilityZone'
               mapping.awsaccountid: 'awsAccountId'
@@ -1198,13 +1198,13 @@ Resources:
         PartitionKeys:
           - Name: accountid
             Type: string
-            Comment: ""
+            Comment: "Account ID"
           - Name: dt
             Type: string
-            Comment: ""
+            Comment: "Date of partition"
           - Name: region
             Type: string
-            Comment: ""
+            Comment: "Region"
           - Name: dataSource
             Type: string
             Comment: "Config Snapshot or History record"
@@ -2049,7 +2049,8 @@ Resources:
               else:
                   try:
                       # Check which tables exist
-                      if check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+                      if False and check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+                          # Organization data collection is not supported at the moment
                           organization_table_exists = True
                       else:
                           account_map_exists = check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
