@@ -21255,7 +21255,7 @@ Sheets:
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
       \ font-size=\"32px\">\n      <b>AWS Config Resource Compliance Dashboard\_</b>\n\
       \    </inline>\n  </block>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ font-size=\"32px\">\n      <b>v4.0.0</b>\n    </inline>\n  </block>\n  <br/>\n\
+      \ font-size=\"32px\">\n      <b>v4.0.1</b>\n    </inline>\n  </block>\n  <br/>\n\
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n\
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
       \ color=\"#2f8ee7\" font-size=\"24px\">\n      <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
