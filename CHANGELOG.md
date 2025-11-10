@@ -1,7 +1,8 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
 # [4.0.1] - 2025-11-10
-Bugfix release. The case insensitive table will not work if you apply the same tag, but with different capitalization to a resource, e.g. `Environment` and `environment`. In that case, any query to the Athena table will fail and no data will be displayed on the dashboard.
+Bugfix release: adopting a case sensitive Athena table for the dashboard. 
+The case insensitive table ov v4.0.0 does not work if you apply the same tag, but with different capitalization to a resource, e.g. `Environment` and `environment`. In that case, any query to the Athena table will fail and no data will be displayed on the dashboard.
 
 ## Changed
 - Removed support for AWS Organizations Data Collection Module of the [Data Collection Stack](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html). The case insensitive table is the only way to support that source of account names.
