@@ -15,7 +15,8 @@ Resources:
   # checkov:skip=CKV_AWS_18: No need to have access logging on this bucket
     Type: 'AWS::S3::Bucket'
     Properties:
-      # for now I launch this in every region MAH!! so I need -${AWS::Region} 
+      # TODO do I really need so many buckets, one per account/region?
+      # for now I launch this in every region so I need -${AWS::Region} 
       BucketName: !Sub 'awsconfigconforms-crcd-cirt-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:

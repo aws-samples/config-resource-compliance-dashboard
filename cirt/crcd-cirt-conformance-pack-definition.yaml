@@ -1,3 +1,17 @@
+# Base file for the definition of the CRCD CIRT Conformance pack
+# Naming conventions for ConfigRuleName:
+# crcd-cirt-<lv1 and lv2 classification>-<rule name>
+# lv1 will indicate: Initial Access, 2nd level TBC, 3rd level TBC
+# lv2 will refine the classification within the level 1
+#
+# Current classification - the code in the rule name matches calculated fields and display names on Quick Suite
+# Classification code | Lv1 Classification | Lv2 Classification
+# crcd-cirt-ia-s3     | Initial Access     | S3 Protection
+# crcd-cirt-ia-iam    | Initial Access     | IAM Protection
+# crcd-cirt-ia-ec2    | Initial Access     | EC2 Protection
+# crcd-cirt-ia-ra     | Initial Access     | Resource Access Protection
+
+
 ConformancePackName: crcd-cirt-security-recommendations
 Description: "Conformance pack for comprehensive security controls recommended by AWS Customer Incident Response Team (CIRT)"
 
@@ -7,12 +21,12 @@ Parameters:  # Add parameters section at the top level
     Default: "PRIVATE,REGIONAL"
     Description: "Allowed API Gateway endpoint types (EDGE, REGIONAL, PRIVATE)"
 
-
+# TODO clean up DEPRECATED rules
 Resources:
   RootAccountHardwareMFAEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-root-account-hardware-mfa-enabled
+      ConfigRuleName: DEPRECATED-crcd-cirt-root-account-hardware-mfa-enabled
       Source:
         Owner: AWS
         SourceIdentifier: ROOT_ACCOUNT_HARDWARE_MFA_ENABLED
@@ -21,7 +35,7 @@ Resources:
   RootAccountMFAEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-root-account-mfa-enabled
+      ConfigRuleName: crcd-cirt-ia-iam-root-account-mfa-enabled
       Source:
         Owner: AWS
         SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
@@ -30,7 +44,7 @@ Resources:
   IAMRootAccessKeyCheck:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-iam-root-access-key-check
+      ConfigRuleName: crcd-cirt-ia-iam-iam-root-access-key-check
       Source:
         Owner: AWS
         SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
@@ -39,7 +53,7 @@ Resources:
   IAMUserMFAEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-iam-user-mfa-enabled
+      ConfigRuleName: crcd-cirt-ia-iam-iam-user-mfa-enabled
       Source:
         Owner: AWS
         SourceIdentifier: IAM_USER_MFA_ENABLED
@@ -47,7 +61,7 @@ Resources:
   MFAEnabledForIAMConsoleAccess:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-mfa-enabled-for-iam-console-access
+      ConfigRuleName: crcd-cirt-ia-iam-mfa-enabled-for-iam-console-access
       Source:
         Owner: AWS
         SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
@@ -55,7 +69,7 @@ Resources:
   AutoscalingLaunchConfigRequiresIMDSv2:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-autoscaling-launchconfig-requires-imdsv2
+      ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
       Source:
         Owner: AWS
         SourceIdentifier: AUTOSCALING_LAUNCH_CONFIG_PUBLIC_IP_DISABLED
@@ -63,7 +77,7 @@ Resources:
   EC2IMDSv2Check:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-ec2-imdsv2-check
+      ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
       Source:
         Owner: AWS
         SourceIdentifier: EC2_IMDSV2_CHECK
@@ -71,7 +85,7 @@ Resources:
   EC2LaunchTemplateIMDSv2Check:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-ec2-launch-template-imdsv2-check
+      ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
       Source:
         Owner: AWS
         SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
@@ -79,7 +93,7 @@ Resources:
   S3BucketPublicReadProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-bucket-public-read-prohibited
+      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
       Source:
         Owner: AWS
         SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
@@ -87,7 +101,7 @@ Resources:
   S3BucketPublicWriteProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-bucket-public-write-prohibited
+      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
       Source:
         Owner: AWS
         SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
@@ -95,7 +109,7 @@ Resources:
   S3AccessPointInVPCOnly:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-access-point-in-vpc-only
+      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
       Source:
         Owner: AWS
         SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
@@ -103,7 +117,7 @@ Resources:
   S3AccessPointPublicAccessBlocks:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-access-point-public-access-blocks
+      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
       Source:
         Owner: AWS
         SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
@@ -111,7 +125,7 @@ Resources:
   S3AccountLevelPublicAccessBlocks:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-account-level-public-access-blocks
+      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
       Source:
         Owner: AWS
         SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
@@ -119,7 +133,7 @@ Resources:
   S3AccountLevelPublicAccessBlocksPeriodic:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-account-level-public-access-blocks-periodic
+      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
       Source:
         Owner: AWS
         SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
@@ -128,7 +142,7 @@ Resources:
   S3BucketLevelPublicAccessProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-s3-bucket-level-public-access-prohibited
+      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
       Source:
         Owner: AWS
         SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
@@ -136,7 +150,7 @@ Resources:
   RedshiftUnrestrictedPortAccess:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-redshift-unrestricted-port-access
+      ConfigRuleName: DEPRECATED-crcd-cirt-redshift-unrestricted-port-access
       Source:
         Owner: AWS
         SourceIdentifier: REDSHIFT_CLUSTER_PUBLIC_ACCESS_CHECK
@@ -144,7 +158,7 @@ Resources:
   RestrictedCommonPorts:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-restricted-common-ports
+      ConfigRuleName: DEPRECATED-crcd-cirt-restricted-common-ports
       Source:
         Owner: AWS
         SourceIdentifier: RESTRICTED_INCOMING_TRAFFIC
@@ -152,7 +166,7 @@ Resources:
   VPCSGOpenOnlyToAuthorizedPorts:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-vpc-sg-open-only-to-authorized-ports
+      ConfigRuleName: DEPRECATED-crcd-cirt-vpc-sg-open-only-to-authorized-ports
       Source:
         Owner: AWS
         SourceIdentifier: VPC_SG_OPEN_ONLY_TO_AUTHORIZED_PORTS
@@ -160,7 +174,7 @@ Resources:
   VPCSGPortRestrictionCheck:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-vpc-sg-port-restriction-check
+      ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
       Source:
         Owner: AWS
         SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
@@ -168,7 +182,7 @@ Resources:
   APIGWv2AccessLogsEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gwv2-access-logs-enabled
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gwv2-access-logs-enabled
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_EXECUTION_LOGGING_ENABLED
@@ -176,7 +190,7 @@ Resources:
   APIGWv2AuthorizationTypeConfigured:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gwv2-authorization-type-configured
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gwv2-authorization-type-configured
       Source:
         Owner: AWS
         SourceIdentifier: API_GWV2_AUTHORIZATION_TYPE_CONFIGURED
@@ -184,7 +198,7 @@ Resources:
   APIGWAssociatedWithWAF:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-associated-with-waf
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-associated-with-waf
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_ASSOCIATED_WITH_WAF
@@ -192,7 +206,7 @@ Resources:
   APIGWCacheEnabledAndEncrypted:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-cache-enabled-and-encrypted
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-cache-enabled-and-encrypted
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_CACHE_ENABLED_AND_ENCRYPTED
@@ -202,7 +216,7 @@ Resources:
   APIGWEndpointTypeCheck:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-endpoint-type-check
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-endpoint-type-check
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_ENDPOINT_TYPE_CHECK
@@ -213,7 +227,7 @@ Resources:
   APIGWExecutionLoggingEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-execution-logging-enabled
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-execution-logging-enabled
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_EXECUTION_LOGGING_ENABLED
@@ -221,7 +235,7 @@ Resources:
   APIGWSSLEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-ssl-enabled
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-ssl-enabled
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_SSL_ENABLED
@@ -229,7 +243,7 @@ Resources:
   APIGWXRayEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-cirt-api-gw-xray-enabled
+      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-xray-enabled
       Source:
         Owner: AWS
         SourceIdentifier: API_GW_XRAY_ENABLED
