@@ -1,3 +1,4 @@
+# DEPRECATED do not use
 # This works, but needs to be created in every region of the AWS Config delegated admin
 # It creates a bucket per region, to contain the YAML template of the conformance pack, which is redundant
 AWSTemplateFormatVersion: '2010-09-09'

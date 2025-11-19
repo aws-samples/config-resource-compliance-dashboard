@@ -1,0 +1,211 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CRCD CIRT Config Rules - Deployed via StackSet to all accounts and regions'
+
+Resources:
+  # Custom Config Rule Lambda Function
+  CustomConfigRuleFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'crcd-cirt-custom-rule-${AWS::Region}'
+      Runtime: python3.9
+      Handler: index.lambda_handler
+      Role: !GetAtt CustomConfigRuleRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import datetime
+          
+          def lambda_handler(event, context):
+              config_client = boto3.client('config')
+              
+              # Get the rule parameters
+              rule_parameters = {}
+              if 'ruleParameters' in event:
+                  rule_parameters = json.loads(event['ruleParameters'])
+              
+              # Example: Check if account has CloudTrail enabled
+              cloudtrail = boto3.client('cloudtrail')
+              
+              try:
+                  # Get all trails
+                  trails = cloudtrail.describe_trails()['trailList']
+                  
+                  # Check if any trail is logging
+                  compliant = False
+                  for trail in trails:
+                      status = cloudtrail.get_trail_status(Name=trail['TrailARN'])
+                      if status['IsLogging']:
+                          compliant = True
+                          break
+                  
+                  # Prepare evaluation result
+                  evaluation = {
+                      'ComplianceResourceType': 'AWS::::Account',
+                      'ComplianceResourceId': event['accountId'],
+                      'ComplianceType': 'COMPLIANT' if compliant else 'NON_COMPLIANT',
+                      'OrderingTimestamp': datetime.datetime.now()
+                  }
+                  
+                  # Submit evaluation to Config
+                  config_client.put_evaluations(
+                      Evaluations=[evaluation],
+                      ResultToken=event['resultToken']
+                  )
+                  
+              except Exception as e:
+                  print(f'Error: {str(e)}')
+                  # Submit failed evaluation
+                  evaluation = {
+                      'ComplianceResourceType': 'AWS::::Account',
+                      'ComplianceResourceId': event['accountId'],
+                      'ComplianceType': 'NOT_APPLICABLE',
+                      'OrderingTimestamp': datetime.datetime.now()
+                  }
+                  config_client.put_evaluations(
+                      Evaluations=[evaluation],
+                      ResultToken=event['resultToken']
+                  )
+
+  CustomConfigRuleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/service-role/ConfigRole
+      Policies:
+        - PolicyName: CloudTrailReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudtrail:DescribeTrails
+                  - cloudtrail:GetTrailStatus
+                  - config:PutEvaluations
+                Resource: '*'
+
+  # Permission for Config to invoke the Lambda function
+  CustomConfigRuleLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref CustomConfigRuleFunction
+      Action: lambda:InvokeFunction
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # AWS Managed Config Rules
+  RootAccountMFAEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-iam-root-account-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+      MaximumExecutionFrequency: TwentyFour_Hours
+
+  IAMRootAccessKeyCheck:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-iam-iam-root-access-key-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
+      MaximumExecutionFrequency: TwentyFour_Hours
+
+  IAMUserMFAEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-iam-iam-user-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_USER_MFA_ENABLED
+
+  MFAEnabledForIAMConsoleAccess:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-iam-mfa-enabled-for-iam-console-access
+      Source:
+        Owner: AWS
+        SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
+
+  EC2IMDSv2Check:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: EC2_IMDSV2_CHECK
+
+  EC2LaunchTemplateIMDSv2Check:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
+
+  S3BucketPublicReadProhibited:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+
+  S3BucketPublicWriteProhibited:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+
+  S3AccountLevelPublicAccessBlocks:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
+
+  VPCSGPortRestrictionCheck:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
+
+  # Custom Lambda-based rule for CloudTrail logging check
+  CustomCloudTrailLoggingCheck:
+    Type: AWS::Config::ConfigRule
+    DependsOn: CustomConfigRuleFunction
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-custom-cloudtrail-logging-enabled
+      Source:
+        Owner: AWS_LAMBDA
+        SourceIdentifier: !GetAtt CustomConfigRuleFunction.Arn
+        SourceDetail:
+          - EventSource: aws.config
+            MessageType: ScheduledNotification
+            MaximumExecutionFrequency: TwentyFour_Hours
+      Scope:
+        ComplianceResourceTypes:
+          - "AWS::::Account"
+
+Outputs:
+  CustomRuleFunctionArn:
+    Description: "ARN of the custom Config rule Lambda function"
+    Value: !GetAtt CustomConfigRuleFunction.Arn
+    
+  ConfigRulesDeployed:
+    Description: "Number of Config rules deployed"
+    Value: "11"

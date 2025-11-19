@@ -15,23 +15,13 @@
 ConformancePackName: crcd-cirt-security-recommendations
 Description: "Conformance pack for comprehensive security controls recommended by AWS Customer Incident Response Team (CIRT)"
 
-Parameters:  # Add parameters section at the top level
-  ApiGatewayEndpointTypes:
-    Type: String
-    Default: "PRIVATE,REGIONAL"
-    Description: "Allowed API Gateway endpoint types (EDGE, REGIONAL, PRIVATE)"
+# Parameters:  # Add parameters section at the top level, when you have parameters
 
-# TODO clean up DEPRECATED rules
 Resources:
-  RootAccountHardwareMFAEnabled:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-root-account-hardware-mfa-enabled
-      Source:
-        Owner: AWS
-        SourceIdentifier: ROOT_ACCOUNT_HARDWARE_MFA_ENABLED
-      MaximumExecutionFrequency: TwentyFour_Hours
 
+  # ------------------------------------------------------------------------------------------
+  # Initial Access
+  # ------------------------------------------------------------------------------------------
   RootAccountMFAEnabled:
     Type: AWS::Config::ConfigRule
     Properties:
@@ -147,30 +137,6 @@ Resources:
         Owner: AWS
         SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
 
-  RedshiftUnrestrictedPortAccess:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-redshift-unrestricted-port-access
-      Source:
-        Owner: AWS
-        SourceIdentifier: REDSHIFT_CLUSTER_PUBLIC_ACCESS_CHECK
-
-  RestrictedCommonPorts:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-restricted-common-ports
-      Source:
-        Owner: AWS
-        SourceIdentifier: RESTRICTED_INCOMING_TRAFFIC
-
-  VPCSGOpenOnlyToAuthorizedPorts:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-vpc-sg-open-only-to-authorized-ports
-      Source:
-        Owner: AWS
-        SourceIdentifier: VPC_SG_OPEN_ONLY_TO_AUTHORIZED_PORTS
-
   VPCSGPortRestrictionCheck:
     Type: AWS::Config::ConfigRule
     Properties:
@@ -179,71 +145,10 @@ Resources:
         Owner: AWS
         SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
 
-  APIGWv2AccessLogsEnabled:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gwv2-access-logs-enabled
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_EXECUTION_LOGGING_ENABLED
+  # ------------------------------------------------------------------------------------------
+  # 2nd level TBC
+  # ------------------------------------------------------------------------------------------
 
-  APIGWv2AuthorizationTypeConfigured:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gwv2-authorization-type-configured
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GWV2_AUTHORIZATION_TYPE_CONFIGURED
-
-  APIGWAssociatedWithWAF:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-associated-with-waf
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_ASSOCIATED_WITH_WAF
-
-  APIGWCacheEnabledAndEncrypted:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-cache-enabled-and-encrypted
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_CACHE_ENABLED_AND_ENCRYPTED
-
-  # TODO https://docs.aws.amazon.com/config/latest/developerguide/api-gw-endpoint-type-check.html
-  # We enforce certain endpoint types only - may not be everyone's use case
-  APIGWEndpointTypeCheck:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-endpoint-type-check
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_ENDPOINT_TYPE_CHECK
-      InputParameters:
-        endpointConfigurationTypes: ${ApiGatewayEndpointTypes}
-
-
-  APIGWExecutionLoggingEnabled:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-execution-logging-enabled
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_EXECUTION_LOGGING_ENABLED
-
-  APIGWSSLEnabled:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-ssl-enabled
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_SSL_ENABLED
-
-  APIGWXRayEnabled:
-    Type: AWS::Config::ConfigRule
-    Properties:
-      ConfigRuleName: DEPRECATED-crcd-cirt-api-gw-xray-enabled
-      Source:
-        Owner: AWS
-        SourceIdentifier: API_GW_XRAY_ENABLED
+  # ------------------------------------------------------------------------------------------
+  # 3rd level TBC
+  # ------------------------------------------------------------------------------------------
