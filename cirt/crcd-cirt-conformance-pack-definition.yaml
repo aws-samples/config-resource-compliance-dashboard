@@ -62,7 +62,7 @@ Resources:
       ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
       Source:
         Owner: AWS
-        SourceIdentifier: AUTOSCALING_LAUNCH_CONFIG_PUBLIC_IP_DISABLED
+        SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
 
   EC2IMDSv2Check:
     Type: AWS::Config::ConfigRule
