@@ -13,6 +13,14 @@
 
 # This rule helps maintain IAM security hygiene by continuously monitoring and flagging users with access keys across your AWS organization.
 
+# TODO
+# According to AWS Config documentation, there's actually a fourth compliance type: INSUFFICIENT_DATA. 
+# This is the appropriate status when a rule cannot evaluate compliance due to missing data or API errors, rather than NOT_APPLICABLE.
+# The distinction is:
+#   NOT_APPLICABLE: The rule doesn't apply to this resource (e.g., resource is deleted, wrong resource type)
+#   INSUFFICIENT_DATA: The rule applies but cannot be evaluated due to missing data or errors
+
+
 import botocore
 import boto3
 import datetime
@@ -52,7 +60,7 @@ def lambda_handler(event, context):
         configuration_item = get_configuration_item(invoking_event)
         logger.debug('CRCD-CIRT: Received configuration item: ' + json.dumps(configuration_item))
         
-        compliance_value = 'NOT_APPLICABLE'
+        compliance_value = 'INSUFFICIENT_DATA' # TODO was 'NOT_APPLICABLE'
         if is_applicable(configuration_item, event):
             compliance_value = evaluate_change_notification_compliance(
                     configuration_item, rule_parameters, event)
@@ -99,7 +107,7 @@ def evaluate_periodic_compliance(rule_parameters, event):
 def evaluate_change_notification_compliance(configuration_item, rule_parameters, event):
     """
     Evaluate resource compliance for the IAM User.
-    Returns: 'COMPLIANT' if the user has no access keys or has only disabled access keys, 'NON_COMPLIANT' if the user has active access keys, or 'NOT_APPLICABLE'
+    Returns: 'COMPLIANT' if the user has no access keys or has only disabled access keys, 'NON_COMPLIANT' if the user has active access keys, or 'INSUFFICIENT_DATA'
     """
     check_defined(configuration_item, 'configuration_item')
     check_defined(configuration_item['configuration'], 'configuration_item[\'configuration\']')
@@ -114,7 +122,7 @@ def evaluate_change_notification_compliance(configuration_item, rule_parameters,
         user_name = configuration_item['resourceName']
         return evaluate_user_compliance(user_name, iam_client)
     
-    return 'NOT_APPLICABLE'
+    return 'INSUFFICIENT_DATA' # TODO was 'NOT_APPLICABLE'
 
 def evaluate_user_compliance(user_name, iam_client):
     """Evaluate a single IAM user's compliance"""
@@ -132,7 +140,7 @@ def evaluate_user_compliance(user_name, iam_client):
             return 'NON_COMPLIANT'
         return 'COMPLIANT'
     except Exception:
-        return 'NOT_APPLICABLE'
+        return 'INSUFFICIENT_DATA' # TODO was 'NOT_APPLICABLE'
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
@@ -224,6 +232,6 @@ def is_applicable(configurationItem, event):
     status = configurationItem['configurationItemStatus']
     eventLeftScope = event['eventLeftScope']
     if status == 'ResourceDeleted':
-        logger.info("CRCD-CIRT: Resource Deleted, setting Compliance Status to NOT_APPLICABLE.")
+        logger.info("CRCD-CIRT: Resource Deleted, setting Compliance Status to NOT_APPLICABLE")
     
     return (status == 'OK' or status == 'ResourceDiscovered') and not eventLeftScope
