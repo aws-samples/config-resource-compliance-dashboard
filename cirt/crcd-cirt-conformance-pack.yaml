@@ -527,7 +527,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      FunctionName: !Ref RootNotUsedRegularlyLambda
+      FunctionName: !GetAtt RootNotUsedRegularlyLambda.Arn
       Action: lambda:InvokeFunction
       Principal: config.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
@@ -822,18 +822,70 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      FunctionName: !Ref UserAccessKeyCheckLambda
+      FunctionName: !GetAtt UserAccessKeyCheckLambda.Arn
       Action: lambda:InvokeFunction
       Principal: config.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
 
+  # CloudWatch Log Group for Root Not Used Regularly Lambda
+  RootNotUsedRegularlyLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-root-not-used-regularly'
+      RetentionInDays: 30
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: No KMS encryption needed
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+
+  # CloudWatch Log Group for User Access Key Check Lambda
+  UserAccessKeyCheckLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-user-access-key-check'
+      RetentionInDays: 30
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: No KMS encryption needed
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+
+
   # AWS Config Conformance Pack with all CIRT rules
   CRCDCIRTConformancePack:
     Type: AWS::Config::ConformancePack
+    DependsOn:
+      - UserAccessKeyCheckLambdaPermission
+      - UserAccessKeyCheckLambdaRole
+      - UserAccessKeyCheckLogGroup
+      - RootNotUsedRegularlyLambdaPermission
+      - RootNotUsedRegularlyLambdaRole
+      - RootNotUsedRegularlyLogGroup
     Properties:
       ConformancePackName: !Ref ConformancePackName
-      TemplateBody: !Sub |
+      TemplateBody: |
         Parameters:
+          RootNotUsedRegularlyLambdaArn:
+            Type: String
+            Description: ARN of the Root Not Used Regularly Lambda function
+          
+          UserAccessKeyCheckLambdaArn:
+            Type: String
+            Description: ARN of the User Access Key Check Lambda function
+          
           ExcludedPublicBuckets:
             Type: String
             Default: ''
@@ -855,8 +907,6 @@ Resources:
             - Fn::Equals:
               - ''
               - Ref: RestrictedPorts
-        #  HasExcludedPublicBuckets: !Not [!Equals [!Ref ExcludedPublicBuckets, '']]
-        #  HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
 
         Resources:
 
@@ -891,7 +941,8 @@ Resources:
               Description: Checks whether the root user is not used regularly
               Source:
                 Owner: CUSTOM_LAMBDA
-                SourceIdentifier: ${RootNotUsedRegularlyLambda.Arn}
+                SourceIdentifier:
+                  Ref: RootNotUsedRegularlyLambdaArn
                 SourceDetails:
                   - EventSource: aws.config
                     MessageType: ScheduledNotification
@@ -904,15 +955,16 @@ Resources:
               Description: Checks whether an IAM user access key exists
               Source:
                 Owner: CUSTOM_LAMBDA
-                SourceIdentifier: ${UserAccessKeyCheckLambda.Arn}
+                SourceIdentifier:
+                  Ref: UserAccessKeyCheckLambdaArn
                 SourceDetails:
                   - EventSource: aws.config
                     MessageType: ScheduledNotification
                     MaximumExecutionFrequency: TwentyFour_Hours
-                Scope:
-                  ComplianceResourceTypes:
-                    - AWS::IAM::User
-          
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::IAM::User
+                    
           IamUserMfaEnabled:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -1085,13 +1137,17 @@ Resources:
                 ComplianceResourceTypes:
                   - AWS::EC2::SecurityGroup
               InputParameters:
-                restrictedPorts:
+                restrictPorts:
                   Fn::If:
                   - HasRestrictedPorts
                   - Ref: RestrictedPorts
                   - Ref: AWS::NoValue
               
       ConformancePackInputParameters:
+        - ParameterName: RootNotUsedRegularlyLambdaArn
+          ParameterValue: !GetAtt RootNotUsedRegularlyLambda.Arn
+        - ParameterName: UserAccessKeyCheckLambdaArn
+          ParameterValue: !GetAtt UserAccessKeyCheckLambda.Arn
         - ParameterName: ExcludedPublicBuckets
           ParameterValue: !Ref ExcludedPublicBuckets
         - ParameterName: RestrictedPorts

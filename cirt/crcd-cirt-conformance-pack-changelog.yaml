@@ -1131,7 +1131,7 @@ Resources:
               #    }
               #  - !Ref AWS::NoValue
               InputParameters:
-                restrictedPorts:
+                restrictPorts: # TODO was using wrong parameter name restrictedPorts:
                   Fn::If:
                   - HasRestrictedPorts
                   - Ref: RestrictedPorts
