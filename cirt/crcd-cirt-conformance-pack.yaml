@@ -1,0 +1,1119 @@
+# AWS Config Resource Compliance Dashboard CRCD and AWS Customer Incident Response Team (CIRT) Conformance Pack
+# Cloud Formation template that deploys the conformance pack resources in one account/region. 
+# This can be installed on a single region or referenced by the StackSet deployment file
+# TODO: check all parameters to all rules, enable them all
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CRCD Dashboard - AWS Customer Incident Response Team (CIRT) Conformance Pack - AWS Config conformance pack with CIRT-recommended rules for security and compliance monitoring. Includes both standard AWS Config managed rules and custom Lambda-backed rules.'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Conformance Pack Configuration"
+        Parameters:
+          - ConformancePackName
+          - RestrictedPorts
+          - ExcludedPublicBuckets
+
+Parameters:
+  ConformancePackName:
+    Type: String
+    Default: crcd-cirt-conformance-pack
+    Description: Name of the conformance pack
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+
+  RestrictedPorts:
+    Type: String
+    Default: '22,3389'
+    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+
+  ExcludedPublicBuckets:
+    Type: String
+    Default: ''
+    Description: Comma-separated list of known allowed public Amazon S3 bucket names
+
+Resources:
+  # Lambda Execution Role for Root Account Usage Check
+  RootNotUsedRegularlyLambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RoleName: !Sub '${ConformancePackName}-root-not-used-regularly-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ConfigRuleEvaluationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - config:PutEvaluations
+                Resource: '*'
+        - PolicyName: RootAccountCheckPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:GetAccountSummary
+                  - iam:GetCredentialReport
+                  - iam:GenerateCredentialReport
+                  - cloudtrail:LookupEvents
+                Resource: '*'
+    Metadata:
+      guard:
+        SuppressedRules:
+          - IAM_NO_INLINE_POLICY_CHECK
+
+  # Lambda Execution Role for IAM User Access Key Check
+  UserAccessKeyCheckLambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      RoleName: !Sub '${ConformancePackName}-user-access-key-check-role'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ConfigRuleEvaluationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - config:PutEvaluations
+                Resource: '*'
+        - PolicyName: IAMUserAccessKeyCheckPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:ListUsers
+                  - iam:GetUser
+                  - iam:ListAccessKeys
+                  - iam:GetAccessKeyLastUsed
+                Resource: '*'
+    Metadata:
+      guard:
+        SuppressedRules:
+          - IAM_NO_INLINE_POLICY_CHECK
+
+  # Custom Lambda Function: Root Account Not Used Regularly
+  # Note: CloudWatch LogGroup removed to avoid naming conflicts in multi-region deployments
+  # Lambda will create its own log group automatically
+  RootNotUsedRegularlyLambda:
+  # checkov:skip=CKV_AWS_117: No need to access VPC resources.
+  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called daily by AWS Config, we don't anticipate the need for reserved concurrency.
+  # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
+  # checkov:skip=CKV_AWS_116: No DQL needed.
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FunctionName: !Sub '${ConformancePackName}-root-not-used-regularly'
+      Description: CRCD-CIRT custom AWS Config rule - Root Account must not be used regularly
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
+      Timeout: 60
+      Code:
+        ZipFile: |
+           """
+           CRCD CIRT Custom Config Rule: Root Account Not Used Regularly
+           
+           Checks whether the root user is not used regularly by examining the IAM Credential Report
+           for root user activity.
+           
+           CONFIGURATION:
+           --------------
+           This Lambda function receives its configuration from AWS Config rule parameters, which are
+           defined in the conformance pack template (crcd-cirt-conformance-pack-definition.yaml).
+           
+           Rule Parameter:
+             - RootUsageThresholdDays (integer, default: 30)
+               Number of days to look back for root account usage. If root was used within this
+               threshold, the account is marked NON_COMPLIANT.
+           
+           The parameter is passed to the Lambda function via the 'ruleParameters' field in the
+           AWS Config evaluation event as a JSON string: {"RootUsageThresholdDays": "30"}
+           
+           BEHAVIOR:
+           ---------
+           This implementation checks if the root user was used at least once in the last 
+           RootUsageThresholdDays days. The rule is COMPLIANT if root was last used more than
+           RootUsageThresholdDays ago (or never used).
+           
+           LIMITATION:
+           -----------
+           If the root user is used once, the rule will remain NON_COMPLIANT until 
+           RootUsageThresholdDays have passed since that usage.
+           
+           ALTERNATIVE APPROACH:
+           ---------------------
+           A more sophisticated implementation could count how many times root was used in the 
+           last RootUsageThresholdDays, and flag as NON_COMPLIANT only if used more than X times.
+           However, this would require querying CloudTrail records, which introduces additional cost.
+           
+           IAM PERMISSIONS REQUIRED:
+           -------------------------
+           The Lambda execution role must have the following permissions:
+             - iam:GenerateCredentialReport
+             - iam:GetCredentialReport
+             - config:PutEvaluations (to submit compliance results to AWS Config)
+             - config:GetResourceConfigHistory (optional, for resource history)
+             - logs:CreateLogGroup
+             - logs:CreateLogStream
+             - logs:PutLogEvents (for CloudWatch Logs)
+           
+           **Feature: crcd-cirt-conformance-pack, Property 3: Lambda functions return valid compliance statuses**
+           **Validates: Requirements 1.3**
+           """
+           
+           import json
+           import logging
+           import os
+           from datetime import datetime, timedelta
+           import boto3
+           from botocore.exceptions import ClientError
+           
+           # Configure logging for CloudWatch Logs
+           logger = logging.getLogger()
+           log_level = os.environ.get('LOG_LEVEL', 'INFO')
+           logger.setLevel(getattr(logging, log_level))
+           
+           # Set to True to get the lambda to assume the Role attached on the Config Service (useful for cross-account).
+           # This check does not need cross-account access
+           ASSUME_ROLE_MODE = False
+           
+           # NOTE: The threshold is NOT configured via environment variable.
+           # It is passed as a rule parameter from AWS Config via the 'ruleParameters' field
+           # in the evaluation event. See the conformance pack definition for configuration.
+           
+           
+           def lambda_handler(event, context):
+               """
+               AWS Config custom rule evaluation handler for root account usage check.
+               
+               This function evaluates whether the root user has been used within the
+               configured threshold period by checking the IAM Credential Report.
+               
+               Args:
+                   event: AWS Config evaluation event containing:
+                       - configRuleId: The Config rule identifier (required)
+                       - configRuleName: The Config rule name
+                       - accountId: AWS account ID
+                       - evaluationMode: DETECTIVE or PROACTIVE
+                       - ruleParameters: JSON string containing rule parameters (optional)
+                           Example: '{"RootUsageThresholdDays": "30"}'
+                           
+                   context: Lambda context object
+               
+               Rule Parameters (from AWS Config):
+                   RootUsageThresholdDays (integer, default: 30):
+                       Number of days to look back for root account usage.
+                       Configured in the conformance pack template's InputParameters.
+               
+               Returns:
+                   dict: Compliance evaluation result containing:
+                       - compliance_type: COMPLIANT | NON_COMPLIANT | INSUFFICIENT_DATA | NOT_APPLICABLE
+                       - annotation: Human-readable explanation
+                       - resource_type: 'AWS::::Account'
+                       - resource_id: AWS account ID
+               """
+               global AWS_CONFIG_CLIENT
+           
+               logger.info(f"Received event: {json.dumps(event)}")
+               
+               try:
+                   # Validate event structure
+                   if 'configRuleId' not in event:
+                       raise ValueError("Missing required field: configRuleId")
+           
+                   invoking_event = json.loads(event['invokingEvent'])
+                   logger.debug('CRCD-CIRT: Received invoking event: ' + json.dumps(invoking_event))
+           
+           
+                   AWS_CONFIG_CLIENT = get_client('config', event)
+           
+                   # This rule supports only periodic evaluation
+                   if invoking_event['messageType'] != 'ScheduledNotification':
+                       logger.logError('CRCD-CIRT: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
+                       raise ValueError("Invalid message type: " + str(invoking_event['messageType']))
+           
+                   # Extract Config rule parameters
+                   config_rule_id = event['configRuleId']
+                   account_id = event.get('accountId')
+           
+                   # Extract rule parameters
+                   rule_parameters = {}
+                   if 'ruleParameters' in event and event['ruleParameters']:
+                       rule_parameters = json.loads(event['ruleParameters'])
+                   
+                   # Get threshold from rule parameters with default fallback
+                   # TODO the default value of RootUsageThresholdDays could be an environment variable of the function
+                   root_usage_threshold_days = int(rule_parameters.get('RootUsageThresholdDays', '30'))
+                   
+                   # Fallback to extracting account ID from invoking event or context if not in event
+                   if not account_id:
+                       account_id = invoking_event['awsAccountId']
+                   if not account_id:
+                       account_id = context.invoked_function_arn.split(':')[4]
+                   
+                   # For periodic rules, there's no specific configuration item
+                   # We evaluate at the account level
+                   resource_type = 'AWS::::Account'
+                   
+                   logger.info(f"Evaluating root account usage for account: {account_id}")
+                   logger.info(f"Threshold: {root_usage_threshold_days} days")
+                   
+                   # Evaluate compliance
+                   compliance_type, last_used_date = evaluate_root_usage(account_id, root_usage_threshold_days)
+                   
+                   annotation = get_annotation(compliance_type, last_used_date, root_usage_threshold_days)
+                   
+                   logger.info(
+                       f"Compliance decision for account {account_id}: "
+                       f"{compliance_type} - {annotation}"
+                   )
+               
+               except ClientError as e:
+                   error_code = e.response['Error']['Code']
+                   error_msg = e.response['Error']['Message']
+                   logger.error(
+                       f"AWS API error evaluating root account usage: {error_code} - {error_msg}",
+                       exc_info=True
+                   )
+           
+                   compliance_type = 'INSUFFICIENT_DATA'
+               
+               except ValueError as e:
+                   logger.error(f"Invalid event structure: {e}", exc_info=True)
+                   compliance_type = 'NOT_APPLICABLE'
+               
+               except Exception as e:
+                   logger.error(f"Unexpected error evaluating root account usage: {e}", exc_info=True)
+                   compliance_type = 'INSUFFICIENT_DATA'
+           
+               # returns result to AWS Config
+               AWS_CONFIG_CLIENT.put_evaluations(
+                   Evaluations=[
+                       {
+                           'ComplianceResourceType': resource_type,
+                           'ComplianceResourceId': account_id,
+                           'ComplianceType': compliance_type,
+                           'Annotation': annotation, 
+                           'OrderingTimestamp': invoking_event['notificationCreationTime']
+                       },
+                   ],
+                   ResultToken=event['resultToken'])
+           
+           def evaluate_root_usage(account_id, root_usage_threshold_days):
+               """
+               Evaluate whether root account is used regularly by checking IAM credential report.
+               
+               This function retrieves the IAM credential report and checks when the root
+               user last used password or access keys.
+               
+               Args:
+                   account_id (str): AWS account ID
+                   root_usage_threshold_days (int): Number of days to look back for root usage.
+                       This value comes from AWS Config rule parameters (RootUsageThresholdDays).
+                       If root was used within this threshold, returns NON_COMPLIANT.
+               
+               Returns:
+                   tuple: (compliance_status, last_used_date) where:
+                       - compliance_status (str): COMPLIANT, NON_COMPLIANT, NOT_APPLICABLE, or INSUFFICIENT_DATA
+                       - last_used_date (datetime): datetime of last root usage, or None if never used
+               """
+               try:
+                   # Create IAM client (only boto3/botocore, no external dependencies)
+                   iam_client = boto3.client('iam')
+                   
+                   logger.info("Generating IAM credential report")
+                   
+                   # Generate credential report (may take a few seconds on first call)
+                   report_status = iam_client.generate_credential_report()
+                   
+                   # Wait for report to be ready if needed, with exponential backoff
+                   # It can take up to 4 minutes to generate a credential report 
+                   import time
+                   max_wait_time = 360 # 6 minutes
+                   start_time = time.time()
+                   wait_interval = 1
+           
+                   while report_status['State'] != 'COMPLETE':
+                       if time.time() - start_time > max_wait_time:
+                           break
+                       time.sleep(wait_interval)
+                       report_status = iam_client.generate_credential_report()
+                       wait_interval = min(wait_interval * 1.5, 10)  # Cap at 10 seconds
+           
+                   # OLD code that waits 1 second at the time
+                   #max_attempts = 300 # 5 minutes
+                   #attempt = 0
+                   #while report_status['State'] != 'COMPLETE' and attempt < max_attempts:
+                   #    logger.info(f"Waiting for credential report (attempt {attempt + 1}/{max_attempts})")
+                   #    import time
+                   #    time.sleep(1)
+                   #    report_status = iam_client.generate_credential_report()
+                   #    attempt += 1
+                   
+                   if report_status['State'] != 'COMPLETE':
+                       logger.error("IAM Credential report generation timed out")
+                       return 'INSUFFICIENT_DATA', None
+                   
+                   # Get the credential report
+                   logger.info("Retrieving IAM credential report")
+                   response = iam_client.get_credential_report()
+                   report_content = response['Content'].decode('utf-8')
+                   
+                   # Parse CSV report
+                   import csv
+                   from io import StringIO
+                   
+                   csv_reader = csv.DictReader(StringIO(report_content))
+                   
+                   # Find root user entry (user == '<root_account>')
+                   root_entry = None
+                   for row in csv_reader:
+                       if row.get('user') == '<root_account>':
+                           root_entry = row
+                           break
+                   
+                   if not root_entry:
+                       logger.error("Root account entry not found in credential report")
+                       return 'INSUFFICIENT_DATA', None
+                   
+                   logger.info(f"Found root account entry in credential report")
+                   
+                   # Check last usage dates
+                   threshold_date = datetime.now() - timedelta(days=root_usage_threshold_days)
+                   last_used_date = None
+                   
+                   # Check password last used
+                   password_last_used = root_entry.get('password_last_used')
+                   if password_last_used and password_last_used != 'N/A' and password_last_used != 'no_information':
+                       try:
+                           password_date = datetime.strptime(password_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                           if last_used_date is None or password_date > last_used_date:
+                               last_used_date = password_date
+                           logger.info(f"Root password last used: {password_last_used}")
+                       except ValueError as e:
+                           logger.warning(f"Could not parse password_last_used date: {e}")
+                   
+                   # Check access key 1 last used
+                   access_key_1_last_used = root_entry.get('access_key_1_last_used_date')
+                   if access_key_1_last_used and access_key_1_last_used != 'N/A' and access_key_1_last_used != 'no_information':
+                       try:
+                           key1_date = datetime.strptime(access_key_1_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                           if last_used_date is None or key1_date > last_used_date:
+                               last_used_date = key1_date
+                           logger.info(f"Root access key 1 last used: {access_key_1_last_used}")
+                       except ValueError as e:
+                           logger.warning(f"Could not parse access_key_1_last_used_date: {e}")
+                   
+                   # Check access key 2 last used
+                   access_key_2_last_used = root_entry.get('access_key_2_last_used_date')
+                   if access_key_2_last_used and access_key_2_last_used != 'N/A' and access_key_2_last_used != 'no_information':
+                       try:
+                           key2_date = datetime.strptime(access_key_2_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                           if last_used_date is None or key2_date > last_used_date:
+                               last_used_date = key2_date
+                           logger.info(f"Root access key 2 last used: {access_key_2_last_used}")
+                       except ValueError as e:
+                           logger.warning(f"Could not parse access_key_2_last_used_date: {e}")
+                   
+                   # Determine compliance
+                   if last_used_date is None:
+                       # No usage recorded
+                       logger.info("No root usage detected")
+                       return 'COMPLIANT', None
+                   elif last_used_date < threshold_date:
+                       # Used, but not within threshold
+                       logger.info(f"Root last used {last_used_date}, before threshold {threshold_date}")
+                       return 'COMPLIANT', last_used_date
+                   else:
+                       # Used within threshold
+                       logger.info(f"Root last used {last_used_date}, within threshold {threshold_date}")
+                       return 'NON_COMPLIANT', last_used_date
+               
+               except ClientError as e:
+                   logger.error(f"IAM API error: {e}", exc_info=True)
+                   raise
+               
+               except Exception as e:
+                   logger.error(f"Error evaluating root usage: {e}", exc_info=True)
+                   raise
+           
+           
+           def get_annotation(compliance_type, last_used_date, root_usage_threshold_days):
+               """
+               Get human-readable annotation for compliance status.
+               
+               Args:
+                   compliance_type: COMPLIANT, NON_COMPLIANT, NOT_APPLICABLE, or INSUFFICIENT_DATA
+                   last_used_date: datetime of last root usage, or None
+                   root_usage_threshold_days: how far in the past (in days) the root user must have been used last for COMPLIANT outcome
+               
+               Returns:
+                   Human-readable annotation string
+               """
+               if compliance_type == 'COMPLIANT':
+                   if last_used_date:
+                       return (
+                           f'Root account last used on {last_used_date.strftime("%Y-%m-%d")}, '
+                           f'which is more than {root_usage_threshold_days} days ago'
+                       )
+                   else:
+                       return f'Root account has not been used (no usage recorded)'
+               elif compliance_type == 'NON_COMPLIANT':
+                   if last_used_date:
+                       days_ago = (datetime.now() - last_used_date).days
+                       return (
+                           f'Root account was used {days_ago} days ago on {last_used_date.strftime("%Y-%m-%d")}, '
+                           f'within the {root_usage_threshold_days}-day threshold'
+                       )
+                   else:
+                       return f'Root account has been used within the last {root_usage_threshold_days} days'
+               else:
+                   return 'Unable to determine root account usage'
+           
+           
+           # This gets the client after assuming the Config service role
+           # either in the same AWS account or cross-account.
+           def get_client(service, event):
+               """Return the service boto client. It should be used instead of directly calling the client.
+               Keyword arguments:
+               service -- the service name used for calling the boto.client()
+               event -- the event variable given in the lambda handler
+               """
+               if not ASSUME_ROLE_MODE:
+                   return boto3.client(service)
+               credentials = get_assume_role_credentials(event["executionRoleArn"])
+               return boto3.client(service, aws_access_key_id=credentials['AccessKeyId'],
+                                   aws_secret_access_key=credentials['SecretAccessKey'],
+                                   aws_session_token=credentials['SessionToken']
+                                  )
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+    Metadata:
+      guard:
+        SuppressedRules:
+          - LAMBDA_INSIDE_VPC
+
+  # Permission for Config to invoke Lambda
+  RootNotUsedRegularlyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FunctionName: !Ref RootNotUsedRegularlyLambda
+      Action: lambda:InvokeFunction
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # Custom Lambda Function: IAM User Access Key Check
+  # Note: CloudWatch LogGroup removed to avoid naming conflicts in multi-region deployments
+  # Lambda will create its own log group automatically
+  UserAccessKeyCheckLambda:
+  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called daily by AWS Config, we don't anticipate the need for reserved concurrency.
+  # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
+  # checkov:skip=CKV_AWS_116: No DQL needed.
+  # checkov:skip=CKV_AWS_117: No need to access VPC resources.
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FunctionName: !Sub '${ConformancePackName}-user-access-key-check'
+      Description: CRCD-CIRT custom AWS Config rule - Checks whether an IAM user access key exists
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
+      Timeout: 60
+      Code:
+        ZipFile: |
+           """
+           CRCD CIRT Custom Config Rule: IAM User Access Key Check
+           
+           Checks whether IAM users have access keys. CIRT strongly recommends against
+           creating access keys and deleting any that exist, as they provide unrestricted
+           access to AWS resources and are high-value targets for attackers.
+           
+           IAM PERMISSIONS REQUIRED:
+           -------------------------
+           The Lambda execution role must have the following permissions:
+             - iam:ListAccessKeys (to check for user access keys)
+             - config:PutEvaluations (to submit compliance results to AWS Config)
+             - config:GetResourceConfigHistory (optional, for resource history)
+             - logs:CreateLogGroup
+             - logs:CreateLogStream
+             - logs:PutLogEvents (for CloudWatch Logs)
+           
+           **Feature: crcd-cirt-conformance-pack, Property 3: Lambda functions return valid compliance statuses**
+           **Validates: Requirements 1.3**
+           """
+           
+           import json
+           import logging
+           import os
+           from datetime import datetime, timedelta
+           import boto3
+           from botocore.exceptions import ClientError
+           import botocore
+           
+           # Configure logging for CloudWatch Logs
+           logger = logging.getLogger()
+           log_level = os.environ.get('LOG_LEVEL', 'INFO')
+           logger.setLevel(getattr(logging, log_level))
+           
+           
+           # Set to True to get the lambda to assume the Role attached on the Config Service (useful for cross-account).
+           # This check does not need cross-account access
+           ASSUME_ROLE_MODE = False
+           
+           def lambda_handler(event, context):
+               """
+               AWS Config custom rule evaluation handler for IAM user access key check.
+               
+               This function evaluates whether IAM users have active access keys.
+               According to CIRT recommendations, IAM users should not have access keys
+               as they are high-value targets for attackers.
+               
+               Args:
+                   event: AWS Config evaluation event containing:
+                       - configRuleId: The Config rule identifier
+                       - configRuleName: The Config rule name
+                       - accountId: AWS account ID
+                       - configurationItem: Resource configuration snapshot
+                   context: Lambda context object
+               
+               Returns:
+                   Compliance evaluation result with compliance_type, annotation,
+                   resource_type, and resource_id
+               """
+           
+               # these are used only to return a compliance status to Config in case of exceptions
+               annotation = None
+               compliance_type = None
+           
+               global AWS_CONFIG_CLIENT
+               logger.info(f"CRCD-CIRT: Received event: {json.dumps(event)}")
+           
+               try:
+                   check_defined(event, 'event')
+                   # Validate event structure
+                   if 'configRuleId' not in event:
+                       raise ValueError("Missing required field: configRuleId")
+                   
+           
+                   invoking_event = json.loads(event['invokingEvent'])
+                   logger.debug(f"CRCD-CIRT: Received invoking event: {json.dumps(invoking_event)}")
+           
+                   rule_parameters = {}
+                   if 'ruleParameters' in event:
+                       rule_parameters = json.loads(event['ruleParameters'])
+           
+                   AWS_CONFIG_CLIENT = get_client('config', event)
+           
+                   # Handle periodic evaluation
+                   if invoking_event['messageType'] == 'ScheduledNotification':
+                       evaluate_periodic_compliance(rule_parameters, event)
+                   else:
+                       logger.error(f"CRCD-CIRT: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
+                       raise ValueError(f"Invalid message type: {invoking_event['messageType']}")
+           
+               except ClientError as e:
+                   error_code = e.response['Error']['Code']
+                   error_msg = e.response['Error']['Message']
+                   logger.error(
+                       f"AWS API error evaluating IAM user access keys: {error_code} - {error_msg}",
+                       exc_info=True
+                   )
+           
+                   compliance_type = 'INSUFFICIENT_DATA'
+                   annotation = f'AWS API error: {error_code} - {error_msg}'
+           
+               except ValueError as e:
+                   logger.error(f"Invalid event structure: {e}", exc_info=True)
+                   compliance_type = 'NOT_APPLICABLE'
+                   annotation = f'Invalid event: {str(e)}'
+               
+               except KeyError as e:
+                   logger.error(f"Missing required field: {e}", exc_info=True)
+                   compliance_type = 'NOT_APPLICABLE'
+                   annotation = f'Missing required field: {str(e)}'
+               
+               except Exception as e:
+                   logger.error(f"Unexpected error evaluating IAM user access keys: {e}", exc_info=True)
+                   compliance_type = 'INSUFFICIENT_DATA'
+                   annotation = f'Evaluation error: {str(e)}'
+           
+               finally:
+                   if compliance_type is not None and annotation is not None:
+                       AWS_CONFIG_CLIENT.put_evaluations(
+                           Evaluations=[
+                               {
+                                   'ComplianceResourceType': 'AWS::IAM::User',
+                                   'ComplianceResourceId': config_item.get('resourceId', 'unknown') if 'config_item' in locals() else 'unknown',
+                                   'ComplianceType': compliance_type,
+                                   'Annotation': annotation, 
+                                   'OrderingTimestamp': invoking_event['notificationCreationTime']
+                               },
+                           ],
+                           ResultToken=event['resultToken'])
+           
+           # Helper function used to validate input
+           def check_defined(reference, reference_name):
+               if not reference:
+                   raise ValueError(f"Error: {reference_name} is not defined")
+               return reference
+           
+           # This gets the client after assuming the Config service role
+           # either in the same AWS account or cross-account.
+           def get_client(service, event):
+               """
+               Returns the service boto client. It should be used instead of directly calling the client.
+           
+               Keyword arguments:
+               service -- the service name used for calling the boto.client()
+               event -- the event variable given in the lambda handler
+               """
+               if not ASSUME_ROLE_MODE:
+                   return boto3.client(service)
+               credentials = get_assume_role_credentials(event["executionRoleArn"])
+               return boto3.client(service, aws_access_key_id=credentials['AccessKeyId'],
+                                   aws_secret_access_key=credentials['SecretAccessKey'],
+                                   aws_session_token=credentials['SessionToken']
+                                  )
+           
+           def get_assume_role_credentials(role_arn):
+               sts_client = boto3.client('sts')
+               try:
+                   assume_role_response = sts_client.assume_role(RoleArn=role_arn, RoleSessionName="configLambdaExecution")
+                   return assume_role_response['Credentials']
+               except botocore.exceptions.ClientError as ex:
+                   # Scrub error message for any internal account info leaks
+                   if 'AccessDenied' in ex.response['Error']['Code']:
+                       ex.response['Error']['Message'] = "AWS Config does not have permission to assume the IAM role."
+                   else:
+                       ex.response['Error']['Message'] = "InternalError"
+                       ex.response['Error']['Code'] = "InternalError"
+                   raise ex
+           
+           
+           def evaluate_periodic_compliance(rule_parameters, event):
+               """Evaluate all IAM users in the account during periodic evaluation"""
+               iam_client = get_client('iam', event)
+               evaluations = []
+               
+               try:
+                   paginator = iam_client.get_paginator('list_users')
+                   for page in paginator.paginate():
+                       for user in page['Users']:
+                           user_name = user['UserName']
+                           user_id = user['UserId']
+                           logger.info(f"CRCD-CIRT: periodic compliance, checking IAM user {user_name} (id {user_id})")
+                           compliance_type, annotation = evaluate_user_compliance(user_name, iam_client)
+           
+                           logger.info(f"CRCD-CIRT: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
+           
+                           evaluations.append({
+                               'ComplianceResourceType': 'AWS::IAM::User',
+                               'ComplianceResourceId': user_id, 
+                               'ComplianceType': compliance_type,
+                               'Annotation': annotation,
+                               'OrderingTimestamp': datetime.utcnow()
+                           })
+               except Exception as e:
+                   logger.error(f'CRCD-CIRT: Error during periodic evaluation: {str(e)}')
+               
+               if evaluations:
+                   AWS_CONFIG_CLIENT.put_evaluations(
+                       Evaluations=evaluations,
+                       ResultToken=event['resultToken']
+                   )
+           
+           def evaluate_user_compliance(user_name, iam_client):
+               """Evaluate a single IAM user's compliance"""
+               logger.info(f"CRCD-CIRT: checking IAM user {user_name}")
+               
+               try:
+                   response = iam_client.list_access_keys(UserName=user_name)
+                   access_keys = response.get('AccessKeyMetadata', [])
+                   
+                   # Check for active access keys only
+                   active_keys = [key for key in access_keys if key['Status'] == 'Active']
+                   logger.info(f"CRCD-CIRT: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
+           
+                   compliance_type = 'INSUFFICIENT_DATA'
+                   if active_keys:
+                       compliance_type = 'NON_COMPLIANT'
+                   else:
+                       compliance_type = 'COMPLIANT'
+                   
+                   annotation = get_annotation(
+                       compliance_type,
+                       user_name,
+                       len(active_keys),
+                       access_key_ids = [key.get('AccessKeyId') for key in active_keys]
+                   )
+           
+                   return compliance_type, annotation
+           
+               except Exception as exc:
+                   logger.error(f"CRCD-CIRT: Error evaluating IAM user {user_name}: {exc}")
+                   return 'INSUFFICIENT_DATA', f"Error evaluating IAM user {user_name}: {exc}"
+           
+           
+           def get_annotation(compliance_type, user_name, access_key_count, access_key_ids):
+               """
+               Get human-readable annotation for compliance status.
+               
+               Args:
+                   compliance_type: COMPLIANT, NON_COMPLIANT, NOT_APPLICABLE, or INSUFFICIENT_DATA
+                   user_name: IAM user name
+                   access_key_count: Number of active access keys
+                   access_key_ids: List of access key IDs
+               
+               Returns:
+                   Human-readable annotation string
+               """
+               if compliance_type == 'COMPLIANT':
+                   return f'IAM user {user_name} does not have active access keys'
+               elif compliance_type == 'NON_COMPLIANT':
+                   key_list = ', '.join(access_key_ids) if access_key_ids else 'unknown'
+                   return (
+                       f'IAM user {user_name} has {access_key_count} active access key(s): {key_list}.'
+                   )
+               else:
+                   return f'Unable to evaluate access keys for user {user_name}'
+           
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+    Metadata:
+      guard:
+        SuppressedRules:
+          - LAMBDA_INSIDE_VPC
+
+  # Permission for Config to invoke Lambda
+  UserAccessKeyCheckLambdaPermission:
+    Type: AWS::Lambda::Permission
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FunctionName: !Ref UserAccessKeyCheckLambda
+      Action: lambda:InvokeFunction
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # AWS Config Conformance Pack with all CIRT rules
+  CRCDCIRTConformancePack:
+    Type: AWS::Config::ConformancePack
+    Properties:
+      ConformancePackName: !Ref ConformancePackName
+      TemplateBody: !Sub |
+        Parameters:
+          ExcludedPublicBuckets:
+            Type: String
+            Default: ''
+            Description: Comma-separated list of known allowed public Amazon S3 bucket names
+          
+          RestrictedPorts:
+            Type: String
+            Default: '22,3389'
+            Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+
+        Conditions:
+          HasExcludedPublicBuckets:
+            Fn::Not:
+            - Fn::Equals:
+              - ''
+              - Ref: ExcludedPublicBuckets
+          HasRestrictedPorts:
+            Fn::Not:
+            - Fn::Equals:
+              - ''
+              - Ref: RestrictedPorts
+        #  HasExcludedPublicBuckets: !Not [!Equals [!Ref ExcludedPublicBuckets, '']]
+        #  HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
+
+        Resources:
+
+          # ============================================================================
+          # Initial Access - IAM Protection
+          # ============================================================================
+
+          RootAccountMfaEnabled:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-root-account-mfa-enabled
+              Description: Checks if the root user of your AWS account requires multi-factor authentication for console sign-in
+              Source:
+                Owner: AWS
+                SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+              MaximumExecutionFrequency: TwentyFour_Hours
+
+          IamRootAccessKeyCheck:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-iam-root-access-key-check
+              Description: Checks whether the root user access key exists
+              Source:
+                Owner: AWS
+                SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
+              MaximumExecutionFrequency: TwentyFour_Hours
+          
+          IamRootNotUsedRegularly:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-iam-root-not-used-regularly
+              Description: Checks whether the root user is not used regularly
+              Source:
+                Owner: CUSTOM_LAMBDA
+                SourceIdentifier: ${RootNotUsedRegularlyLambda.Arn}
+                SourceDetails:
+                  - EventSource: aws.config
+                    MessageType: ScheduledNotification
+                    MaximumExecutionFrequency: TwentyFour_Hours
+          
+          IamUserAccessKeyCheck:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-iam-user-access-key-check
+              Description: Checks whether an IAM user access key exists
+              Source:
+                Owner: CUSTOM_LAMBDA
+                SourceIdentifier: ${UserAccessKeyCheckLambda.Arn}
+                SourceDetails:
+                  - EventSource: aws.config
+                    MessageType: ScheduledNotification
+                    MaximumExecutionFrequency: TwentyFour_Hours
+                Scope:
+                  ComplianceResourceTypes:
+                    - AWS::IAM::User
+          
+          IamUserMfaEnabled:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-iam-user-mfa-enabled
+              Description: Checks if the AWS Identity and Access Management (IAM) users have multi-factor authentication (MFA) enabled.
+              Source:
+                Owner: AWS
+                SourceIdentifier: IAM_USER_MFA_ENABLED
+              MaximumExecutionFrequency: TwentyFour_Hours
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::IAM::User
+          
+          MfaEnabledForIamConsoleAccess:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-mfa-enabled-for-iam-console-access
+              Description: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
+              Source:
+                Owner: AWS
+                SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::IAM::User
+          
+          
+          # ============================================================================
+          # Initial Access - S3 Protection
+          # ============================================================================
+
+          S3BucketPublicReadProhibited:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
+              Description: Checks that S3 buckets do not allow public read access
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::S3::Bucket
+              
+          
+          S3BucketPublicWriteProhibited:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
+              Description: Checks that S3 buckets do not allow public write access
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::S3::Bucket
+          
+          S3AccessPointInVpcOnly:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
+              Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::S3::AccessPoint
+              
+          S3AccessPointPublicAccessBlocks:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
+              Description: Checks whether Amazon S3 access points have public access block settings enabled
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::S3::AccessPoint
+
+          S3AccountLevelPublicAccessBlocks:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
+              Description: Checks whether Amazon S3 account-level public access block settings are enabled
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
+
+          S3AccountLevelPublicAccessBlocksPeriodic:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
+              Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
+              MaximumExecutionFrequency: TwentyFour_Hours
+          
+          S3BucketLevelPublicAccessProhibited:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
+              Description: Checks if S3 buckets are publicly accessible
+              Source:
+                Owner: AWS
+                SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::S3::Bucket
+              InputParameters:
+                excludedPublicBuckets:
+                  Fn::If:
+                  - HasExcludedPublicBuckets
+                  - Ref: ExcludedPublicBuckets
+                  - Ref: AWS::NoValue
+          
+          # ============================================================================
+          # Initial Access - EC2 Security
+          # ============================================================================
+
+          AutoscalingLaunchconfigRequiresImdsv2:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+              Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
+              Source:
+                Owner: AWS
+                SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::AutoScaling::LaunchConfiguration
+
+          Ec2Imdsv2Check:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
+              Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
+              Source:
+                Owner: AWS
+                SourceIdentifier: EC2_IMDSV2_CHECK
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::EC2::Instance
+
+          Ec2LaunchTemplateImdsv2Check:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
+              Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
+              Source:
+                Owner: AWS
+                SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::EC2::LaunchTemplate
+          
+          # ============================================================================
+          # Initial Access - Resource Access Protection
+          # ============================================================================
+          
+          VpcSgPortRestrictionCheck:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
+              Source:
+                Owner: AWS
+                SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
+              Description: Checks whether security groups allow unrestricted inbound ports
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::EC2::SecurityGroup
+              InputParameters:
+                restrictedPorts:
+                  Fn::If:
+                  - HasRestrictedPorts
+                  - Ref: RestrictedPorts
+                  - Ref: AWS::NoValue
+              
+      ConformancePackInputParameters:
+        - ParameterName: ExcludedPublicBuckets
+          ParameterValue: !Ref ExcludedPublicBuckets
+        - ParameterName: RestrictedPorts
+          ParameterValue: !Ref RestrictedPorts
+
+Outputs:
+  ConformancePackName:
+    Description: Name of the deployed conformance pack
+    Value: !Ref ConformancePackName
+    Export:
+      Name: !Sub '${AWS::StackName}-ConformancePackName'
+
+  RootNotUsedRegularlyLambdaRoleArn:
+    Description: ARN of the Root Not Used Regularly Lambda execution role
+    Value: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RootNotUsedRegularlyLambdaRoleArn'
+
+  UserAccessKeyCheckLambdaRoleArn:
+    Description: ARN of the User Access Key Check Lambda execution role
+    Value: !GetAtt UserAccessKeyCheckLambdaRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-UserAccessKeyCheckLambdaRoleArn'
+
+
