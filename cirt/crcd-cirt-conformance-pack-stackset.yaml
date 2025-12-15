@@ -1,0 +1,247 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CRCD Dashboard - AWS Customer Incident Response Team (CIRT) Conformance Pack - StackSet for multi-region and multi-account deployment. Supports both AWS Organizations and standalone single-account deployments.'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Template Configuration"
+        Parameters:
+          - StackSetTemplateS3URL
+      - Label:
+          default: "Deployment Mode"
+        Parameters:
+          - DeploymentMode
+      - Label:
+          default: "Organization Configuration (AWS Organizations mode only)"
+        Parameters:
+          # TODO remove - OrganizationId
+          - TargetOrganizationalUnitIds
+      - Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - DeploymentRegions
+      - Label:
+          default: "Conformance Pack Configuration"
+        Parameters:
+          - ConformancePackName
+          - RestrictedPorts
+          - ExcludedPublicBuckets
+    ParameterLabels:
+      StackSetTemplateS3URL:
+        default: "S3 Object URL of the standalone template (in AWS CloudFormation YAML format)"
+      DeploymentMode:
+        default: "Deployment mode"
+      # TODO remove
+      #OrganizationId:
+      #  default: "AWS Organization ID"
+      TargetOrganizationalUnitIds:
+        default: "Target Organizational Unit IDs"
+      DeploymentRegions:
+        default: "Deployment Regions"
+      ConformancePackName:
+        default: "Conformance Pack name"
+      RestrictedPorts:
+        default: "Security Group port restriction check - restricted ports"
+      ExcludedPublicBuckets:
+        default: "S3 bucket-level public access check - excluded public buckets"
+
+
+
+Parameters:
+  StackSetTemplateS3URL:
+    Type: String
+    Description: S3 HTTPS Object URL of the standalone template (e.g., https://my-bucket.s3.amazonaws.com/crcd-cirt-conformance-pack.yaml or https://my-bucket.s3.us-east-1.amazonaws.com/crcd-cirt-conformance-pack.yaml)
+    AllowedPattern: ^https://[a-z0-9.-]+\.s3(\.[a-z0-9-]+)?\.amazonaws\.com/.+$
+    ConstraintDescription: Must be a valid S3 HTTPS URL (https://bucket.s3.region.amazonaws.com/key or https://bucket.s3.amazonaws.com/key). Note - s3:// format is not supported by StackSets.
+
+  DeploymentMode:
+    Type: String
+    # Default: AWS Organizations
+    Default: Standalone # TODO this is used for DEV
+    AllowedValues:
+      - AWS Organizations
+      - Standalone
+    Description: Choose deployment mode - AWS Organizations for multi-account deployment, or Standalone for single-account multi-region deployment
+
+  # TODO remove
+  #OrganizationId:
+  #  Type: String
+  #  Default: ''
+  #  Description: AWS Organization ID (e.g. o-xxxxxxxxxx) - Required only for AWS Organizations mode
+  #  AllowedPattern: '^(o-[a-z0-9]{10,32})?$'
+  #  ConstraintDescription: Must be a valid AWS Organization ID starting with 'o-' or empty for Standalone mode
+
+  TargetOrganizationalUnitIds:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of Organizational Unit IDs to deploy to (leave empty to deploy to root OU which includes all accounts) - Used only in AWS Organizations mode
+    Default: ''
+
+  DeploymentRegions:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of AWS regions to deploy to (e.g., us-east-1,us-west-2,eu-west-1)
+    #Default: 'us-east-1,us-east-2,us-west-1,us-west-2,eu-west-1,eu-west-2,eu-central-1,ap-southeast-1,ap-southeast-2,ap-northeast-1'
+    Default: 'us-east-1,eu-west-1' # TODO these are used for dev
+
+  ConformancePackName:
+    Type: String
+    Default: crcd-cirt-conformance-pack
+    Description: Name of the conformance pack
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+
+  RestrictedPorts:
+    Type: String
+    Default: '22,3389'
+    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+
+  ExcludedPublicBuckets:
+    Type: String
+    Default: ''
+    Description: Comma-separated list of known allowed public Amazon S3 bucket names
+
+Conditions:
+  IsOrganizationMode: !Equals [!Ref DeploymentMode, 'AWS Organizations']
+  IsStandaloneMode: !Equals [!Ref DeploymentMode, 'Standalone']
+  DeployToRootOU: !Equals [!Join ['', !Ref TargetOrganizationalUnitIds], '']
+
+Resources:
+  # IAM Role for StackSet Administration (SELF_MANAGED mode only)
+  StackSetAdministrationRole:
+    Type: AWS::IAM::Role
+    Condition: IsStandaloneMode
+    Properties:
+      RoleName: CRCDCIRTStackSetAdministrationRole # was: AWSCloudFormationStackSetAdministrationRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDCIRTStackSetExecutionRole'
+                  # - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AWSCloudFormationStackSetExecutionRole'
+
+  # IAM Role for StackSet Execution (SELF_MANAGED mode only)
+  StackSetExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: IsStandaloneMode
+    Properties:
+      RoleName: CRCDCIRTStackSetExecutionRole # was: AWSCloudFormationStackSetExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt StackSetAdministrationRole.Arn
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+
+  # StackSet for deploying the conformance pack
+  # Note: In Standalone mode, this depends on StackSetExecutionRole,
+  # which in turn depends on StackSetAdministrationRole, ensuring proper creation order in Standalone mode
+  CRCDCIRTConformancePackStackSet:
+    Type: AWS::CloudFormation::StackSet
+    DependsOn:
+      - StackSetExecutionRole
+    Metadata:
+      cfn-lint:
+        config:
+          ignore_checks:
+            - E3005 
+          # 'StackSetExecutionRole' will not exist when condition 'IsStandaloneMode' is False
+          # It won't cause issues in Organization mode because the condition prevents the role from being created, 
+          # and CloudFormation ignores DependsOn for non-existent resources
+    Properties:
+      StackSetName: !Sub '${ConformancePackName}-stackset'
+      Description: !Sub 'CRCD CIRT Conformance Pack - ${DeploymentMode} deployment of CIRT-recommended AWS Config rules'
+      PermissionModel: !If
+        - IsOrganizationMode
+        - SERVICE_MANAGED
+        - SELF_MANAGED
+      AdministrationRoleARN: !If
+        - IsStandaloneMode
+        - !GetAtt StackSetAdministrationRole.Arn
+        - !Ref AWS::NoValue
+      ExecutionRoleName: !If
+        - IsStandaloneMode
+        - CRCDCIRTStackSetExecutionRole # AWSCloudFormationStackSetExecutionRole
+        - !Ref AWS::NoValue
+      Capabilities:
+        - CAPABILITY_NAMED_IAM
+      AutoDeployment: !If
+        - IsOrganizationMode
+        - Enabled: true
+          RetainStacksOnAccountRemoval: false
+        - !Ref AWS::NoValue
+      CallAs: !If
+        - IsOrganizationMode
+        - DELEGATED_ADMIN
+        - !Ref AWS::NoValue
+      OperationPreferences:
+        RegionConcurrencyType: PARALLEL
+        MaxConcurrentPercentage: 100
+        FailureTolerancePercentage: 50
+      Parameters:
+        - ParameterKey: ConformancePackName
+          ParameterValue: !Ref ConformancePackName
+        - ParameterKey: RestrictedPorts
+          ParameterValue: !Ref RestrictedPorts
+        - ParameterKey: ExcludedPublicBuckets
+          ParameterValue: !Ref ExcludedPublicBuckets
+      StackInstancesGroup:
+        - DeploymentTargets: !If
+            - IsOrganizationMode
+            - OrganizationalUnitIds: !If
+                - DeployToRootOU
+                - !Ref AWS::NoValue
+                - !Ref TargetOrganizationalUnitIds
+              AccountFilterType: !If
+                - DeployToRootOU
+                - NONE
+                - !Ref AWS::NoValue
+            - Accounts:
+                - !Ref AWS::AccountId
+          Regions: !Ref DeploymentRegions
+      TemplateURL: !Ref StackSetTemplateS3URL
+
+Outputs:
+  StackSetId:
+    Description: ID of the created StackSet
+    Value: !Ref CRCDCIRTConformancePackStackSet
+    Export:
+      Name: !Sub '${AWS::StackName}-StackSetId'
+
+  StackSetName:
+    Description: Name of the created StackSet
+    Value: !Sub '${ConformancePackName}-stackset'
+    Export:
+      Name: !Sub '${AWS::StackName}-StackSetName'
+
+  DeploymentMode:
+    Description: Deployment mode used
+    Value: !Ref DeploymentMode
+
+  DeploymentRegions:
+    Description: Regions where the conformance pack is deployed
+    Value: !Join [',', !Ref DeploymentRegions]
+
+  # TODO remove
+  #OrganizationId:
+  #  Condition: IsOrganizationMode
+  #  Description: AWS Organization ID
+  #  Value: !Ref OrganizationId
+
+  TemplateURL:
+    Description: S3 URL of the standalone template used for StackSet deployment
+    Value: !Ref StackSetTemplateS3URL

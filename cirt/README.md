@@ -4,6 +4,28 @@ This folder contains templates for deploying AWS Config rules recommended by the
 
 ## Files
 
+### `crcd-cirt-conformance-pack-specification.yaml`
+Contains the specification of all AWS Config rules and corresponding parameters included in the conformance pack.
+
+### `crcd-cirt-conformance-pack-resources.yaml`
+**Development file**
+Cloud Formation template for a standalone deployment - i.e. single account and Region - of the conformance pack. Takes the S3 path of `crcd-cirt-conformance-pack-specification.yaml` as input parameter.
+
+This solution will be used if the conformance pack definition is so large that it needs its own standalone file on S3. To simplify deployment, we'll keep the conformance pack definition embedded in the Cloud Formation resources file (this file) as much as possible.
+
+### `crcd-cirt-conformance-pack.yaml`
+**Development file**
+Cloud Formation template for a standalone deployment - i.e. single account and Region - of the conformance pack. Contains the conformance pack `crcd-cirt-conformance-pack-specification.yaml` as hard-coded value.
+
+
+### `crcd-cirt-conformance-pack-stackset.yaml`
+**Main deployment template** - Deploy this from your management account to create a StackSet that deploys Config rules organization-wide or in all specified Regions in case of deployment on a standalone account.
+
+Refers to the S3 path of `crcd-cirt-conformance-pack.yaml` or `crcd-cirt-conformance-pack-resources.yaml`
+
+# OLD
+## Files
+
 ### `crcd-cirt-stackset-deployment.yaml`
 **Main deployment template** - Deploy this from your management account to create a StackSet that deploys Config rules organization-wide.
 

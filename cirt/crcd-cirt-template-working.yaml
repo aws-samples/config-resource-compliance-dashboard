@@ -1049,11 +1049,20 @@ Resources:
                 ComplianceResourceTypes:
                   - AWS::S3::Bucket
               InputParameters:
-                excludedPublicBuckets:
-                  Fn::If:
-                  - HasExcludedPublicBuckets
-                  - Ref: ExcludedPublicBuckets
-                  - Ref: AWS::NoValue
+                Fn::If:
+                - HasExcludedPublicBuckets
+                - excludedPublicBuckets:
+                    Ref: ExcludedPublicBuckets
+                - Ref: AWS::NoValue
+                
+                #excludedPublicBuckets:
+                #  Fn::If:
+                #  - HasExcludedPublicBuckets
+                #  - Ref: ExcludedPublicBuckets
+                #  - Ref: AWS::NoValue
+
+
+
           # ============================================================================
           # Initial Access - EC2 Security
           # ============================================================================
