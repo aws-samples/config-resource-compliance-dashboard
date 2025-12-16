@@ -1,28 +1,138 @@
-# AWS Config Resource Compliance Dashboard (CRCD) and AWS Customer Incident Response Team (CIRT) Conformance Pack
-# Cloud Formation template that deploys the conformance pack resources in one account/region. 
-# This can be installed on a single region or referenced by the StackSet deployment file
-# TODO: check all parameters to all rules, enable them all
+# AWS Config Resource Compliance Dashboard CRCD and AWS Customer Incident Response Team (CIRT) Conformance Pack
+# Organizational deployment with hybrid approach:
+# 1. IAM rules (custom Lambda + AWS managed) deployed via regular conformance pack in us-east-1 only
+# 2. Regional rules (S3, EC2, VPC) deployed via organizational conformance pack to all regions
+#
+# DEPLOYMENT INSTRUCTIONS:
+# - Deploy this template as a StackSet targeting organizational units
+# - Specify us-east-1 as the only region
+# - Enable automatic deployment for new accounts
+# - The IAM conformance pack will be created in us-east-1 of each account
+# - The organizational conformance pack will automatically deploy regional rules to all regions
+
+
+# Organization-level deployment
+
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard - AWS Customer Incident Response Team (CIRT) Conformance Pack - AWS Config conformance pack with CIRT-recommended rules for security and compliance monitoring. Includes both standard AWS Config managed rules and custom Lambda-backed rules.'
+Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in us-east-1 and regional rules organization-wide'
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: "Conformance Pack Configuration"
+          default: "IAM Conformance Pack Configuration"
         Parameters:
-          - ConformancePackName
+          # TODO deprecated - IAMConformancePackName
+          - IAMRulesDeploymentRegion
+      - Label:
+          default: "Organizational Conformance Pack Configuration (All regions)"
+        Parameters:
+          # TODO deprecated- RegionalConformancePackName
           - RestrictedPorts
           - ExcludedPublicBuckets
+          # TODO deprecated - TargetOrganizationalUnitIds
+          - ExcludedAccountsIDs
+      - Label:
+          default: "Technical parameters - do not change"
+        Parameters:
+          - ConformancePackName
+          - IAMPackSuffix
+
+    ParameterLabels:
+      IAMRulesDeploymentRegion:
+        default: "IAM Rules Region"
+
+      ConformancePackName:
+        default: "Conformance Pack name"
+
+      IAMPackSuffix:
+        default: "IAM Conformance Pack Name suffix"
+      
+      # TODO decide if you use an external S2 path or not, tentatively keeping the entire tempalte here for a 1-step deployment experience
+      #StackSetTemplateS3URL:
+      #  default: "S3 Object URL of the standalone template (in AWS CloudFormation YAML format)"
+      
+      # TODO we will probably end up with two separate CFN templates, one for sandalone and one for organizations
+      # This template is for organizations only at the moment
+      #DeploymentMode:
+      #  default: "Deployment mode"
+      
+      ExcludedAccountsIDs:
+        default: "A comma-separated list of accounts excluded from organization conformance pack"
+
+      TargetOrganizationalUnitIds:
+        default: "Target Organizational Unit IDs"
+
+      # TODO this is needed on standalone mode, which is not on this template for now
+      #DeploymentRegions:
+      #  default: "Deployment Regions"
+      
+      RestrictedPorts:
+        default: "Security Group port restriction check - restricted ports"
+      ExcludedPublicBuckets:
+        default: "S3 bucket-level public access check - excluded public buckets"
 
 Parameters:
+
+  # TODO, this works only in a stackset... may as well just run on the local Region, not worth sending a stackset everywhere
+  # that just installs on a region... But must be done once in every account, so we do need stacksets!
+  IAMRulesDeploymentRegion:
+    Type: String
+    Default: us-east-1
+    Description: AWS Region where IAM rules will be deployed (IAM is global, so only one region is needed)
+    AllowedValues:
+      - us-east-1
+      - us-east-2
+      - us-west-1
+      - us-west-2
+      - eu-west-1
+      - eu-west-2
+      - eu-west-3
+      - eu-central-1
+      - eu-north-1
+      - ap-southeast-1
+      - ap-southeast-2
+      - ap-northeast-1
+      - ap-northeast-2
+      - ap-south-1
+      - sa-east-1
+      - ca-central-1
+
   ConformancePackName:
     Type: String
     Default: crcd-cirt-conformance-pack
     Description: Name of the conformance pack
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+
+  # Suffix is used only on the conformance pack name
+  IAMPackSuffix:
+    Type: String
+    Default: ia-iam
+    Description: Suffix for the name of the IAM conformance pack
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+  
+  ExcludedAccountsIDs:
+    Type: String
+    Default: ''
+    Description: A comma-separated list of accounts excluded from organization conformance pack (leave empty to deploy to all accounts)
+
+  # TODO deprecated
+  #IAMConformancePackName:
+  #  Type: String
+  #  Default: crcd-cirt-iam-rules
+  #  Description: Name of the IAM conformance pack
+  #  AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+  #  ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+  #
+  #RegionalConformancePackName:
+  #  Type: String
+  #  Default: crcd-cirt-regional-rules
+  #  Description: Name of the regional organizational conformance pack (deployed to all regions)
+  #  AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+  #  ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
 
   RestrictedPorts:
     Type: String
@@ -33,11 +143,28 @@ Parameters:
     Type: String
     Default: ''
     Description: Comma-separated list of known allowed public Amazon S3 bucket names
+  
+  TargetOrganizationalUnitIds:
+    Type: CommaDelimitedList
+    Description: Comma-separated list of Organizational Unit IDs to deploy to (leave empty to deploy to root OU which includes all accounts) - Used only in AWS Organizations mode
+    Default: ''
+
+Conditions:
+  IsIAMDeploymentRegion: !Equals [!Ref 'AWS::Region', !Ref IAMRulesDeploymentRegion]
+  DeployToRootOU: !Equals [!Join ['', !Ref TargetOrganizationalUnitIds], '']
+
 
 Resources:
+  # ===================================================================================================
+  # PART 1: IAM RULES - Deployed in a single region via regular Conformance Pack
+  # Contains: Lambda functions, CloudWatch log groups, IAM roles
+  # ===================================================================================================
+
+
   # Lambda Execution Role for Root Account Usage Check
   RootNotUsedRegularlyLambdaRole:
     Type: AWS::IAM::Role
+    Condition: IsIAMDeploymentRegion
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
@@ -79,6 +206,7 @@ Resources:
   # Lambda Execution Role for IAM User Access Key Check
   UserAccessKeyCheckLambdaRole:
     Type: AWS::IAM::Role
+    Condition: IsIAMDeploymentRegion
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
@@ -117,6 +245,44 @@ Resources:
         SuppressedRules:
           - IAM_NO_INLINE_POLICY_CHECK
 
+  # CloudWatch Log Group for Root Not Used Regularly Lambda
+  RootNotUsedRegularlyLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    Condition: IsIAMDeploymentRegion
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-root-not-used-regularly'
+      RetentionInDays: 30
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: No KMS encryption needed
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+
+  # CloudWatch Log Group for User Access Key Check Lambda
+  UserAccessKeyCheckLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    Condition: IsIAMDeploymentRegion
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-user-access-key-check'
+      RetentionInDays: 30
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: No KMS encryption needed
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+  
   # Custom Lambda Function: Root Account Not Used Regularly
   # Note: CloudWatch LogGroup removed to avoid naming conflicts in multi-region deployments
   # Lambda will create its own log group automatically
@@ -128,6 +294,7 @@ Resources:
     Type: AWS::Lambda::Function
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
+    Condition: IsIAMDeploymentRegion
     Properties:
       FunctionName: !Sub '${ConformancePackName}-root-not-used-regularly'
       Description: CRCD-CIRT custom AWS Config rule - Root Account must not be used regularly
@@ -521,17 +688,6 @@ Resources:
         SuppressedRules:
           - LAMBDA_INSIDE_VPC
 
-  # Permission for Config to invoke Lambda
-  RootNotUsedRegularlyLambdaPermission:
-    Type: AWS::Lambda::Permission
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      FunctionName: !GetAtt RootNotUsedRegularlyLambda.Arn
-      Action: lambda:InvokeFunction
-      Principal: config.amazonaws.com
-      SourceAccount: !Ref AWS::AccountId
-
   # Custom Lambda Function: IAM User Access Key Check
   # Note: CloudWatch LogGroup removed to avoid naming conflicts in multi-region deployments
   # Lambda will create its own log group automatically
@@ -543,6 +699,7 @@ Resources:
     Type: AWS::Lambda::Function
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
+    Condition: IsIAMDeploymentRegion
     Properties:
       FunctionName: !Sub '${ConformancePackName}-user-access-key-check'
       Description: CRCD-CIRT custom AWS Config rule - Checks whether an IAM user access key exists
@@ -816,9 +973,23 @@ Resources:
         SuppressedRules:
           - LAMBDA_INSIDE_VPC
 
-  # Permission for Config to invoke Lambda
+
+  # Permission for Config to invoke Root Lambda
+  RootNotUsedRegularlyLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: IsIAMDeploymentRegion
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FunctionName: !GetAtt RootNotUsedRegularlyLambda.Arn
+      Action: lambda:InvokeFunction
+      Principal: config.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+
+  # Permission for Config to invoke User Access Key Lambda
   UserAccessKeyCheckLambdaPermission:
     Type: AWS::Lambda::Permission
+    Condition: IsIAMDeploymentRegion
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
@@ -827,56 +998,21 @@ Resources:
       Principal: config.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
 
-  # CloudWatch Log Group for Root Not Used Regularly Lambda
-  RootNotUsedRegularlyLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-root-not-used-regularly'
-      RetentionInDays: 30
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W84
-            reason: No KMS encryption needed
-      guard:
-        SuppressedRules:
-          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
-
-  # CloudWatch Log Group for User Access Key Check Lambda
-  UserAccessKeyCheckLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-user-access-key-check'
-      RetentionInDays: 30
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W84
-            reason: No KMS encryption needed
-      guard:
-        SuppressedRules:
-          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
-
-
-  # AWS Config Conformance Pack with all CIRT rules
-  CRCDCIRTConformancePack:
+  # IAM Conformance Pack (deployed in specified region only)
+  CRCDCIRTIAMConformancePack:
     Type: AWS::Config::ConformancePack
+    Condition: IsIAMDeploymentRegion
     DependsOn:
-      - UserAccessKeyCheckLambdaPermission
-      - UserAccessKeyCheckLambdaRole
-      - UserAccessKeyCheckLogGroup
       - RootNotUsedRegularlyLambdaPermission
-      - RootNotUsedRegularlyLambdaRole
+      - UserAccessKeyCheckLambdaPermission
       - RootNotUsedRegularlyLogGroup
+      - UserAccessKeyCheckLogGroup
+      - UserAccessKeyCheckLambdaRole
+      - RootNotUsedRegularlyLambdaRole
+
     Properties:
-      ConformancePackName: !Ref ConformancePackName
-      TemplateBody: |
+      ConformancePackName: !Sub '${ConformancePackName}-${IAMPackSuffix}' # TODO remove !Ref IAMConformancePackName
+      TemplateBody: |       
         Parameters:
           RootNotUsedRegularlyLambdaArn:
             Type: String
@@ -885,35 +1021,9 @@ Resources:
           UserAccessKeyCheckLambdaArn:
             Type: String
             Description: ARN of the User Access Key Check Lambda function
-          
-          ExcludedPublicBuckets:
-            Type: String
-            Default: ''
-            Description: Comma-separated list of known allowed public Amazon S3 bucket names
-          
-          RestrictedPorts:
-            Type: String
-            Default: '22,3389'
-            Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
-
-        Conditions:
-          HasExcludedPublicBuckets:
-            Fn::Not:
-            - Fn::Equals:
-              - ''
-              - Ref: ExcludedPublicBuckets
-          HasRestrictedPorts:
-            Fn::Not:
-            - Fn::Equals:
-              - ''
-              - Ref: RestrictedPorts
 
         Resources:
-
-          # ============================================================================
-          # Initial Access - IAM Protection
-          # ============================================================================
-
+          # AWS Managed IAM Rules
           RootAccountMfaEnabled:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -933,7 +1043,33 @@ Resources:
                 Owner: AWS
                 SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
               MaximumExecutionFrequency: TwentyFour_Hours
-          
+
+          IamUserMfaEnabled:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-iam-user-mfa-enabled
+              Description: Checks if the AWS Identity and Access Management (IAM) users have multi-factor authentication (MFA) enabled.
+              Source:
+                Owner: AWS
+                SourceIdentifier: IAM_USER_MFA_ENABLED
+              MaximumExecutionFrequency: TwentyFour_Hours
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::IAM::User
+
+          MfaEnabledForIamConsoleAccess:
+            Type: AWS::Config::ConfigRule
+            Properties:
+              ConfigRuleName: crcd-cirt-ia-iam-mfa-enabled-for-iam-console-access
+              Description: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
+              Source:
+                Owner: AWS
+                SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
+              Scope:
+                ComplianceResourceTypes:
+                  - AWS::IAM::User
+
+          # Custom Lambda-based IAM Rules
           IamRootNotUsedRegularly:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -947,12 +1083,12 @@ Resources:
                   - EventSource: aws.config
                     MessageType: ScheduledNotification
                     MaximumExecutionFrequency: TwentyFour_Hours
-          
+
           IamUserAccessKeyCheck:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-iam-iam-user-access-key-check
-              Description: Checks whether an IAM user access key exists
+              Description: Checks whether IAM users have access keys
               Source:
                 Owner: CUSTOM_LAMBDA
                 SourceIdentifier:
@@ -964,37 +1100,57 @@ Resources:
               Scope:
                 ComplianceResourceTypes:
                   - AWS::IAM::User
-                    
-          IamUserMfaEnabled:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-iam-iam-user-mfa-enabled
-              Description: Checks if the AWS Identity and Access Management (IAM) users have multi-factor authentication (MFA) enabled.
-              Source:
-                Owner: AWS
-                SourceIdentifier: IAM_USER_MFA_ENABLED
-              MaximumExecutionFrequency: TwentyFour_Hours
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::IAM::User
-          
-          MfaEnabledForIamConsoleAccess:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-iam-mfa-enabled-for-iam-console-access
-              Description: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
-              Source:
-                Owner: AWS
-                SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::IAM::User
-          
-          
-          # ============================================================================
-          # Initial Access - S3 Protection
-          # ============================================================================
+      
+      ConformancePackInputParameters:
+        - ParameterName: RootNotUsedRegularlyLambdaArn
+          ParameterValue: !GetAtt RootNotUsedRegularlyLambda.Arn
+        - ParameterName: UserAccessKeyCheckLambdaArn
+          ParameterValue: !GetAtt UserAccessKeyCheckLambda.Arn
 
+  # ===================================================================================================
+  # PART 2: ORGANIZATIONAL RULES - Deployed organization-wide via OrganizationConformancePack
+  # Contains: S3, EC2, VPC security rules
+  # ===================================================================================================
+
+  CRCDCIRTOrganizationConformancePack:
+    Type: AWS::Config::OrganizationConformancePack
+    Properties:
+      OrganizationConformancePackName: !Ref ConformancePackName
+      # A list of ConformancePackInputParameter objects.
+      ConformancePackInputParameters:
+        - ParameterName: ExcludedPublicBuckets
+          ParameterValue: !Ref ExcludedPublicBuckets
+        - ParameterName: RestrictedPorts
+          ParameterValue: !Ref RestrictedPorts
+      # A comma-separated list of accounts excluded from organization conformance pack. 
+      ExcludedAccounts:
+      DeliveryS3Bucket: !Ref ExcludedAccountsIDs
+      TemplateBody: |
+        Parameters:
+          ExcludedPublicBuckets:
+            Type: String
+            Default: ''
+            Description: Comma-separated list of known allowed public Amazon S3 bucket names
+
+          RestrictedPorts:
+            Type: String
+            Default: '22,3389'
+            Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+
+        Conditions:
+          HasExcludedPublicBuckets:
+            Fn::Not:
+            - Fn::Equals:
+              - ''
+              - Ref: ExcludedPublicBuckets
+          HasRestrictedPorts:
+            Fn::Not:
+            - Fn::Equals:
+              - ''
+              - Ref: RestrictedPorts
+
+        Resources:
+          # S3 Protection Rules
           S3BucketPublicReadProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -1006,8 +1162,7 @@ Resources:
               Scope:
                 ComplianceResourceTypes:
                   - AWS::S3::Bucket
-              
-          
+
           S3BucketPublicWriteProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -1019,24 +1174,24 @@ Resources:
               Scope:
                 ComplianceResourceTypes:
                   - AWS::S3::Bucket
-          
+
           S3AccessPointInVpcOnly:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
-              Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
+              Description: Checks if S3 access points are configured to only allow access from within a VPC
               Source:
                 Owner: AWS
                 SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
               Scope:
                 ComplianceResourceTypes:
                   - AWS::S3::AccessPoint
-              
+
           S3AccessPointPublicAccessBlocks:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
-              Description: Checks whether Amazon S3 access points have public access block settings enabled
+              Description: Checks if S3 access points have public access block settings enabled
               Source:
                 Owner: AWS
                 SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
@@ -1048,7 +1203,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
-              Description: Checks whether Amazon S3 account-level public access block settings are enabled
+              Description: Checks if S3 account-level public access block settings are enabled
               Source:
                 Owner: AWS
                 SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
@@ -1057,12 +1212,12 @@ Resources:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
-              Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
+              Description: Periodically checks if S3 account-level public access block settings remain enabled
               Source:
                 Owner: AWS
                 SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
               MaximumExecutionFrequency: TwentyFour_Hours
-          
+
           S3BucketLevelPublicAccessProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
@@ -1080,16 +1235,13 @@ Resources:
                   - HasExcludedPublicBuckets
                   - Ref: ExcludedPublicBuckets
                   - Ref: AWS::NoValue
-          
-          # ============================================================================
-          # Initial Access - EC2 Security
-          # ============================================================================
 
+          # EC2 Security Rules
           AutoscalingLaunchconfigRequiresImdsv2:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
-              Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
+              Description: Checks if Auto Scaling launch configurations require IMDSv2
               Source:
                 Owner: AWS
                 SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
@@ -1101,7 +1253,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
-              Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
+              Description: Checks if EC2 instances are configured to require IMDSv2
               Source:
                 Owner: AWS
                 SourceIdentifier: EC2_IMDSV2_CHECK
@@ -1113,52 +1265,46 @@ Resources:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
-              Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
+              Description: Checks if EC2 launch templates are configured to require IMDSv2
               Source:
                 Owner: AWS
                 SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
               Scope:
                 ComplianceResourceTypes:
                   - AWS::EC2::LaunchTemplate
-          
-          # ============================================================================
-          # Initial Access - Resource Access Protection
-          # ============================================================================
-          
+
+          # VPC Security Rules
           VpcSgPortRestrictionCheck:
             Type: AWS::Config::ConfigRule
             Properties:
               ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
+              Description: Checks if security groups allow unrestricted inbound ports
               Source:
                 Owner: AWS
-                SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
-              Description: Checks whether security groups allow unrestricted inbound ports
+                SourceIdentifier: VPC_SG_OPEN_ONLY_TO_AUTHORIZED_PORTS
               Scope:
                 ComplianceResourceTypes:
                   - AWS::EC2::SecurityGroup
               InputParameters:
-                restrictPorts:
+                authorizedTcpPorts:
                   Fn::If:
                   - HasRestrictedPorts
                   - Ref: RestrictedPorts
                   - Ref: AWS::NoValue
-              
-      ConformancePackInputParameters:
-        - ParameterName: RootNotUsedRegularlyLambdaArn
-          ParameterValue: !GetAtt RootNotUsedRegularlyLambda.Arn
-        - ParameterName: UserAccessKeyCheckLambdaArn
-          ParameterValue: !GetAtt UserAccessKeyCheckLambda.Arn
-        - ParameterName: ExcludedPublicBuckets
-          ParameterValue: !Ref ExcludedPublicBuckets
-        - ParameterName: RestrictedPorts
-          ParameterValue: !Ref RestrictedPorts
 
 Outputs:
+  IAMConformancePackName:
+    Condition: IsIAMDeploymentRegion
+    Description: Name of the IAM conformance pack (us-east-1 only)
+    Value: !Sub '${ConformancePackName}-${IAMPackSuffix}' # TODO remove !Ref IAMConformancePackName
+
   ConformancePackName:
-    Description: Name of the deployed conformance pack
+    Description: Name of the conformance pack
     Value: !Ref ConformancePackName
-    Export:
-      Name: !Sub '${AWS::StackName}-ConformancePackName'
+
+  DeploymentRegion:
+    Description: Region where this stack is deployed
+    Value: !Ref 'AWS::Region'
 
   RootNotUsedRegularlyLambdaRoleArn:
     Description: ARN of the Root Not Used Regularly Lambda execution role
@@ -1171,5 +1317,3 @@ Outputs:
     Value: !GetAtt UserAccessKeyCheckLambdaRole.Arn
     Export:
       Name: !Sub '${AWS::StackName}-UserAccessKeyCheckLambdaRoleArn'
-
-
