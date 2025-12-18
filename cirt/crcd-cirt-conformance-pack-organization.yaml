@@ -151,7 +151,6 @@ Parameters:
 
 Conditions:
   IsIAMDeploymentRegion: !Equals [!Ref 'AWS::Region', !Ref IAMRulesDeploymentRegion]
-  DeployToRootOU: !Equals [!Join ['', !Ref TargetOrganizationalUnitIds], '']
 
 
 Resources:
@@ -1260,18 +1259,6 @@ Resources:
               Scope:
                 ComplianceResourceTypes:
                   - AWS::EC2::Instance
-
-          Ec2LaunchTemplateImdsv2Check:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
-              Description: Checks if EC2 launch templates are configured to require IMDSv2
-              Source:
-                Owner: AWS
-                SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::LaunchTemplate
 
           # VPC Security Rules
           VpcSgPortRestrictionCheck:
