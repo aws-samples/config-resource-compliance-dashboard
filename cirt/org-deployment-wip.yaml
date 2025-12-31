@@ -1,4 +1,12 @@
 # testing the Organization-level deployment
+# TODO try AWS::Config::OrganizationConformancePack for standard Config rules, so that you unify 2 stacksets into 1
+# and you remove a nested layer of parameters...
+#
+# Organization Conformance Packs use a "best effort" deployment model.
+#   Supported regions: Rules deploy successfully, status = CREATE_SUCCESSFUL
+#   Unsupported regions: Rules fail, status = CREATE_FAILED for that account/region
+#   Overall pack: Still exists and is considered "deployed" — it doesn't roll back
+
 
 # Must be run from managment account or AWS Config delegated admin
 # Run this on managment account to designate
@@ -11,7 +19,7 @@
 # 2. uses a StackSet to deploy OrganizationConformancePack to multiple regions in the current account
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in us-east-1 and regional rules organization-wide'
+Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in current region and regional rules organization-wide'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -23,15 +31,22 @@ Metadata:
           - ExcludedAccountsIDs
           - DeploymentAccount
           - DeploymentRegions
+      # TODO add support for all rule parameters, organize the sections accordingly to CRCD CIRT Classification... see if it works
       - Label:
-          default: "Organizational Conformance Pack Configuration (All regions)"
+          default: "IAM Protection rule parameters"
+        Parameters:
+          - RootUsageThresholdDays
+      - Label:
+          default: "S3 Protection rule parameters"
         Parameters:
           - ExcludedPublicBuckets
-      # TODO add support for all rule parameters, organize the sections accordingly... see if one section per rule works
       - Label:
-          default: "VPC Security Group Port Restriction (Region-limited rule)"
+          default: "Resource Access Protection rule parameters"
         Parameters:
           - RestrictedPorts
+          - ProtocolType
+          - ExcludeExternalSecurityGroups
+          - IpType
       - Label:
           default: "Technical parameters - do not change"
         Parameters:
@@ -45,15 +60,27 @@ Metadata:
       ExcludedAccountsIDs:
         default: "A comma-separated list of accounts excluded from organization conformance pack"
       RestrictedPorts:
-        default: "Security Group port restriction check - restricted ports"
+        default: "VPC Security Group Port Restriction Check rule: restricted ports"
+      ProtocolType:
+        default: "VPC Security Group Port Restriction Check rule: protocol type"
+      ExcludeExternalSecurityGroups:
+        default: "VPC Security Group Port Restriction Check rule: exclude external security groups"
+      IpType:
+        default: "VPC Security Group Port Restriction Check rule: IP type"
       ExcludedPublicBuckets:
-        default: "S3 bucket-level public access check - excluded public buckets"
+        default: "S3 Bucket-Level Public Access Prohibited rule: excluded public buckets"
       TargetOrganizationalUnitIds:
         default: "Target Organizational Unit IDs"
       DeploymentAccount:
         default: "Deployment account"
+      RootUsageThresholdDays:
+        default: "Root Account Not Used Regularly rule: root account usage threshold (days)"
 
 Parameters:
+  RootUsageThresholdDays:
+    Type: String
+    Default: '5'
+    Description: Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT.
 
   DeploymentAccount:
     Type: String
@@ -63,6 +90,8 @@ Parameters:
       - Management Account
     Description: Choose the type of current account - Delegate Admin if this account is the AWS Config delegated admin, or Management Account if you run this from the management account of your AWS Organization
 
+  # TODO make it CommaDelimitedList with allowedpattern, cannot be empty
+  # TODO this regex? ^[a-zA-Z0-9-]{1,128}$]
   DeploymentRegions:
     Type: CommaDelimitedList
     # TODO development values these are the regions in dev environment
@@ -76,11 +105,13 @@ Parameters:
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
   
+  # TODO make it CommaDelimitedList with allowedpattern, can be empty
   ExcludedAccountsIDs:
     Type: String
     Default: ''
     Description: A comma-separated list of accounts excluded from organization conformance pack (leave empty to deploy to all accounts)
 
+  # TODO make it CommaDelimitedList with allowedpattern, can be empty
   ExcludedPublicBuckets:
     Type: String
     Default: ''
@@ -100,12 +131,38 @@ Parameters:
     ConstraintDescription: Must be a comma-separated list of valid OU IDs (ou-xxxx-xxxxxxxx) or root ID (r-xxxx)
 
   # VPC_SG_PORT_RESTRICTION_CHECK is not available in: cn-north-1, cn-northwest-1, ap-southeast-7, ap-southeast-5, mx-central-1, ap-east-1, ca-west-1
+  # TODO make it CommaDelimitedList with allowedpattern, can be empty
   RestrictedPorts:
     Type: String
     Default: '22,3389'
-    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range. Valid port numbers range from 0 to 65535.
 
-# TODO add validation of all parameters: required parameters and syntax 
+  ProtocolType:
+    Type: String
+    Default: 'ALL'
+    Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL' (case-insensitive). If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value is 'ALL'.
+    AllowedValues:
+      - ALL
+      - TCP
+      - UDP
+  
+  ExcludeExternalSecurityGroups:
+    Type: String
+    Default: 'true'
+    Description: Indicates whether to exclude external security groups from the rule. Set to 'true' to exclude external security groups from the rule. Set to 'false' to include external security groups in the rule evaluation.
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  IpType:
+    Type: String
+    Default: 'ALL'
+    Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). If not specified, the rule defaults to check for 'ALL'.
+    AllowedValues:
+      - IPv4
+      - IPv6
+      - ALL
+
 
 Conditions:
   IsDelegatedAdminAccount: !Equals [!Ref DeploymentAccount, 'Delegated Admin']
@@ -113,10 +170,18 @@ Conditions:
   HasExcludedPublicBuckets: !Not [!Equals [!Ref ExcludedPublicBuckets, '']]
   HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
 
+# TODO add validation of all parameters: required parameters and syntax 
+#Rules:
+#  MandatoryXXX:
+#    Assertions:
+#      - Assert: !Not
+#        - !Equals
+#          - !Ref XXX
+#          - ''
+#        AssertDescription: "XXX is required"
 
 Resources:
 
-  
   # ============================================================================
   # StackSet to deploy the conformance pack across multiple regions
   # in the entire organization
@@ -334,6 +399,7 @@ Resources:
       Capabilities:
         # This stack creates IAM roles with custom role names
         # Since the IAM roles have explicit RoleName properties, CloudFormation needs the stronger acknowledgment that we're creating named IAM resources
+        # The template will be created in a single region, roles will be created only once per account
         - CAPABILITY_NAMED_IAM
       StackInstancesGroup:
         - DeploymentTargets:
@@ -351,6 +417,8 @@ Resources:
       Parameters:
         - ParameterKey: ConformancePackName
           ParameterValue: !Sub '${ConformancePackName}-IAMRules'
+        - ParameterKey: RootUsageThresholdDays
+          ParameterValue: !Ref RootUsageThresholdDays
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
         Description: 'CRCD CIRT IAM Rules - deployed via StackSet (region-limited)'
@@ -358,6 +426,9 @@ Resources:
         Parameters:
           ConformancePackName:
             Type: String
+          RootUsageThresholdDays:
+            Type: String
+            Default: '5'
 
         Resources:
           # Lambda Execution Role for Root Account Usage Check
@@ -366,7 +437,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: !Sub '${ConformancePackName}-root-not-used-regularly-role'
+              RoleName: 'CRCD-CIRT-Rule-RootNotUsedRegularly'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -407,7 +478,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: !Sub '${ConformancePackName}-user-access-key-check-role'
+              RoleName: !Sub 'CRCD-CIRT-Rule-UserAccessKeyCheck'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -449,7 +520,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-root-not-used-regularly'
+              LogGroupName: '/aws/lambda/crcd-cirt-root-not-used-regularly'
               RetentionInDays: 30
             Metadata:
               cfn_nag:
@@ -467,7 +538,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              LogGroupName: !Sub '/aws/lambda/${ConformancePackName}-user-access-key-check'
+              LogGroupName: '/aws/lambda/crcd-cirt-user-access-key-check'
               RetentionInDays: 30
             Metadata:
               cfn_nag:
@@ -489,12 +560,12 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              FunctionName: !Sub '${ConformancePackName}-root-not-used-regularly'
-              Description: CRCD-CIRT custom AWS Config rule - Root Account Not Used Regularly rule
+              FunctionName: 'crcd-cirt-root-not-used-regularly'
+              Description: CRCD-CIRT Conformance Pack custom AWS Config rule - Root account not used regularly
               Runtime: python3.11
               Handler: index.lambda_handler
               Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
-              Timeout: 60
+              Timeout: 420
               Code:
                 ZipFile: |
                   """
@@ -505,8 +576,7 @@ Resources:
                   
                   CONFIGURATION:
                   --------------
-                  This Lambda function receives its configuration from AWS Config rule parameters, which are
-                  defined in the conformance pack template (crcd-cirt-conformance-pack-definition.yaml).
+                  This Lambda function receives data from AWS Config rule parameters.
                   
                   Rule Parameter:
                     - RootUsageThresholdDays (integer, default: 30)
@@ -527,22 +597,11 @@ Resources:
                   If the root user is used once, the rule will remain NON_COMPLIANT until 
                   RootUsageThresholdDays have passed since that usage.
                   
-                  ALTERNATIVE APPROACH:
+                  DISCARDED ALTERNATIVE APPROACH:
                   ---------------------
                   A more sophisticated implementation could count how many times root was used in the 
                   last RootUsageThresholdDays, and flag as NON_COMPLIANT only if used more than X times.
                   However, this would require querying CloudTrail records, which introduces additional cost.
-                  
-                  IAM PERMISSIONS REQUIRED:
-                  -------------------------
-                  The Lambda execution role must have the following permissions:
-                    - iam:GenerateCredentialReport
-                    - iam:GetCredentialReport
-                    - config:PutEvaluations (to submit compliance results to AWS Config)
-                    - config:GetResourceConfigHistory (optional, for resource history)
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents (for CloudWatch Logs)
                   """
                   
                   import json
@@ -561,9 +620,9 @@ Resources:
                   # This check does not need cross-account access
                   ASSUME_ROLE_MODE = False
                   
-                  # NOTE: The threshold is NOT configured via environment variable.
+                  # NOTE: The RootUsageThresholdDays threshold is NOT configured via environment variable.
                   # It is passed as a rule parameter from AWS Config via the 'ruleParameters' field
-                  # in the evaluation event. See the conformance pack definition for configuration.
+                  # in the evaluation event.
                   
                   
                   def lambda_handler(event, context):
@@ -608,7 +667,6 @@ Resources:
                           invoking_event = json.loads(event['invokingEvent'])
                           logger.debug('CRCD-CIRT: Received invoking event: ' + json.dumps(invoking_event))
                   
-                  
                           AWS_CONFIG_CLIENT = get_client('config', event)
                   
                           # This rule supports only periodic evaluation
@@ -626,7 +684,7 @@ Resources:
                               rule_parameters = json.loads(event['ruleParameters'])
                           
                           # Get threshold from rule parameters with default fallback
-                          # TODO the default value of RootUsageThresholdDays could be an environment variable of the function
+                          # TODO the default value of RootUsageThresholdDays could be an environment variable of the function instead of a hardcode 30
                           root_usage_threshold_days = int(rule_parameters.get('RootUsageThresholdDays', '30'))
                           
                           # Fallback to extracting account ID from invoking event or context if not in event
@@ -723,16 +781,6 @@ Resources:
                               time.sleep(wait_interval)
                               report_status = iam_client.generate_credential_report()
                               wait_interval = min(wait_interval * 1.5, 10)  # Cap at 10 seconds
-                  
-                          # OLD code that waits 1 second at the time
-                          #max_attempts = 300 # 5 minutes
-                          #attempt = 0
-                          #while report_status['State'] != 'COMPLETE' and attempt < max_attempts:
-                          #    logger.info(f"Waiting for credential report (attempt {attempt + 1}/{max_attempts})")
-                          #    import time
-                          #    time.sleep(1)
-                          #    report_status = iam_client.generate_credential_report()
-                          #    attempt += 1
                           
                           if report_status['State'] != 'COMPLETE':
                               logger.error("IAM Credential report generation timed out")
@@ -900,7 +948,8 @@ Resources:
             UpdateReplacePolicy: Delete
             DependsOn: UserAccessKeyCheckLogGroup
             Properties:
-              FunctionName: !Sub '${ConformancePackName}-user-access-key-check'
+              FunctionName: 'crcd-cirt-user-access-key-check'
+              Description: CRCD-CIRT Conformance Pack custom AWS Config rule - IAM users access key check
               Runtime: python3.11
               Handler: index.lambda_handler
               Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
@@ -913,16 +962,6 @@ Resources:
                   Checks whether IAM users have access keys. CIRT strongly recommends against
                   creating access keys and deleting any that exist, as they provide unrestricted
                   access to AWS resources and are high-value targets for attackers.
-                  
-                  IAM PERMISSIONS REQUIRED:
-                  -------------------------
-                  The Lambda execution role must have the following permissions:
-                    - iam:ListAccessKeys (to check for user access keys)
-                    - config:PutEvaluations (to submit compliance results to AWS Config)
-                    - config:GetResourceConfigHistory (optional, for resource history)
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents (for CloudWatch Logs)
                   """
                   
                   import json
@@ -977,7 +1016,6 @@ Resources:
                           if 'configRuleId' not in event:
                               raise ValueError("Missing required field: configRuleId")
                           
-                  
                           invoking_event = json.loads(event['invokingEvent'])
                           logger.debug(f"CRCD-CIRT: Received invoking event: {json.dumps(invoking_event)}")
                   
@@ -1193,6 +1231,8 @@ Resources:
                   ParameterValue: !GetAtt RootNotUsedRegularlyLambda.Arn
                 - ParameterName: UserAccessKeyCheckLambdaArn
                   ParameterValue: !GetAtt UserAccessKeyCheckLambda.Arn
+                - ParameterName: RootUsageThresholdDays
+                  ParameterValue: !Ref RootUsageThresholdDays
 
               TemplateBody: |
                 Parameters:
@@ -1202,6 +1242,10 @@ Resources:
                   UserAccessKeyCheckLambdaArn:
                     Type: String
                     Description: ARN of the Lambda function for rule User Access Key Check
+                  RootUsageThresholdDays:
+                    Type: String
+                    Description: Parameter from AWS Config into rule IamRootNotUsedRegularly
+                    Default: '5'
 
                 Resources:
                   # ============================================================================
@@ -1261,14 +1305,19 @@ Resources:
                     Type: AWS::Config::ConfigRule
                     Properties:
                       ConfigRuleName: crcd-cirt-ia-iam-iam-root-not-used-regularly
-                      Description: Checks whether the root user is not used regularly
+                      Description: Checks whether the root user is not used regularly. Parameter: RootUsageThresholdDays (integer) - Number of days to look back for root usage.
                       Source:
                         Owner: CUSTOM_LAMBDA
-                        SourceIdentifier: Ref RootNotUsedRegularlyLambdaArn
+                        SourceIdentifier:
+                          Ref: RootNotUsedRegularlyLambdaArn
                         SourceDetails:
                           - EventSource: aws.config
                             MessageType: ScheduledNotification
                             MaximumExecutionFrequency: TwentyFour_Hours
+                      InputParameters:
+                        RootUsageThresholdDays:
+                          Ref: RootUsageThresholdDays
+                  
                   # Rule: Checks whether an IAM user access key exists
                   IamUserAccessKeyCheck:
                     Type: AWS::Config::ConfigRule
@@ -1277,7 +1326,8 @@ Resources:
                       Description: Checks whether an IAM user access key exists
                       Source:
                         Owner: CUSTOM_LAMBDA
-                        SourceIdentifier: Ref UserAccessKeyCheckLambdaArn
+                        SourceIdentifier:
+                          Ref: UserAccessKeyCheckLambdaArn
                         SourceDetails:
                           - EventSource: aws.config
                             MessageType: ScheduledNotification
@@ -1326,6 +1376,14 @@ Resources:
           - ParameterKey: RestrictedPorts
             ParameterValue: !Ref RestrictedPorts
           - Ref: AWS::NoValue
+        # the other parameters to this rule come from a drop down list, they are always provided
+        - ParameterKey: ProtocolType
+          ParameterValue: !Ref ProtocolType
+        - ParameterKey: ExcludeExternalSecurityGroups
+          ParameterValue: !Ref ExcludeExternalSecurityGroups
+        - ParameterKey: IpType
+          ParameterValue: !Ref IpType
+
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
         Description: 'CRCD CIRT VPC SG Port Restriction Rule - deployed via StackSet (region-limited)'
@@ -1336,6 +1394,13 @@ Resources:
           RestrictedPorts:
             Type: String
             Default: '22,3389'
+          ProtocolType:
+            Type: String
+          ExcludeExternalSecurityGroups:
+            Type: String
+          IpType:
+            Type: String
+          
 
         Conditions:
           HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
@@ -1362,12 +1427,31 @@ Resources:
                   - ParameterName: RestrictedPorts
                     ParameterValue: !Ref RestrictedPorts
                   - Ref: AWS::NoValue
+                - ParameterName: ProtocolType
+                  ParameterValue: !Ref ProtocolType
+                - ParameterName: ExcludeExternalSecurityGroups
+                  ParameterValue: !Ref ExcludeExternalSecurityGroups
+                - ParameterName: IpType
+                  ParameterValue: !Ref IpType
+
               TemplateBody: |
                 Parameters:
                   RestrictedPorts:
                     Type: String
                     Default: '22,3389'
                     Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+                  ProtocolType:
+                    Type: String
+                    Default: 'ALL'
+                    Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL' (case-insensitive). If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value is 'ALL'.
+                  ExcludeExternalSecurityGroups:
+                    Type: String
+                    Default: 'true'
+                    Description: If set to 'true', the rule will exclude external security groups from the scope of the rule. Default value is 'true'.'
+                  IpType:
+                    Type: String
+                    Default: 'ALL'
+                    Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). If not specified, the rule defaults to check for 'ALL'.
 
                 Conditions:
                   HasRestrictedPorts:
@@ -1394,6 +1478,12 @@ Resources:
                           - HasRestrictedPorts
                           - Ref: RestrictedPorts
                           - Ref: AWS::NoValue
+                        protocolType:
+                          Ref: ProtocolType
+                        excludeExternalSecurityGroups:
+                          Ref: ExcludeExternalSecurityGroups
+                        ipType:
+                          Ref: IpType
 
 Outputs:
 
