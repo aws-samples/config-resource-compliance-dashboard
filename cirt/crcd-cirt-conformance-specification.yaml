@@ -230,18 +230,18 @@ Resources:
         ComplianceResourceTypes:
           - AWS::EC2::Instance
 
-  # Rule removed due to poor regional support, check again in the future
-  #Ec2LaunchTemplateImdsv2Check:
-  #  Type: AWS::Config::ConfigRule
-  #  Properties:
-  #    ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
-  #    Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
-  #    Source:
-  #      Owner: AWS
-  #      SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
-  #    Scope:
-  #      ComplianceResourceTypes:
-  #        - AWS::EC2::LaunchTemplate
+  # Rule removed due to poor regional support, then added again when passed to OrganizationConformancePack
+  Ec2LaunchTemplateImdsv2Check:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
+      Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
+      Source:
+        Owner: AWS
+        SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::EC2::LaunchTemplate
   
   # ============================================================================
   # Initial Access - Resource Access Protection

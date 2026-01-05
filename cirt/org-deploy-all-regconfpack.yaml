@@ -1,34 +1,31 @@
-# Organization-level deployment
-# uses AWS::Config::OrganizationConformancePack for standard Config rules
+# 2026-01-05 
+# Last file with 3x stacksets each deploying a standard conformance pack
+# keeping it as temp reference
+
+# testing the Organization-level deployment
+# TODO try AWS::Config::OrganizationConformancePack for standard Config rules, so that you unify 2 stacksets into 1
+# and you remove a nested layer of parameters and do not care anymore of regional rule availability, 
+# you can also bring back the rule you removed
+
+
+
+#
 # Organization Conformance Packs use a "best effort" deployment model.
 #   Supported regions: Rules deploy successfully, status = CREATE_SUCCESSFUL
 #   Unsupported regions: Rules fail, status = CREATE_FAILED for that account/region
 #   Overall pack: Still exists and is considered "deployed" — it doesn't roll back
 
-# this template works in this way
-# 1. must exclude accounts where config is not enabled, typicallly the payer
-# 2. uses OrganizationConformancePack to deploy all standard rules across the entire organization
-# 3. uses stacksets to deploy IAM-related Config rules on the current region on every account of the organization
 
-# ===========================================================================================================
-# Prerequisites
-# ===========================================================================================================
-#
-# The account where you run this must be deletaged admin for CloudFormation and AWS Config
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
-#
-# 1. Must be run from managment account or CloudFormation delegated admin 
-# Run this on managment account to designate
-# aws organizations register-delegated-administrator --account-id <DELEGATED_ACCOUNT_ID> --service-principal=member.org.stacksets.cloudformation.amazonaws.com
-# Run this to verify
-# aws organizations list-delegated-administrators --service-principal member.org.stacksets.cloudformation.amazonaws.com
-#
-# 2. Must be run from managment account or AWS Config delegated admin
+# Must be run from managment account or AWS Config delegated admin
 # Run this on managment account to designate
 # aws organizations register-delegated-administrator --account-id <DELEGATED_ACCOUNT_ID> --service-principal config.amazonaws.com
 # Run this to verify
 # aws organizations list-delegated-administrators --service-principal config.amazonaws.com
-  
+
+# this template works in this way
+# 1. must exclude accounts where config is not enabled, typicallly the payer
+# 2. uses a StackSet to deploy OrganizationConformancePack to multiple regions in the current account
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in current region and regional rules organization-wide'
 
@@ -41,7 +38,7 @@ Metadata:
           - TargetOrganizationalUnitIds
           - ExcludedAccountsIDs
           - DeploymentAccount
-          # TODO deprecated parameter - DeploymentRegions
+          - DeploymentRegions
       # TODO add support for all rule parameters, organize the sections accordingly to CRCD CIRT Classification... see if it works
       - Label:
           default: "IAM Protection rule parameters"
@@ -64,9 +61,8 @@ Metadata:
           - ConformancePackName
 
     ParameterLabels:
-      # TODO DeploymentRegions is deprecated, eventually remove
-      #DeploymentRegions:
-      #  default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
+      DeploymentRegions:
+        default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
       ConformancePackName:
         default: "Conformance Pack name"
       ExcludedAccountsIDs:
@@ -100,15 +96,15 @@ Parameters:
     AllowedValues:
       - Delegated Admin
       - Management Account
-    Description: Choose the type of current account - Delegate Admin if this account is the AWS Config and AWS CloudFormation delegated admin, or Management Account if you run this from the management account of your AWS Organization
+    Description: Choose the type of current account - Delegate Admin if this account is the AWS Config delegated admin, or Management Account if you run this from the management account of your AWS Organization
 
   # TODO make it CommaDelimitedList with allowedpattern, cannot be empty
   # TODO this regex? ^[a-zA-Z0-9-]{1,128}$]
-  #DeploymentRegions:
-  #  Type: CommaDelimitedList
-  #  # TODO development values these are the regions in dev environment
-  #  Default: "eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-south-2,eu-north-1,eu-central-1,eu-central-2"
-  #  Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed
+  DeploymentRegions:
+    Type: CommaDelimitedList
+    # TODO development values these are the regions in dev environment
+    Default: "eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-south-2,eu-north-1,eu-central-1,eu-central-2"
+    Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed
 
   ConformancePackName:
     Type: String
@@ -142,6 +138,7 @@ Parameters:
     AllowedPattern: ^(r-[a-z0-9]{4,32}|ou-[a-z0-9]+-[a-z0-9]+)(,(r-[a-z0-9]{4,32}|ou-[a-z0-9]+-[a-z0-9]+))*$
     ConstraintDescription: Must be a comma-separated list of valid OU IDs (ou-xxxx-xxxxxxxx) or root ID (r-xxxx)
 
+  # VPC_SG_PORT_RESTRICTION_CHECK is not available in: cn-north-1, cn-northwest-1, ap-southeast-7, ap-southeast-5, mx-central-1, ap-east-1, ca-west-1
   # TODO make it CommaDelimitedList with allowedpattern, can be empty
   RestrictedPorts:
     Type: String
@@ -194,238 +191,201 @@ Conditions:
 Resources:
 
   # ============================================================================
-  # OrganizationConformancePack for CRCD-CIRT Config rules
-  # AWS Config deploys to all Config-enabled regions automatically
+  # StackSet to deploy the conformance pack across multiple regions
+  # in the entire organization
   # ============================================================================
-  CRCDCIRTOrganizationConformancePack:
-    Type: AWS::Config::OrganizationConformancePack
+  CRCDCIRTOrganizationStackSet:
+    Type: AWS::CloudFormation::StackSet
     Properties:
-      OrganizationConformancePackName: !Ref ConformancePackName
-      # A list of ConformancePackInputParameter objects.
-      ConformancePackInputParameters:
-        # these parameters come from a drop down list, they are always provided
-        - ParameterName: ProtocolType
-          ParameterValue: !Ref ProtocolType
-        - ParameterName: ExcludeExternalSecurityGroups
-          ParameterValue: !Ref ExcludeExternalSecurityGroups
-        - ParameterName: IpType
-          ParameterValue: !Ref IpType
-        
-        # TODO delete
-        #- ParameterName: RestrictedPorts
-        #  ParameterValue: !Ref RestrictedPorts
-        #- ParameterName: ExcludedPublicBuckets
-        #  ParameterValue: !Ref ExcludedPublicBuckets
+      StackSetName: !Sub '${ConformancePackName}-stackset'
+      Description: Deploys CRCD CIRT conformance pack across multiple regions in the entire organization
+      PermissionModel: SERVICE_MANAGED
+      CallAs: !If
+        - IsDelegatedAdminAccount
+        - DELEGATED_ADMIN # running from delegated admin account
+        - SELF # running from the management account, can also use !Ref 'AWS::NoValue'
+      AutoDeployment:
+        Enabled: true
+        RetainStacksOnAccountRemoval: false
+      Capabilities:
+        - CAPABILITY_IAM
+      StackInstancesGroup:
+        - DeploymentTargets:
+            OrganizationalUnitIds: !Ref TargetOrganizationalUnitIds
+            AccountFilterType: !If
+              - HasExcludedAccounts
+              - DIFFERENCE
+              - NONE
+            Accounts: !If
+              - HasExcludedAccounts
+              - !Split [',', !Ref ExcludedAccountsIDs]
+              - !Ref 'AWS::NoValue'
+          Regions: !Ref DeploymentRegions
+      Parameters:
+        - ParameterKey: ConformancePackName
+          ParameterValue: !Ref ConformancePackName
         - Fn::If:
-          - HasRestrictedPorts
-          - ParameterName: RestrictedPorts
-            ParameterValue: !Ref RestrictedPorts
-          - Ref: AWS::NoValue
-        - Fn::If:
-          - HasExcludedPublicBuckets
-          - ParameterName: ExcludedPublicBuckets
-            ParameterValue: !Ref ExcludedPublicBuckets
-          - Ref: AWS::NoValue
-
-      # A comma-separated list of accounts excluded from organization conformance pack.
-      ExcludedAccounts: !If 
-        - HasExcludedAccounts
-        - !Split [',', !Ref ExcludedAccountsIDs]
-        - !Ref 'AWS::NoValue'
-
-      # If you don't specify it, AWS Config will use the default delivery channel's S3 bucket that's already configured in your organization's management account.
-      # The name of the Amazon S3 bucket where AWS Config stores conformance pack templates. 
-      # DeliveryS3Bucket: 
+            - HasExcludedPublicBuckets
+            - ParameterKey: ExcludedPublicBuckets
+              ParameterValue: !Ref ExcludedPublicBuckets
+            - Ref: AWS::NoValue
       TemplateBody: |
-        Parameters:
-          RestrictedPorts:
-            Type: String
-            Default: '22,3389'
-            Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
-          ProtocolType:
-            Type: String
-          ExcludeExternalSecurityGroups:
-            Type: String
-          IpType:
-            Type: String
+        AWSTemplateFormatVersion: '2010-09-09'
+        Description: 'CRCD CIRT Conformance Pack - deployed via StackSet'
 
+        Parameters:
+          ConformancePackName:
+            Type: String
           ExcludedPublicBuckets:
             Type: String
             Default: ''
-            Description: Comma-separated list of known allowed public Amazon S3 bucket names
 
         Conditions:
-          HasRestrictedPorts:
-            Fn::Not:
-            - Fn::Equals:
-              - ''
-              - Ref: RestrictedPorts
-          
-          HasExcludedPublicBuckets: 
-            Fn::Not: 
-            - Fn::Equals: 
-              - ''
-              - Ref: ExcludedPublicBuckets
+          HasExcludedPublicBuckets: !Not [!Equals [!Ref ExcludedPublicBuckets, '']]
 
         Resources:
-          # ============================================================================
-          # Initial Access - S3 Protection
-          # ============================================================================
-
-          S3BucketPublicReadProhibited:
-            Type: AWS::Config::ConfigRule
+          CRCDCIRTConformancePack:
+            Type: AWS::Config::ConformancePack
             Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
-              Description: Checks that S3 buckets do not allow public read access
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
-              
-          
-          S3BucketPublicWriteProhibited:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
-              Description: Checks that S3 buckets do not allow public write access
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
-          
-          S3AccessPointInVpcOnly:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
-              Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::AccessPoint
-              
-          S3AccessPointPublicAccessBlocks:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
-              Description: Checks whether Amazon S3 access points have public access block settings enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::AccessPoint
-
-          S3AccountLevelPublicAccessBlocks:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
-              Description: Checks whether Amazon S3 account-level public access block settings are enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
-
-          S3AccountLevelPublicAccessBlocksPeriodic:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
-              Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
-              MaximumExecutionFrequency: TwentyFour_Hours
-          
-          S3BucketLevelPublicAccessProhibited:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
-              Description: Checks if S3 buckets are publicly accessible
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
-              InputParameters:
-                excludedPublicBuckets:
-                  Fn::If:
+              ConformancePackName: !Ref ConformancePackName
+              ConformancePackInputParameters:
+                - Fn::If:
                   - HasExcludedPublicBuckets
-                  - Ref: ExcludedPublicBuckets
+                  - ParameterName: ExcludedPublicBuckets
+                    ParameterValue: !Ref ExcludedPublicBuckets
                   - Ref: AWS::NoValue
-          
-          # ============================================================================
-          # Initial Access - EC2 Security
-          # ============================================================================
+              TemplateBody: |
+                Parameters:
+                  ExcludedPublicBuckets:
+                    Type: String
+                    Default: ''
+                    Description: Comma-separated list of known allowed public Amazon S3 bucket names
 
-          AutoscalingLaunchconfigRequiresImdsv2:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
-              Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::AutoScaling::LaunchConfiguration
+                Conditions:
+                  HasExcludedPublicBuckets:
+                    Fn::Not:
+                    - Fn::Equals:
+                      - ''
+                      - Ref: ExcludedPublicBuckets
 
-          Ec2Imdsv2Check:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
-              Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: EC2_IMDSV2_CHECK
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::Instance
-          
-          Ec2LaunchTemplateImdsv2Check:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
-              Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::LaunchTemplate
-         
-          # ============================================================================
-          # Initial Access - Resource Access Protection
-          # ============================================================================
-          
-          VpcSgPortRestrictionCheck:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
-              Source:
-                Owner: AWS
-                SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
-              Description: Checks whether security groups allow unrestricted inbound ports
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::SecurityGroup
-              InputParameters:
-                restrictPorts:
-                  Fn::If:
-                  - HasRestrictedPorts
-                  - Ref: RestrictedPorts
-                  - Ref: AWS::NoValue
-                protocolType:
-                  Ref: ProtocolType
-                excludeExternalSecurityGroups:
-                  Ref: ExcludeExternalSecurityGroups
-                ipType:
-                  Ref: IpType
+                Resources:
+                  # ============================================================================
+                  # Initial Access - S3 Protection
+                  # ============================================================================
 
+                  S3BucketPublicReadProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
+                      Description: Checks that S3 buckets do not allow public read access
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                      
+                  
+                  S3BucketPublicWriteProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
+                      Description: Checks that S3 buckets do not allow public write access
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                  
+                  S3AccessPointInVpcOnly:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
+                      Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::AccessPoint
+                      
+                  S3AccessPointPublicAccessBlocks:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
+                      Description: Checks whether Amazon S3 access points have public access block settings enabled
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::AccessPoint
+
+                  S3AccountLevelPublicAccessBlocks:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
+                      Description: Checks whether Amazon S3 account-level public access block settings are enabled
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
+
+                  S3AccountLevelPublicAccessBlocksPeriodic:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
+                      Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
+                      MaximumExecutionFrequency: TwentyFour_Hours
+                  
+                  S3BucketLevelPublicAccessProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
+                      Description: Checks if S3 buckets are publicly accessible
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                      InputParameters:
+                        excludedPublicBuckets:
+                          Fn::If:
+                          - HasExcludedPublicBuckets
+                          - Ref: ExcludedPublicBuckets
+                          - Ref: AWS::NoValue
+                  
+                  # ============================================================================
+                  # Initial Access - EC2 Security
+                  # ============================================================================
+
+                  AutoscalingLaunchconfigRequiresImdsv2:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+                      Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::AutoScaling::LaunchConfiguration
+
+                  Ec2Imdsv2Check:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
+                      Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: EC2_IMDSV2_CHECK
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::EC2::Instance
 
   # ============================================================================
   # IAM rules are deployed on the current region only
@@ -1329,11 +1289,9 @@ Resources:
                       Source:
                         Owner: AWS
                         SourceIdentifier: IAM_USER_MFA_ENABLED
-                      MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed- also added MaximumExecutionFrequency above
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::IAM::User
                   # Rule: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
                   MfaEnabledForIamConsoleAccess:
                     Type: AWS::Config::ConfigRule
@@ -1343,11 +1301,9 @@ Resources:
                       Source:
                         Owner: AWS
                         SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
-                      MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed- also added MaximumExecutionFrequency above
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::IAM::User
                   
                   # ============================================================================
                   # Custom rules - Initial Access - IAM Protection
@@ -1357,7 +1313,7 @@ Resources:
                     Type: AWS::Config::ConfigRule
                     Properties:
                       ConfigRuleName: crcd-cirt-ia-iam-iam-root-not-used-regularly
-                      Description: Checks whether the root user is not used regularly. Parameter RootUsageThresholdDays (integer) - Number of days to look back for root usage.
+                      Description: Checks whether the root user is not used regularly. Parameter: RootUsageThresholdDays (integer) - Number of days to look back for root usage.
                       Source:
                         Owner: CUSTOM_LAMBDA
                         SourceIdentifier:
@@ -1384,18 +1340,165 @@ Resources:
                           - EventSource: aws.config
                             MessageType: ScheduledNotification
                             MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::IAM::User
 
-  
+  # ============================================================================
+  # Separate StackSet for VPC_SG_PORT_RESTRICTION_CHECK (region-limited rule)
+  # Not available in: cn-north-1, cn-northwest-1, ap-southeast-7, ap-southeast-5, mx-central-1, ap-east-1, ca-west-1
+  # The inner template checks AWS::Region and skips deployment in unsupported regions
+  # ============================================================================
+  CRCDCIRTVpcSgRuleStackSet:
+    Type: AWS::CloudFormation::StackSet
+    Properties:
+      StackSetName: !Sub '${ConformancePackName}-vpc-sg-rule-stackset'
+      Description: Deploys VPC Security Group port restriction rule (region-limited)
+      PermissionModel: SERVICE_MANAGED
+      CallAs: !If
+        - IsDelegatedAdminAccount
+        - DELEGATED_ADMIN
+        - SELF
+      AutoDeployment:
+        Enabled: true
+        RetainStacksOnAccountRemoval: false
+      Capabilities:
+        - CAPABILITY_IAM
+      StackInstancesGroup:
+        - DeploymentTargets:
+            OrganizationalUnitIds: !Ref TargetOrganizationalUnitIds
+            AccountFilterType: !If
+              - HasExcludedAccounts
+              - DIFFERENCE
+              - NONE
+            Accounts: !If
+              - HasExcludedAccounts
+              - !Split [',', !Ref ExcludedAccountsIDs]
+              - !Ref 'AWS::NoValue'
+          Regions: !Ref DeploymentRegions
+      Parameters:
+        - ParameterKey: ConformancePackName
+          ParameterValue: !Sub '${ConformancePackName}-VpcSgRule'
+        - Fn::If:
+          - HasRestrictedPorts
+          - ParameterKey: RestrictedPorts
+            ParameterValue: !Ref RestrictedPorts
+          - Ref: AWS::NoValue
+        # the other parameters to this rule come from a drop down list, they are always provided
+        - ParameterKey: ProtocolType
+          ParameterValue: !Ref ProtocolType
+        - ParameterKey: ExcludeExternalSecurityGroups
+          ParameterValue: !Ref ExcludeExternalSecurityGroups
+        - ParameterKey: IpType
+          ParameterValue: !Ref IpType
+
+      TemplateBody: |
+        AWSTemplateFormatVersion: '2010-09-09'
+        Description: 'CRCD CIRT VPC SG Port Restriction Rule - deployed via StackSet (region-limited)'
+
+        Parameters:
+          ConformancePackName:
+            Type: String
+          RestrictedPorts:
+            Type: String
+            Default: '22,3389'
+          ProtocolType:
+            Type: String
+          ExcludeExternalSecurityGroups:
+            Type: String
+          IpType:
+            Type: String
+          
+
+        Conditions:
+          HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
+          # Region check - rule NOT supported in these regions
+          IsUnsupportedRegion: !Or
+            - !Equals [!Ref 'AWS::Region', 'cn-north-1']
+            - !Equals [!Ref 'AWS::Region', 'cn-northwest-1']
+            - !Equals [!Ref 'AWS::Region', 'ap-southeast-7']  # Thailand
+            - !Equals [!Ref 'AWS::Region', 'ap-southeast-5']  # Malaysia
+            - !Equals [!Ref 'AWS::Region', 'mx-central-1']    # Mexico
+            - !Equals [!Ref 'AWS::Region', 'ap-east-1']       # Taipei (Hong Kong)
+            - !Equals [!Ref 'AWS::Region', 'ca-west-1']       # Calgary
+          IsSupportedRegion: !Not [!Condition IsUnsupportedRegion]
+
+        Resources:
+          CRCDCIRTVpcSgConformancePack:
+            Type: AWS::Config::ConformancePack
+            Condition: IsSupportedRegion
+            Properties:
+              ConformancePackName: !Ref ConformancePackName
+              ConformancePackInputParameters:
+                - Fn::If:
+                  - HasRestrictedPorts
+                  - ParameterName: RestrictedPorts
+                    ParameterValue: !Ref RestrictedPorts
+                  - Ref: AWS::NoValue
+                - ParameterName: ProtocolType
+                  ParameterValue: !Ref ProtocolType
+                - ParameterName: ExcludeExternalSecurityGroups
+                  ParameterValue: !Ref ExcludeExternalSecurityGroups
+                - ParameterName: IpType
+                  ParameterValue: !Ref IpType
+
+              TemplateBody: |
+                Parameters:
+                  RestrictedPorts:
+                    Type: String
+                    Default: '22,3389'
+                    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
+                  ProtocolType:
+                    Type: String
+                    Default: 'ALL'
+                    Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL' (case-insensitive). If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value is 'ALL'.
+                  ExcludeExternalSecurityGroups:
+                    Type: String
+                    Default: 'true'
+                    Description: If set to 'true', the rule will exclude external security groups from the scope of the rule. Default value is 'true'.'
+                  IpType:
+                    Type: String
+                    Default: 'ALL'
+                    Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). If not specified, the rule defaults to check for 'ALL'.
+
+                Conditions:
+                  HasRestrictedPorts:
+                    Fn::Not:
+                    - Fn::Equals:
+                      - ''
+                      - Ref: RestrictedPorts
+
+                Resources:
+                  VpcSgPortRestrictionCheck:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
+                      Description: Checks whether security groups allow unrestricted inbound ports
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::EC2::SecurityGroup
+                      InputParameters:
+                        restrictPorts:
+                          Fn::If:
+                          - HasRestrictedPorts
+                          - Ref: RestrictedPorts
+                          - Ref: AWS::NoValue
+                        protocolType:
+                          Ref: ProtocolType
+                        excludeExternalSecurityGroups:
+                          Ref: ExcludeExternalSecurityGroups
+                        ipType:
+                          Ref: IpType
+
 Outputs:
 
   ConformancePackName:
     Description: Name of the conformance pack
     Value: !Ref ConformancePackName
 
-  #DeploymentRegions:
-  #  Description: Regions where the conformance pack is deployed
-  #  Value: !Join [',', !Ref DeploymentRegions]
+  DeploymentRegions:
+    Description: Regions where the conformance pack is deployed
+    Value: !Join [',', !Ref DeploymentRegions]
