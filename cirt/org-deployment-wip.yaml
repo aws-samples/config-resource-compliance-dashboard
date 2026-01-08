@@ -58,10 +58,10 @@ Metadata:
       - Label:
           default: "Resource Access Protection rule parameters"
         Parameters:
-          - zzzVPCSGPortRestrictionParamRestrictedPorts
-          - VPCSGPortRestrictionParamProtocolType
-          - VPCSGPortRestrictionParamExcludeExternalSecurityGroups
-          - VPCSGPortRestrictionParamIpType
+          - VPCSecurityGroupPortRestrictionParamRestrictedPorts
+          - VPCSecurityGroupPortRestrictionParamProtocolType
+          - VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
+          - VPCSecurityGroupPortRestrictionParamIpType
       - Label:
           default: "Technical parameters - do not change"
         Parameters:
@@ -74,13 +74,13 @@ Metadata:
         default: "Conformance Pack name"
       ExcludedAccountsIDs:
         default: "Accounts to exclude from organization conformance pack"
-      zzzVPCSGPortRestrictionParamRestrictedPorts:
+      VPCSecurityGroupPortRestrictionParamRestrictedPorts:
         default: "VPC Security Group Port Restriction Check rule: restricted ports"
-      VPCSGPortRestrictionParamProtocolType:
+      VPCSecurityGroupPortRestrictionParamProtocolType:
         default: "VPC Security Group Port Restriction Check rule: protocol type"
-      VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+      VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups:
         default: "VPC Security Group Port Restriction Check rule: exclude external security groups"
-      VPCSGPortRestrictionParamIpType:
+      VPCSecurityGroupPortRestrictionParamIpType:
         default: "VPC Security Group Port Restriction Check rule: IP type"
       S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets:
         default: "S3 Bucket-Level Public Access Prohibited rule: excluded public buckets"
@@ -168,12 +168,12 @@ Parameters:
 
   # TODO String vs. CommaDelimitedList you need to treat the values differently and you pass this to many layers. careful if you want to change! 
   # TODO test case: this can be empty
-  zzzVPCSGPortRestrictionParamRestrictedPorts:
+  VPCSecurityGroupPortRestrictionParamRestrictedPorts:
     Type: String
     Default: '22,3389'
     Description: "Comma-separated list of ports that should not be open for incoming traffic over the full IP range. Valid port numbers range from 0 to 65535. Default value for the rule is '22,3389'. For info https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html"
 
-  VPCSGPortRestrictionParamProtocolType:
+  VPCSecurityGroupPortRestrictionParamProtocolType:
     Type: String
     Default: 'ALL'
     Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL'. If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value for the rule is 'ALL'.
@@ -182,7 +182,7 @@ Parameters:
       - TCP
       - UDP
   
-  VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+  VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups:
     Type: String
     Default: 'true'
     Description: Indicates whether to exclude external security groups from the rule. Set to 'true' to exclude external security groups from the rule. Set to 'false' to include external security groups in the rule evaluation. Default value for the rule is 'true'.
@@ -190,7 +190,7 @@ Parameters:
       - 'true'
       - 'false'
 
-  VPCSGPortRestrictionParamIpType:
+  VPCSecurityGroupPortRestrictionParamIpType:
     Type: String
     Default: 'ALL'
     Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). Default value for the rule is 'ALL'
@@ -237,7 +237,7 @@ Conditions:
   HasExcludedAccounts: !Not [!Equals [!Join [',', !Ref ExcludedAccountsIDs], '']]
   HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
   HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
-  HasRestrictedPorts: !Not [!Equals [!Ref zzzVPCSGPortRestrictionParamRestrictedPorts, '']]
+  HasRestrictedPorts: !Not [!Equals [!Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts, '']]
 
 
 # TODO add validation of all parameters: required parameters and syntax 
@@ -332,20 +332,20 @@ Resources:
         - Fn::If:
           - HasExcludedAccounts
           - ParameterKey: ExcludedAccountsIDs
-            ParameterValue: !Join [',', !Ref ExcludedAccountsIDs] #!Ref ExcludedAccountsIDs
+            ParameterValue: !Join [',', !Ref ExcludedAccountsIDs]
           - Ref: AWS::NoValue
         
         # parameters to VPC_SG_PORT_RESTRICTION_CHECK rule
-        - ParameterKey: VPCSGPortRestrictionParamProtocolType
-          ParameterValue: !Ref VPCSGPortRestrictionParamProtocolType
-        - ParameterKey: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
-          ParameterValue: !Ref VPCSGPortRestrictionParamExcludeExternalSecurityGroups
-        - ParameterKey: VPCSGPortRestrictionParamIpType
-          ParameterValue: !Ref VPCSGPortRestrictionParamIpType
+        - ParameterKey: VPCSecurityGroupPortRestrictionParamProtocolType
+          ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamProtocolType
+        - ParameterKey: VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
+          ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
+        - ParameterKey: VPCSecurityGroupPortRestrictionParamIpType
+          ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamIpType
         - Fn::If:
           - HasRestrictedPorts
-          - ParameterKey: zzzVPCSGPortRestrictionParamRestrictedPorts
-            ParameterValue: !Ref zzzVPCSGPortRestrictionParamRestrictedPorts
+          - ParameterKey: VPCSecurityGroupPortRestrictionParamRestrictedPorts
+            ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts
           - Ref: AWS::NoValue
         
         # parameters to S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC rule
@@ -385,13 +385,13 @@ Resources:
             Default: ''
           
           # parameters to VPC_SG_PORT_RESTRICTION_CHECK rule
-          VPCSGPortRestrictionParamProtocolType:
+          VPCSecurityGroupPortRestrictionParamProtocolType:
             Type: String
-          VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+          VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups:
             Type: String
-          VPCSGPortRestrictionParamIpType:
+          VPCSecurityGroupPortRestrictionParamIpType:
             Type: String
-          zzzVPCSGPortRestrictionParamRestrictedPorts:
+          VPCSecurityGroupPortRestrictionParamRestrictedPorts:
             Type: String
             Default: ''
           
@@ -419,7 +419,7 @@ Resources:
           # parameters that come from a drop down list are always provided
           # the others must have this construct
           HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
-          HasRestrictedPorts: !Not [!Equals [!Ref zzzVPCSGPortRestrictionParamRestrictedPorts, '']]
+          HasRestrictedPorts: !Not [!Equals [!Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts, '']]
           HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
           HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']] # checking the STRING parameter has data      
 
@@ -434,16 +434,16 @@ Resources:
                 - ParameterName: DeploymentRegion
                   ParameterValue: !Ref AWS::Region
                 
-                - ParameterName: VPCSGPortRestrictionParamProtocolType
-                  ParameterValue: !Ref VPCSGPortRestrictionParamProtocolType
-                - ParameterName: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
-                  ParameterValue: !Ref VPCSGPortRestrictionParamExcludeExternalSecurityGroups
-                - ParameterName: VPCSGPortRestrictionParamIpType
-                  ParameterValue: !Ref VPCSGPortRestrictionParamIpType
+                - ParameterName: VPCSecurityGroupPortRestrictionParamProtocolType
+                  ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamProtocolType
+                - ParameterName: VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
+                  ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
+                - ParameterName: VPCSecurityGroupPortRestrictionParamIpType
+                  ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamIpType
                 - Fn::If:
                   - HasRestrictedPorts
-                  - ParameterName: zzzVPCSGPortRestrictionParamRestrictedPorts
-                    ParameterValue: !Ref zzzVPCSGPortRestrictionParamRestrictedPorts
+                  - ParameterName: VPCSecurityGroupPortRestrictionParamRestrictedPorts
+                    ParameterValue: !Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts
                   - Ref: AWS::NoValue
 
                 - ParameterName: S3AccountLevelPublicAccessParamIgnorePublicAcls
@@ -482,14 +482,14 @@ Resources:
                     Type: String
                     Default: ''
 
-                  zzzVPCSGPortRestrictionParamRestrictedPorts:
+                  VPCSecurityGroupPortRestrictionParamRestrictedPorts:
                     Type: String
                     Default: ''
-                  VPCSGPortRestrictionParamProtocolType:
+                  VPCSecurityGroupPortRestrictionParamProtocolType:
                     Type: String
-                  VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+                  VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups:
                     Type: String
-                  VPCSGPortRestrictionParamIpType:
+                  VPCSecurityGroupPortRestrictionParamIpType:
                     Type: String
                   
                   S3AccountLevelPublicAccessParamIgnorePublicAcls:
@@ -514,7 +514,7 @@ Resources:
                     Fn::Not:
                     - Fn::Equals:
                       - ''
-                      - Ref: zzzVPCSGPortRestrictionParamRestrictedPorts
+                      - Ref: VPCSecurityGroupPortRestrictionParamRestrictedPorts
                   
                   HasExcludedPublicBuckets: 
                     Fn::Not: 
@@ -808,7 +808,7 @@ Resources:
                   # Initial Access - Resource Access Protection
                   # ============================================================================
                   
-                  VPCSGPortRestrictionParamCheck:
+                  VPCSecurityGroupPortRestrictionParamCheck:
                     Type: AWS::Config::ConfigRule
                     Condition: IsSupportedRegionSgPortRestriction
                     Properties:
@@ -824,14 +824,14 @@ Resources:
                         restrictPorts:
                           Fn::If:
                           - HasRestrictedPorts
-                          - Ref: DeploymentRegion # TODO test put it back zzzVPCSGPortRestrictionParamRestrictedPorts
+                          - Ref: DeploymentRegion # TODO test put it back VPCSecurityGroupPortRestrictionParamRestrictedPorts
                           - Ref: AWS::NoValue
                         protocolType:
-                          Ref: VPCSGPortRestrictionParamProtocolType
+                          Ref: VPCSecurityGroupPortRestrictionParamProtocolType
                         excludeExternalSecurityGroups:
-                          Ref: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+                          Ref: VPCSecurityGroupPortRestrictionParamExcludeExternalSecurityGroups
                         ipType:
-                          Ref: VPCSGPortRestrictionParamIpType
+                          Ref: VPCSecurityGroupPortRestrictionParamIpType
 
 
   # ============================================================================
