@@ -1,3 +1,4 @@
+# Conformance Pack YAML template that can be deployed manually on the AWS Config console, keeping it for temporary reference
 Parameters:
   RootNotUsedRegularlyLambdaArn:
     Type: String

@@ -11,7 +11,7 @@
 # 3. uses stacksets to deploy IAM-related Config rules on the current region on every account of the organization
 
 # ===========================================================================================================
-# Prerequisites
+# Prerequisites (move to readme and documentation)
 # ===========================================================================================================
 #
 # The account where you run this must be deletaged admin for CloudFormation and AWS Config
@@ -41,8 +41,7 @@ Metadata:
           - TargetOrganizationalUnitIds
           - ExcludedAccountsIDs
           - DeploymentAccount
-          # TODO deprecated parameter - DeploymentRegions
-      # TODO add support for all rule parameters, organize the sections accordingly to CRCD CIRT Classification... see if it works
+          - DeploymentRegions
       - Label:
           default: "IAM Protection rule parameters"
         Parameters:
@@ -50,49 +49,67 @@ Metadata:
       - Label:
           default: "S3 Protection rule parameters"
         Parameters:
-          - ExcludedPublicBuckets
+          - S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+          - S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+          - S3AccountLevelPublicAccessParamIgnorePublicAcls
+          - S3AccountLevelPublicAccessParamBlockPublicPolicy
+          - S3AccountLevelPublicAccessParamBlockPublicAcls
+          - S3AccountLevelPublicAccessParamRestrictPublicBuckets
       - Label:
           default: "Resource Access Protection rule parameters"
         Parameters:
-          - RestrictedPorts
-          - ProtocolType
-          - ExcludeExternalSecurityGroups
-          - IpType
+          - zzzVPCSGPortRestrictionParamRestrictedPorts
+          - VPCSGPortRestrictionParamProtocolType
+          - VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+          - VPCSGPortRestrictionParamIpType
       - Label:
           default: "Technical parameters - do not change"
         Parameters:
           - ConformancePackName
 
     ParameterLabels:
-      # TODO DeploymentRegions is deprecated, eventually remove
-      #DeploymentRegions:
-      #  default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
+      DeploymentRegions:
+        default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
       ConformancePackName:
         default: "Conformance Pack name"
       ExcludedAccountsIDs:
-        default: "A comma-separated list of accounts excluded from organization conformance pack"
-      RestrictedPorts:
+        default: "Accounts to exclude from organization conformance pack"
+      zzzVPCSGPortRestrictionParamRestrictedPorts:
         default: "VPC Security Group Port Restriction Check rule: restricted ports"
-      ProtocolType:
+      VPCSGPortRestrictionParamProtocolType:
         default: "VPC Security Group Port Restriction Check rule: protocol type"
-      ExcludeExternalSecurityGroups:
+      VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
         default: "VPC Security Group Port Restriction Check rule: exclude external security groups"
-      IpType:
+      VPCSGPortRestrictionParamIpType:
         default: "VPC Security Group Port Restriction Check rule: IP type"
-      ExcludedPublicBuckets:
+      S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets:
         default: "S3 Bucket-Level Public Access Prohibited rule: excluded public buckets"
+      S3AccessPointPublicAccessBlocksParamExcludedAccessPoints:
+        default: "S3 Access Point Public Access Block rule: excluded access points"
       TargetOrganizationalUnitIds:
-        default: "Target Organizational Unit IDs"
+        default: "Target Organization Root or Organizational Unit IDs"
       DeploymentAccount:
         default: "Deployment account"
       RootUsageThresholdDays:
         default: "Root Account Not Used Regularly rule: root account usage threshold (days)"
+      
+      S3AccountLevelPublicAccessParamIgnorePublicAcls:
+        default: "S3 Account-Level Public Access Block rule: enforce option IgnorePublicAcls"
+      S3AccountLevelPublicAccessParamBlockPublicPolicy:
+        default: "S3 Account-Level Public Access Block rule: enforce option BlockPublicPolicy"
+      S3AccountLevelPublicAccessParamBlockPublicAcls:
+        default: "S3 Account-Level Public Access Block rule: enforce option BlockPublicAcls"
+      S3AccountLevelPublicAccessParamRestrictPublicBuckets:
+        default: "S3 Account-Level Public Access Block rule: enforce option RestrictPublicBuckets"
 
 Parameters:
   RootUsageThresholdDays:
     Type: String
     Default: '5'
-    Description: Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT.
+    Description: Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT (Required).
+    AllowedPattern: ^[1-9][0-9]{0,2}$
+    ConstraintDescription: Must be a number between 1 and 999
+
 
   DeploymentAccount:
     Type: String
@@ -100,34 +117,23 @@ Parameters:
     AllowedValues:
       - Delegated Admin
       - Management Account
-    Description: Choose the type of current account - Delegate Admin if this account is the AWS Config and AWS CloudFormation delegated admin, or Management Account if you run this from the management account of your AWS Organization
+    Description: Type of this deployment account - Select 'Delegate Admin' if this account is the AWS Config and AWS CloudFormation delegated admin, or 'Management Account' if you run this template from the management account of your AWS Organization
 
-  # TODO make it CommaDelimitedList with allowedpattern, cannot be empty
   # TODO this regex? ^[a-zA-Z0-9-]{1,128}$]
-  #DeploymentRegions:
-  #  Type: CommaDelimitedList
-  #  # TODO development values these are the regions in dev environment
-  #  Default: "eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-south-2,eu-north-1,eu-central-1,eu-central-2"
-  #  Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed
+  DeploymentRegions:
+    Type: CommaDelimitedList
+    # TODO development values these are the regions in dev environment
+    # TODO eu-south-2,eu-central-2 regions that are active in the dev environment and rule EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK is not available
+    # TODO using 2 regions so it's faster, full list eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-north-1,eu-central-1
+    Default: "eu-west-1,eu-central-1"
+    Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed
 
   ConformancePackName:
     Type: String
     Default: CRCD-CIRT-Security-Recommendations
-    Description: Name of the conformance pack
-    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]*$
+    Description: Name of the conformance pack (required).
+    AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
-  
-  # TODO make it CommaDelimitedList with allowedpattern, can be empty
-  ExcludedAccountsIDs:
-    Type: String
-    Default: ''
-    Description: A comma-separated list of accounts excluded from organization conformance pack (leave empty to deploy to all accounts)
-
-  # TODO make it CommaDelimitedList with allowedpattern, can be empty
-  ExcludedPublicBuckets:
-    Type: String
-    Default: ''
-    Description: Comma-separated list of known allowed public Amazon S3 bucket names
   
   # SERVICE_MANAGED StackSets require OrganizationalUnitIds to be explicitly specified
   # You can find your root OU ID by running:
@@ -138,48 +144,101 @@ Parameters:
   #  Default: ''
   TargetOrganizationalUnitIds:
     Type: CommaDelimitedList
-    Description: Comma-separated list of Organizational Unit IDs to deploy to. Use root OU ID (r-xxxx) to deploy to all accounts.
+    Description: Comma-separated list of Organizational Unit IDs to deploy to. Use root OU ID (r-xxxx) to deploy to all accounts (Required).
+    Default: 'r-y0sj' # TODO development value to remove
     AllowedPattern: ^(r-[a-z0-9]{4,32}|ou-[a-z0-9]+-[a-z0-9]+)(,(r-[a-z0-9]{4,32}|ou-[a-z0-9]+-[a-z0-9]+))*$
     ConstraintDescription: Must be a comma-separated list of valid OU IDs (ou-xxxx-xxxxxxxx) or root ID (r-xxxx)
 
-  # TODO make it CommaDelimitedList with allowedpattern, can be empty
-  RestrictedPorts:
+  # Both conformance packs (organizational, regional IA-IAM rules) consider this parameter
+  ExcludedAccountsIDs:
+    # Type: String
+    Type: CommaDelimitedList
+    Default: '575108922771' # TODO development value to remove
+    Description: A comma-separated list of accounts that will not receive the organization conformance pack (leave empty to deploy to all accounts). Make sure you add here any account ID where AWS Config is not enabled, otherwise the entire stack will fail.
+
+  S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets:
+    Type: String
+    Default: ''
+    Description: "Comma-separated list of known allowed public Amazon S3 bucket names - for info https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-level-public-access-prohibited.html"
+  
+  S3AccessPointPublicAccessBlocksParamExcludedAccessPoints:
+    Type: String
+    Default: ''
+    Description: "Comma-separated list of names for allowed public Amazon S3 access points - for info https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-public-access-blocks.html"
+
+  # TODO String vs. CommaDelimitedList you need to treat the values differently and you pass this to many layers. careful if you want to change! 
+  # TODO test case: this can be empty
+  zzzVPCSGPortRestrictionParamRestrictedPorts:
     Type: String
     Default: '22,3389'
-    Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range. Valid port numbers range from 0 to 65535.
+    Description: "Comma-separated list of ports that should not be open for incoming traffic over the full IP range. Valid port numbers range from 0 to 65535. Default value for the rule is '22,3389'. For info https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html"
 
-  ProtocolType:
+  VPCSGPortRestrictionParamProtocolType:
     Type: String
     Default: 'ALL'
-    Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL' (case-insensitive). If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value is 'ALL'.
+    Description: The Transmission Protocol Type for the rule to check. Valid values include 'TCP', 'UDP', and 'ALL'. If set to 'ALL', the rule will check for rules that use either 'TCP', 'UDP', or 'ALL' (-1) protocol. Default value for the rule is 'ALL'.
     AllowedValues:
       - ALL
       - TCP
       - UDP
   
-  ExcludeExternalSecurityGroups:
+  VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
     Type: String
     Default: 'true'
-    Description: Indicates whether to exclude external security groups from the rule. Set to 'true' to exclude external security groups from the rule. Set to 'false' to include external security groups in the rule evaluation.
+    Description: Indicates whether to exclude external security groups from the rule. Set to 'true' to exclude external security groups from the rule. Set to 'false' to include external security groups in the rule evaluation. Default value for the rule is 'true'.
     AllowedValues:
       - 'true'
       - 'false'
 
-  IpType:
+  VPCSGPortRestrictionParamIpType:
     Type: String
     Default: 'ALL'
-    Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). If not specified, the rule defaults to check for 'ALL'.
+    Description: The Internet Protocol (IP) version for the rule to check. Valid values include 'IPv4', 'IPv6', and 'ALL' (case-insensitive). Default value for the rule is 'ALL'
     AllowedValues:
       - IPv4
       - IPv6
       - ALL
 
+  S3AccountLevelPublicAccessParamIgnorePublicAcls:
+    Type: String
+    Default: 'true'
+    Description: "Indicates whether to check that IgnorePublicAcls option is enforced or not. Set to 'true' to check the option is enforced. Set to 'false' to ignore the option. Default value for the rule is 'true'. For info https://docs.aws.amazon.com/config/latest/developerguide/s3-account-level-public-access-blocks-periodic.html and https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+    AllowedValues:
+      - 'true'
+      - 'false'
+  
+  S3AccountLevelPublicAccessParamBlockPublicPolicy:
+    Type: String
+    Default: 'true'
+    Description: "Indicates whether to check that BlockPublicPolicy option is enforced or not. Set to 'true' to check the option is enforced. Set to 'false' to ignore the option. Default value for the rule is 'true'."
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  S3AccountLevelPublicAccessParamBlockPublicAcls:
+    Type: String
+    Default: 'true'
+    Description: "Indicates whether to check that BlockPublicAcls option is enforced or not. Set to 'true' to check the option is enforced. Set to 'false' to ignore the option. Default value for the rule is 'true'."
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  S3AccountLevelPublicAccessParamRestrictPublicBuckets:
+    Type: String
+    Default: 'true'
+    Description: "Indicates whether to check that RestrictPublicBuckets option is enforced or not. Set to 'true' to check the option is enforced. Set to 'false' to ignore the option. Default value for the rule is 'true'."
+    AllowedValues:
+      - 'true'
+      - 'false'
 
 Conditions:
   IsDelegatedAdminAccount: !Equals [!Ref DeploymentAccount, 'Delegated Admin']
-  HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']]
-  HasExcludedPublicBuckets: !Not [!Equals [!Ref ExcludedPublicBuckets, '']]
-  HasRestrictedPorts: !Not [!Equals [!Ref RestrictedPorts, '']]
+  # HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']]
+  HasExcludedAccounts: !Not [!Equals [!Join [',', !Ref ExcludedAccountsIDs], '']]
+  HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
+  HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
+  HasRestrictedPorts: !Not [!Equals [!Ref zzzVPCSGPortRestrictionParamRestrictedPorts, '']]
+
 
 # TODO add validation of all parameters: required parameters and syntax 
 #Rules:
@@ -196,235 +255,583 @@ Resources:
   # ============================================================================
   # OrganizationConformancePack for CRCD-CIRT Config rules
   # AWS Config deploys to all Config-enabled regions automatically
+  #
+  # This stackset runs in all specified regions of current account to deploy an organization conformance pack 
+  # which then will deploy in all accounts of each region region. Regional availability of rules is handled
+  # within the template.
   # ============================================================================
-  CRCDCIRTOrganizationConformancePack:
-    Type: AWS::Config::OrganizationConformancePack
+  # IAM Role for StackSet Administration (SELF_MANAGED mode only)
+  StackSetAdministrationRole:
+    Type: AWS::IAM::Role
+    # Condition: IsStandaloneMode TODO this is always needed for now
     Properties:
-      OrganizationConformancePackName: !Ref ConformancePackName
-      # A list of ConformancePackInputParameter objects.
-      ConformancePackInputParameters:
-        # these parameters come from a drop down list, they are always provided
-        - ParameterName: ProtocolType
-          ParameterValue: !Ref ProtocolType
-        - ParameterName: ExcludeExternalSecurityGroups
-          ParameterValue: !Ref ExcludeExternalSecurityGroups
-        - ParameterName: IpType
-          ParameterValue: !Ref IpType
+      RoleName: CRCDCIRTStackSetAdministrationRole # was: AWSCloudFormationStackSetAdministrationRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDCIRTStackSetExecutionRole'
+                  # - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AWSCloudFormationStackSetExecutionRole'
+
+  # IAM Role for StackSet Execution (SELF_MANAGED mode only)
+  StackSetExecutionRole:
+    Type: AWS::IAM::Role
+    # Condition: IsStandaloneMode TODO this is always needed for now
+    Properties:
+      RoleName: CRCDCIRTStackSetExecutionRole # was: AWSCloudFormationStackSetExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !GetAtt StackSetAdministrationRole.Arn
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
         
-        # TODO delete
-        #- ParameterName: RestrictedPorts
-        #  ParameterValue: !Ref RestrictedPorts
-        #- ParameterName: ExcludedPublicBuckets
-        #  ParameterValue: !Ref ExcludedPublicBuckets
+  CRCDCIRTStackSet:
+    Type: AWS::CloudFormation::StackSet
+    Properties:
+      StackSetName: !Sub '${ConformancePackName}-org-stackset'
+      Description: Deploys CRCD CIRT conformance pack rules in the entire organization
+      PermissionModel: SELF_MANAGED # Runs on this account only
+      AdministrationRoleARN: 
+        !GetAtt StackSetAdministrationRole.Arn
+      ExecutionRoleName:
+        !Ref StackSetExecutionRole
+      #Capabilities:
+        # TODO check if it's needed (it works with it) 
+        # Not needed as the StackSet template only creates an AWS::Config::OrganizationConformancePack resource, which doesn't create any IAM resources with custom names.
+        # This stack creates IAM roles with custom role names
+        # Since the IAM roles have explicit RoleName properties, CloudFormation needs the stronger acknowledgment that we're creating named IAM resources
+        # The template will be created in a single region, roles will be created only once per account
+      #  - CAPABILITY_NAMED_IAM
+      StackInstancesGroup:
+        - DeploymentTargets:
+            Accounts:
+              - !Ref 'AWS::AccountId'  # Current account only
+          Regions: !Ref DeploymentRegions
+
+      Parameters:
+        - ParameterKey: ConformancePackName
+          ParameterValue: !Ref ConformancePackName
+        
+        # convert the array ExcludedAccountsIDs to String, from now on this parameter is a string in the sub templates
+        - Fn::If:
+          - HasExcludedAccounts
+          - ParameterKey: ExcludedAccountsIDs
+            ParameterValue: !Join [',', !Ref ExcludedAccountsIDs] #!Ref ExcludedAccountsIDs
+          - Ref: AWS::NoValue
+        
+        # parameters to VPC_SG_PORT_RESTRICTION_CHECK rule
+        - ParameterKey: VPCSGPortRestrictionParamProtocolType
+          ParameterValue: !Ref VPCSGPortRestrictionParamProtocolType
+        - ParameterKey: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+          ParameterValue: !Ref VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+        - ParameterKey: VPCSGPortRestrictionParamIpType
+          ParameterValue: !Ref VPCSGPortRestrictionParamIpType
         - Fn::If:
           - HasRestrictedPorts
-          - ParameterName: RestrictedPorts
-            ParameterValue: !Ref RestrictedPorts
+          - ParameterKey: zzzVPCSGPortRestrictionParamRestrictedPorts
+            ParameterValue: !Ref zzzVPCSGPortRestrictionParamRestrictedPorts
           - Ref: AWS::NoValue
+        
+        # parameters to S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC rule
+        - ParameterKey: S3AccountLevelPublicAccessParamIgnorePublicAcls
+          ParameterValue: !Ref S3AccountLevelPublicAccessParamIgnorePublicAcls
+        - ParameterKey: S3AccountLevelPublicAccessParamBlockPublicPolicy
+          ParameterValue: !Ref S3AccountLevelPublicAccessParamBlockPublicPolicy
+        - ParameterKey: S3AccountLevelPublicAccessParamBlockPublicAcls
+          ParameterValue: !Ref S3AccountLevelPublicAccessParamBlockPublicAcls
+        - ParameterKey: S3AccountLevelPublicAccessParamRestrictPublicBuckets
+          ParameterValue: !Ref S3AccountLevelPublicAccessParamRestrictPublicBuckets
+        
+        # parameters to S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED rule
         - Fn::If:
           - HasExcludedPublicBuckets
-          - ParameterName: ExcludedPublicBuckets
-            ParameterValue: !Ref ExcludedPublicBuckets
+          - ParameterKey: S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+            ParameterValue: !Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+          - Ref: AWS::NoValue
+        
+        # parameters to S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS rule
+        - Fn::If:
+          - HasExcludedAccessPoints
+          - ParameterKey: S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+            ParameterValue: !Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
           - Ref: AWS::NoValue
 
-      # A comma-separated list of accounts excluded from organization conformance pack.
-      ExcludedAccounts: !If 
-        - HasExcludedAccounts
-        - !Split [',', !Ref ExcludedAccountsIDs]
-        - !Ref 'AWS::NoValue'
 
-      # If you don't specify it, AWS Config will use the default delivery channel's S3 bucket that's already configured in your organization's management account.
-      # The name of the Amazon S3 bucket where AWS Config stores conformance pack templates. 
-      # DeliveryS3Bucket: 
       TemplateBody: |
-        Parameters:
-          RestrictedPorts:
-            Type: String
-            Default: '22,3389'
-            Description: Comma-separated list of ports that should not be open for incoming traffic over the full IP range
-          ProtocolType:
-            Type: String
-          ExcludeExternalSecurityGroups:
-            Type: String
-          IpType:
-            Type: String
+        AWSTemplateFormatVersion: '2010-09-09'
+        Description: 'CRCD CIRT Organization Conformance Pack - deployed via StackSet'
 
-          ExcludedPublicBuckets:
+        Parameters:
+          ConformancePackName:
+            Type: String
+          ExcludedAccountsIDs:
             Type: String
             Default: ''
-            Description: Comma-separated list of known allowed public Amazon S3 bucket names
+          
+          # parameters to VPC_SG_PORT_RESTRICTION_CHECK rule
+          VPCSGPortRestrictionParamProtocolType:
+            Type: String
+          VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+            Type: String
+          VPCSGPortRestrictionParamIpType:
+            Type: String
+          zzzVPCSGPortRestrictionParamRestrictedPorts:
+            Type: String
+            Default: ''
+          
+          # parameters to S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC rule
+          S3AccountLevelPublicAccessParamIgnorePublicAcls:
+            Type: String
+          S3AccountLevelPublicAccessParamBlockPublicPolicy:
+            Type: String
+          S3AccountLevelPublicAccessParamBlockPublicAcls:
+            Type: String
+          S3AccountLevelPublicAccessParamRestrictPublicBuckets:
+            Type: String
+
+          # parameters to S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED rule
+          S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets:
+            Type: String
+            Default: ''
+
+          # parameters to S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS rule
+          S3AccessPointPublicAccessBlocksParamExcludedAccessPoints:
+            Type: String
+            Default: ''
 
         Conditions:
-          HasRestrictedPorts:
-            Fn::Not:
-            - Fn::Equals:
-              - ''
-              - Ref: RestrictedPorts
-          
-          HasExcludedPublicBuckets: 
-            Fn::Not: 
-            - Fn::Equals: 
-              - ''
-              - Ref: ExcludedPublicBuckets
+          # parameters that come from a drop down list are always provided
+          # the others must have this construct
+          HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
+          HasRestrictedPorts: !Not [!Equals [!Ref zzzVPCSGPortRestrictionParamRestrictedPorts, '']]
+          HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
+          HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']] # checking the STRING parameter has data      
 
         Resources:
-          # ============================================================================
-          # Initial Access - S3 Protection
-          # ============================================================================
-
-          S3BucketPublicReadProhibited:
-            Type: AWS::Config::ConfigRule
+          CRCDCIRTOrganizationConformancePack:
+            Type: AWS::Config::OrganizationConformancePack
             Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
-              Description: Checks that S3 buckets do not allow public read access
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
+              OrganizationConformancePackName: !Ref ConformancePackName
               
-          
-          S3BucketPublicWriteProhibited:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
-              Description: Checks that S3 buckets do not allow public write access
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
-          
-          S3AccessPointInVpcOnly:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
-              Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::AccessPoint
-              
-          S3AccessPointPublicAccessBlocks:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
-              Description: Checks whether Amazon S3 access points have public access block settings enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::AccessPoint
-
-          S3AccountLevelPublicAccessBlocks:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
-              Description: Checks whether Amazon S3 account-level public access block settings are enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
-
-          S3AccountLevelPublicAccessBlocksPeriodic:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
-              Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
-              MaximumExecutionFrequency: TwentyFour_Hours
-          
-          S3BucketLevelPublicAccessProhibited:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
-              Description: Checks if S3 buckets are publicly accessible
-              Source:
-                Owner: AWS
-                SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::S3::Bucket
-              InputParameters:
-                excludedPublicBuckets:
-                  Fn::If:
-                  - HasExcludedPublicBuckets
-                  - Ref: ExcludedPublicBuckets
-                  - Ref: AWS::NoValue
-          
-          # ============================================================================
-          # Initial Access - EC2 Security
-          # ============================================================================
-
-          AutoscalingLaunchconfigRequiresImdsv2:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
-              Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::AutoScaling::LaunchConfiguration
-
-          Ec2Imdsv2Check:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
-              Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: EC2_IMDSV2_CHECK
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::Instance
-          
-          Ec2LaunchTemplateImdsv2Check:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
-              Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
-              Source:
-                Owner: AWS
-                SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::LaunchTemplate
-         
-          # ============================================================================
-          # Initial Access - Resource Access Protection
-          # ============================================================================
-          
-          VpcSgPortRestrictionCheck:
-            Type: AWS::Config::ConfigRule
-            Properties:
-              ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
-              Source:
-                Owner: AWS
-                SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
-              Description: Checks whether security groups allow unrestricted inbound ports
-              Scope:
-                ComplianceResourceTypes:
-                  - AWS::EC2::SecurityGroup
-              InputParameters:
-                restrictPorts:
-                  Fn::If:
+              ConformancePackInputParameters:
+                # Current region of deployment for this stackset, must be passed to the nested template
+                - ParameterName: DeploymentRegion
+                  ParameterValue: !Ref AWS::Region
+                
+                - ParameterName: VPCSGPortRestrictionParamProtocolType
+                  ParameterValue: !Ref VPCSGPortRestrictionParamProtocolType
+                - ParameterName: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+                  ParameterValue: !Ref VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+                - ParameterName: VPCSGPortRestrictionParamIpType
+                  ParameterValue: !Ref VPCSGPortRestrictionParamIpType
+                - Fn::If:
                   - HasRestrictedPorts
-                  - Ref: RestrictedPorts
+                  - ParameterName: zzzVPCSGPortRestrictionParamRestrictedPorts
+                    ParameterValue: !Ref zzzVPCSGPortRestrictionParamRestrictedPorts
                   - Ref: AWS::NoValue
-                protocolType:
-                  Ref: ProtocolType
-                excludeExternalSecurityGroups:
-                  Ref: ExcludeExternalSecurityGroups
-                ipType:
-                  Ref: IpType
+
+                - ParameterName: S3AccountLevelPublicAccessParamIgnorePublicAcls
+                  ParameterValue: !Ref S3AccountLevelPublicAccessParamIgnorePublicAcls
+                - ParameterName: S3AccountLevelPublicAccessParamBlockPublicPolicy
+                  ParameterValue: !Ref S3AccountLevelPublicAccessParamBlockPublicPolicy
+                - ParameterName: S3AccountLevelPublicAccessParamBlockPublicAcls
+                  ParameterValue: !Ref S3AccountLevelPublicAccessParamBlockPublicAcls
+                - ParameterName: S3AccountLevelPublicAccessParamRestrictPublicBuckets
+                  ParameterValue: !Ref S3AccountLevelPublicAccessParamRestrictPublicBuckets
+                
+                - Fn::If:
+                  - HasExcludedPublicBuckets
+                  - ParameterName: S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+                    ParameterValue: !Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+                  - Ref: AWS::NoValue
+
+                - Fn::If:
+                  - HasExcludedAccessPoints
+                  - ParameterName: S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+                    ParameterValue: !Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+                  - Ref: AWS::NoValue
+
+              # A comma-separated list of accounts excluded from organization conformance pack.
+              ExcludedAccounts: !If 
+                - HasExcludedAccounts
+                - !Split [',', !Ref ExcludedAccountsIDs]
+                - !Ref 'AWS::NoValue'
+
+              # If you don't specify it, AWS Config will use the default delivery channel's S3 bucket that's already configured in your organization's management account.
+              # The name of the Amazon S3 bucket where AWS Config stores conformance pack templates. 
+              # DeliveryS3Bucket: 
+              TemplateBody: |
+                Parameters:
+                  DeploymentRegion:
+                    Type: String
+                    Default: ''
+
+                  zzzVPCSGPortRestrictionParamRestrictedPorts:
+                    Type: String
+                    Default: ''
+                  VPCSGPortRestrictionParamProtocolType:
+                    Type: String
+                  VPCSGPortRestrictionParamExcludeExternalSecurityGroups:
+                    Type: String
+                  VPCSGPortRestrictionParamIpType:
+                    Type: String
+                  
+                  S3AccountLevelPublicAccessParamIgnorePublicAcls:
+                    Type: String
+                  S3AccountLevelPublicAccessParamBlockPublicPolicy:
+                    Type: String
+                  S3AccountLevelPublicAccessParamBlockPublicAcls:
+                    Type: String
+                  S3AccountLevelPublicAccessParamRestrictPublicBuckets:
+                    Type: String
+
+                  S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets:
+                    Type: String
+                    Default: ''
+                  
+                  S3AccessPointPublicAccessBlocksParamExcludedAccessPoints:
+                    Type: String
+                    Default: ''
+
+                Conditions:
+                  HasRestrictedPorts:
+                    Fn::Not:
+                    - Fn::Equals:
+                      - ''
+                      - Ref: zzzVPCSGPortRestrictionParamRestrictedPorts
+                  
+                  HasExcludedPublicBuckets: 
+                    Fn::Not: 
+                    - Fn::Equals: 
+                      - ''
+                      - Ref: S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+                  
+                  HasExcludedAccessPoints:
+                    Fn::Not: 
+                    - Fn::Equals: 
+                      - ''
+                      - Ref: S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+                  
+                  # Managing Regional availability of AWS Config rules
+                  # Region check - rules
+                  # AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
+                  # S3_ACCESS_POINT_IN_VPC_ONLY
+                  # S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
+                  # are not supported in these regions
+                  # ap-southeast-7  # Thailand
+                  # ap-southeast-5  # Malaysia
+                  # mx-central-1    # Mexico
+                  # ap-east-1       # Taipei (Hong Kong)
+                  # ca-west-1       # Calgary
+                  IsUnsupportedRegion3Rules:
+                    Fn::Or:
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-southeast-7'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-southeast-5'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'mx-central-1'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-east-1'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ca-west-1'
+                  IsSupportedRegion3Rules:
+                    Fn::Not:
+                      - Condition: IsUnsupportedRegion3Rules
+
+                  # EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK is not supported in these regions
+                  # ap-southeast-7  Thailand
+                  # ap-southeast-5  Malaysia
+                  # mx-central-1    Mexico
+                  # ap-east-1       Taipei (Hong Kong)
+                  # ca-west-1       Calgary
+                  # me-central-1    Middle East UAE
+                  # ap-south-2      Asia Pacific (Hyderabad)
+                  # ap-southeast-4  Asia Pacific (Melbourne)
+                  # us-gov-east-1   AWS GovCloud (US-East)
+                  # us-gov-west-1   AWS GovCloud (US-West)
+                  # il-central-1    Israel (Tel Aviv) 
+                  # eu-south-2      Europe (Spain) 
+                  # eu-central-2    Europe (Zurich)
+                  # need to nest Fn::Or since it supports max 10 conditions
+                  IsUnsupportedRegionImdsv2:
+                    Fn::Or:
+                      - Fn::Or:
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ap-southeast-7'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ap-southeast-5'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'mx-central-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ap-east-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ca-west-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'me-central-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ap-south-2'
+                      - Fn::Or:
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'ap-southeast-4'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'us-gov-east-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'us-gov-west-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'il-central-1'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'eu-south-2'
+                        - Fn::Equals:
+                          - Ref: DeploymentRegion
+                          - 'eu-central-2'
+                  IsSupportedRegionImdsv2:
+                    Fn::Not:
+                      - Condition: IsUnsupportedRegionImdsv2
+
+                  # VPC_SG_PORT_RESTRICTION_CHECK is not supported in these regions
+                  # are not supported in these regions
+                  # ap-southeast-7  # Thailand
+                  # ap-southeast-5  # Malaysia
+                  # mx-central-1    # Mexico
+                  # ap-east-1       # Taipei (Hong Kong)
+                  # ca-west-1       # Calgary
+                  # cn-north-1      # China (Beijing) 
+                  IsUnsupportedRegionSgPortRestriction:
+                    Fn::Or:
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-southeast-7'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-southeast-5'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'mx-central-1'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ap-east-1'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'ca-west-1'
+                      - Fn::Equals:
+                        - Ref: DeploymentRegion
+                        - 'cn-north-1'
+                  IsSupportedRegionSgPortRestriction:
+                    Fn::Not:
+                      - Condition: IsUnsupportedRegionSgPortRestriction
+
+                Resources:
+                  # ============================================================================
+                  # Initial Access - S3 Protection
+                  # ============================================================================
+
+                  S3BucketPublicReadProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-read-prohibited
+                      Description: Checks that S3 buckets do not allow public read access
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                      
+                  S3BucketPublicWriteProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-public-write-prohibited
+                      Description: Checks that S3 buckets do not allow public write access
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                  
+                  S3AccessPointInVpcOnly:
+                    Type: AWS::Config::ConfigRule
+                    Condition: IsSupportedRegion3Rules
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-in-vpc-only
+                      Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::AccessPoint
+                      
+                  S3AccessPointPublicAccessBlocks:
+                    Type: AWS::Config::ConfigRule
+                    Condition: IsSupportedRegion3Rules
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-access-point-public-access-blocks
+                      Description: Checks whether Amazon S3 access points have public access block settings enabled
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::AccessPoint
+                    InputParameters:
+                        excludedAccessPoints:
+                          Fn::If:
+                          - HasExcludedAccessPoints
+                          - Ref: S3AccessPointPublicAccessBlocksParamExcludedAccessPoints
+                          - Ref: AWS::NoValue
+
+                  # TODO we remove this and only use the periodic one
+                  #S3AccountLevelPublicAccessParamBlocks:
+                  #  Type: AWS::Config::ConfigRule
+                  #  Properties:
+                  #    ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks
+                  #    Description: Checks whether Amazon S3 account-level public access block settings are enabled
+                  #    Source:
+                  #      Owner: AWS
+                  #      SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS
+
+                  S3AccountLevelPublicAccessParamBlocksPeriodic:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-account-level-public-access-blocks-periodic
+                      Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
+                      MaximumExecutionFrequency: TwentyFour_Hours
+                      InputParameters:
+                        IgnorePublicAcls:
+                          Ref: S3AccountLevelPublicAccessParamIgnorePublicAcls
+                        BlockPublicPolicy:
+                          Ref: S3AccountLevelPublicAccessParamBlockPublicPolicy
+                        BlockPublicAcls:
+                          Ref: S3AccountLevelPublicAccessParamBlockPublicAcls
+                        RestrictPublicBuckets:
+                          Ref: S3AccountLevelPublicAccessParamRestrictPublicBuckets
+                  
+                  S3BucketLevelPublicAccessProhibited:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-s3-s3-bucket-level-public-access-prohibited
+                      Description: Checks if S3 buckets are publicly accessible
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::S3::Bucket
+                      InputParameters:
+                        excludedPublicBuckets:
+                          Fn::If:
+                          - HasExcludedPublicBuckets
+                          - Ref: S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets
+                          - Ref: AWS::NoValue
+                  
+                  # ============================================================================
+                  # Initial Access - EC2 Security
+                  # ============================================================================
+
+                  AutoscalingLaunchconfigRequiresImdsv2:
+                    Type: AWS::Config::ConfigRule
+                    Condition: IsSupportedRegion3Rules
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+                      Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::AutoScaling::LaunchConfiguration
+
+                  Ec2Imdsv2Check:
+                    Type: AWS::Config::ConfigRule
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ec2-ec2-imdsv2-check
+                      Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: EC2_IMDSV2_CHECK
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::EC2::Instance
+                  
+                  Ec2LaunchTemplateImdsv2Check:
+                    Type: AWS::Config::ConfigRule
+                    Condition: IsSupportedRegionImdsv2
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ec2-ec2-launch-template-imdsv2-check
+                      Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::EC2::LaunchTemplate
+                
+                  # ============================================================================
+                  # Initial Access - Resource Access Protection
+                  # ============================================================================
+                  
+                  VPCSGPortRestrictionParamCheck:
+                    Type: AWS::Config::ConfigRule
+                    Condition: IsSupportedRegionSgPortRestriction
+                    Properties:
+                      ConfigRuleName: crcd-cirt-ia-ra-vpc-sg-port-restriction-check
+                      Source:
+                        Owner: AWS
+                        SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
+                      Description: Checks whether security groups allow unrestricted inbound ports
+                      Scope:
+                        ComplianceResourceTypes:
+                          - AWS::EC2::SecurityGroup
+                      InputParameters:
+                        restrictPorts:
+                          Fn::If:
+                          - HasRestrictedPorts
+                          - Ref: DeploymentRegion # TODO test put it back zzzVPCSGPortRestrictionParamRestrictedPorts
+                          - Ref: AWS::NoValue
+                        protocolType:
+                          Ref: VPCSGPortRestrictionParamProtocolType
+                        excludeExternalSecurityGroups:
+                          Ref: VPCSGPortRestrictionParamExcludeExternalSecurityGroups
+                        ipType:
+                          Ref: VPCSGPortRestrictionParamIpType
 
 
   # ============================================================================
@@ -458,13 +865,14 @@ Resources:
               - NONE
             Accounts: !If
               - HasExcludedAccounts
-              - !Split [',', !Ref ExcludedAccountsIDs]
+              # - !Split [',', !Ref ExcludedAccountsIDs]
+              - !Ref ExcludedAccountsIDs
               - !Ref 'AWS::NoValue'
           Regions:
             - !Ref 'AWS::Region'
       Parameters:
         - ParameterKey: ConformancePackName
-          ParameterValue: !Sub '${ConformancePackName}-IAMRules'
+          ParameterValue: !Sub '${ConformancePackName}-IA-IAM' # Follows the naming convention of the conformance pack
         - ParameterKey: RootUsageThresholdDays
           ParameterValue: !Ref RootUsageThresholdDays
       TemplateBody: |
@@ -1396,6 +1804,6 @@ Outputs:
     Description: Name of the conformance pack
     Value: !Ref ConformancePackName
 
-  #DeploymentRegions:
-  #  Description: Regions where the conformance pack is deployed
-  #  Value: !Join [',', !Ref DeploymentRegions]
+  DeploymentRegions:
+    Description: Regions where the conformance pack is deployed
+    Value: !Join [',', !Ref DeploymentRegions]

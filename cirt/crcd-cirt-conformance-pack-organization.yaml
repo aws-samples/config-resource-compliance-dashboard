@@ -1,3 +1,6 @@
+# Old file version to deploy the confpack everywhere
+# replace with WIP file
+
 # AWS Config Resource Compliance Dashboard CRCD and AWS Customer Incident Response Team (CIRT) Conformance Pack
 # Organizational deployment with hybrid approach:
 # 1. IAM rules (custom Lambda + AWS managed) deployed via regular conformance pack in us-east-1 only
