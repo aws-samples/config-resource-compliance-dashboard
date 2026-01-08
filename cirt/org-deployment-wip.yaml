@@ -35,6 +35,10 @@ Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybr
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
+      #- Label:
+      #    default: "Deployment Mode"
+      #  Parameters:
+      #    - DeploymentMode
       - Label:
           default: "Deployment Configuration"
         Parameters:
@@ -68,6 +72,8 @@ Metadata:
           - ConformancePackName
 
     ParameterLabels:
+      #DeploymentMode:
+      #  default: "Deployment mode"
       DeploymentRegions:
         default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
       ConformancePackName:
@@ -103,13 +109,21 @@ Metadata:
         default: "S3 Account-Level Public Access Block rule: enforce option RestrictPublicBuckets"
 
 Parameters:
+  #DeploymentMode:
+  #  Type: String
+  #  Default: AWS Organizations
+    # Default: Standalone # TODO this is used for DEV
+  #  AllowedValues:
+  #    - AWS Organizations
+  #    - Standalone
+  #  Description: Choose deployment mode - AWS Organizations for multi-account and multi-region deployment, or Standalone for single-account multi-region deployment
+
   RootUsageThresholdDays:
     Type: String
     Default: '5'
     Description: Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT (Required).
     AllowedPattern: ^[1-9][0-9]{0,2}$
     ConstraintDescription: Must be a number between 1 and 999
-
 
   DeploymentAccount:
     Type: String
@@ -124,8 +138,8 @@ Parameters:
     Type: CommaDelimitedList
     # TODO development values these are the regions in dev environment
     # TODO eu-south-2,eu-central-2 regions that are active in the dev environment and rule EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK is not available
-    # TODO using 2 regions so it's faster, full list eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-north-1,eu-central-1
-    Default: "eu-west-1,eu-central-1"
+    # TODO using 2 regions so it's faster, full list eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-north-1,eu-central-1,eu-south-2,eu-central-2
+    Default: 'eu-west-1,eu-central-1'
     Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed
 
   ConformancePackName:
@@ -167,7 +181,7 @@ Parameters:
     Description: "Comma-separated list of names for allowed public Amazon S3 access points - for info https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-public-access-blocks.html"
 
   # TODO String vs. CommaDelimitedList you need to treat the values differently and you pass this to many layers. careful if you want to change! 
-  # TODO test case: this can be empty
+  # TODO test the case of empty input parameter... this can be empty
   VPCSecurityGroupPortRestrictionParamRestrictedPorts:
     Type: String
     Default: '22,3389'
@@ -233,12 +247,13 @@ Parameters:
 
 Conditions:
   IsDelegatedAdminAccount: !Equals [!Ref DeploymentAccount, 'Delegated Admin']
-  # HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']]
   HasExcludedAccounts: !Not [!Equals [!Join [',', !Ref ExcludedAccountsIDs], '']]
   HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
   HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
   HasRestrictedPorts: !Not [!Equals [!Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts, '']]
-
+  # TODO delete
+  #IsOrganizationMode: !Equals [!Ref DeploymentMode, 'AWS Organizations']
+  #IsStandaloneMode: !Equals [!Ref DeploymentMode, 'Standalone']
 
 # TODO add validation of all parameters: required parameters and syntax 
 #Rules:
@@ -263,7 +278,7 @@ Resources:
   # IAM Role for StackSet Administration (SELF_MANAGED mode only)
   StackSetAdministrationRole:
     Type: AWS::IAM::Role
-    # Condition: IsStandaloneMode TODO this is always needed for now
+    # Condition: IsStandaloneMode TODO this is always needed for now, but need to put back the standalone mode (installation on a single account)
     Properties:
       RoleName: CRCDCIRTStackSetAdministrationRole # was: AWSCloudFormationStackSetAdministrationRole
       AssumeRolePolicyDocument:
@@ -288,7 +303,6 @@ Resources:
   # IAM Role for StackSet Execution (SELF_MANAGED mode only)
   StackSetExecutionRole:
     Type: AWS::IAM::Role
-    # Condition: IsStandaloneMode TODO this is always needed for now
     Properties:
       RoleName: CRCDCIRTStackSetExecutionRole # was: AWSCloudFormationStackSetExecutionRole
       AssumeRolePolicyDocument:
@@ -300,24 +314,20 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
-        
+
+  # This stack set iterates through the specified regions of the current account
+  # In Organization mode, the stackset deploys the organization conformance pack to all accounts of the organization
+  # In Standalone mode, the stackset deploys the conformance pack to the current account only
   CRCDCIRTStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties:
       StackSetName: !Sub '${ConformancePackName}-org-stackset'
-      Description: Deploys CRCD CIRT conformance pack rules in the entire organization
+      Description: Deploys CRCD CIRT conformance pack rules
       PermissionModel: SELF_MANAGED # Runs on this account only
       AdministrationRoleARN: 
         !GetAtt StackSetAdministrationRole.Arn
       ExecutionRoleName:
         !Ref StackSetExecutionRole
-      #Capabilities:
-        # TODO check if it's needed (it works with it) 
-        # Not needed as the StackSet template only creates an AWS::Config::OrganizationConformancePack resource, which doesn't create any IAM resources with custom names.
-        # This stack creates IAM roles with custom role names
-        # Since the IAM roles have explicit RoleName properties, CloudFormation needs the stronger acknowledgment that we're creating named IAM resources
-        # The template will be created in a single region, roles will be created only once per account
-      #  - CAPABILITY_NAMED_IAM
       StackInstancesGroup:
         - DeploymentTargets:
             Accounts:
@@ -327,6 +337,10 @@ Resources:
       Parameters:
         - ParameterKey: ConformancePackName
           ParameterValue: !Ref ConformancePackName
+
+        # Will pass the installation mode to the sub template
+        #- ParameterKey: DeploymentMode
+        #  ParameterValue: !Ref DeploymentMode
         
         # convert the array ExcludedAccountsIDs to String, from now on this parameter is a string in the sub templates
         - Fn::If:
@@ -375,11 +389,13 @@ Resources:
 
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
-        Description: 'CRCD CIRT Organization Conformance Pack - deployed via StackSet'
+        Description: 'CRCD CIRT Conformance Pack - deployed via StackSet'
 
         Parameters:
           ConformancePackName:
             Type: String
+          #DeploymentMode:
+          #  Type: String
           ExcludedAccountsIDs:
             Type: String
             Default: ''
@@ -421,11 +437,15 @@ Resources:
           HasExcludedPublicBuckets: !Not [!Equals [!Ref S3BucketLevelPublicAccessProhibitedExcludedParamPublicBuckets, '']]
           HasRestrictedPorts: !Not [!Equals [!Ref VPCSecurityGroupPortRestrictionParamRestrictedPorts, '']]
           HasExcludedAccessPoints: !Not [!Equals [!Ref S3AccessPointPublicAccessBlocksParamExcludedAccessPoints, '']]
-          HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']] # checking the STRING parameter has data      
+          HasExcludedAccounts: !Not [!Equals [!Ref ExcludedAccountsIDs, '']] # checking the STRING parameter has data
+
+          #DeploymentModeIsOrganization: !Equals [!Ref DeploymentMode, 'AWS Organizations']
+          #DeploymentModeIsStandalone: !Equals [!Ref DeploymentMode, 'Standalone']   
 
         Resources:
           CRCDCIRTOrganizationConformancePack:
             Type: AWS::Config::OrganizationConformancePack
+            #Condition: DeploymentModeIsOrganization
             Properties:
               OrganizationConformancePackName: !Ref ConformancePackName
               
@@ -824,7 +844,7 @@ Resources:
                         restrictPorts:
                           Fn::If:
                           - HasRestrictedPorts
-                          - Ref: DeploymentRegion # TODO test put it back VPCSecurityGroupPortRestrictionParamRestrictedPorts
+                          - Ref: VPCSecurityGroupPortRestrictionParamRestrictedPorts
                           - Ref: AWS::NoValue
                         protocolType:
                           Ref: VPCSecurityGroupPortRestrictionParamProtocolType
@@ -1140,8 +1160,9 @@ Resources:
                               rule_parameters = json.loads(event['ruleParameters'])
                           
                           # Get threshold from rule parameters with default fallback
-                          # TODO the default value of RootUsageThresholdDays could be an environment variable of the function instead of a hardcode 30
-                          root_usage_threshold_days = int(rule_parameters.get('RootUsageThresholdDays', '30'))
+                          # the default value of RootUsageThresholdDays is hardcoded because users must make a 
+                          # cloud formation update so that the new value goes in all lambda functions in all accounts
+                          root_usage_threshold_days = int(rule_parameters.get('RootUsageThresholdDays', '5'))
                           
                           # Fallback to extracting account ID from invoking event or context if not in event
                           if not account_id:
@@ -1738,10 +1759,7 @@ Resources:
                         Owner: AWS
                         SourceIdentifier: IAM_USER_MFA_ENABLED
                       MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed- also added MaximumExecutionFrequency above
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
+
                   # Rule: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
                   MfaEnabledForIamConsoleAccess:
                     Type: AWS::Config::ConfigRule
@@ -1752,10 +1770,6 @@ Resources:
                         Owner: AWS
                         SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
                       MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed- also added MaximumExecutionFrequency above
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
                   
                   # ============================================================================
                   # Custom rules - Initial Access - IAM Protection
@@ -1792,10 +1806,6 @@ Resources:
                           - EventSource: aws.config
                             MessageType: ScheduledNotification
                             MaximumExecutionFrequency: TwentyFour_Hours
-                      # TODO removing Scope as this defines the resources tha can trigger an evaluation for the rule, but this is a periodic rule hence not needed
-                      #Scope:
-                      #  ComplianceResourceTypes:
-                      #    - AWS::IAM::User
 
   
 Outputs:
