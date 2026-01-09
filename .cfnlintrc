@@ -1,0 +1,3 @@
+ignore_templates:
+  - "**/crcd-cirt-conformance-specification.yaml"
+  - "cirt/**"
