@@ -1,26 +1,6 @@
 # CRCD Dashboard - AWS CIRT Conformance Pack
 # Supports two deployment mode: standalone account and AWS Organizations
-#
 
-# ===========================================================================================================
-# TODO Prerequisites (move to readme and documentation)
-# ===========================================================================================================
-#
-# The account where you run this must be deletaged admin for CloudFormation and AWS Config
-# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html
-#
-# 1. Must be run from managment account or CloudFormation delegated admin 
-# Run this on managment account to designate
-# aws organizations register-delegated-administrator --account-id <DELEGATED_ACCOUNT_ID> --service-principal=member.org.stacksets.cloudformation.amazonaws.com
-# Run this to verify
-# aws organizations list-delegated-administrators --service-principal member.org.stacksets.cloudformation.amazonaws.com
-#
-# 2. Must be run from managment account or AWS Config delegated admin
-# Run this on managment account to designate
-# aws organizations register-delegated-administrator --account-id <DELEGATED_ACCOUNT_ID> --service-principal config.amazonaws.com
-# Run this to verify
-# aws organizations list-delegated-administrators --service-principal config.amazonaws.com
-  
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in current region and regional rules organization-wide'
 
@@ -67,14 +47,14 @@ Metadata:
       DeploymentMode:
         default: "Deployment mode"
       DeploymentAccount:
-        default: "Deployment account (used only in deployment mode: AWS Organizations)"
+        default: "Deployment account type (used only in deployment mode: AWS Organizations)"
 
       DeploymentRegions:
-        default: "Regions to deploy (comma-separated list of Regions where AWS Config is enabled)"
+        default: "Deployment Regions"
       ConformancePackName:
         default: "Conformance Pack name"
       ExcludedAccountsIDs:
-        default: "Accounts to exclude from organization conformance pack"
+        default: "Accounts to exclude (used only in deployment mode: AWS Organizations)"
       TargetOrganizationalUnitIds:
         default: "Target Organization Root or Organizational Unit IDs"
 
@@ -124,7 +104,7 @@ Parameters:
     AllowedValues:
       - Delegated Admin
       - Management Account
-    Description: Type of deployment account (this account). Select 'Delegate Admin' if this account is the AWS Config and AWS CloudFormation delegated admin, or 'Management Account' if you run this template from the management account of your AWS Organization.
+    Description: Type of deployment account (this account). Select 'Delegated Admin' if this account is the AWS Config and AWS CloudFormation delegated admin, or 'Management Account' if you run this template from the management account of your AWS Organization.
 
   DeploymentRegions:
     Type: CommaDelimitedList
@@ -143,14 +123,9 @@ Parameters:
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
 
-  # TODO move this to the docs 
-  # SERVICE_MANAGED StackSets require OrganizationalUnitIds to be explicitly specified
-  # You can find your root OU ID by running:
-  # aws organizations list-roots --query 'Roots[0].Id' --output text
-
   TargetOrganizationalUnitIds:
     Type: CommaDelimitedList
-    Description: Comma-separated list of Organizational Unit IDs to deploy to. Use root OU ID (r-xxxx) to deploy to all accounts (Required).
+    Description: Enter the root OU ID (r-xxxx) to deploy to all accounts of your organization, or specify a comma-separated list of Organizational Unit IDs (ou-xxxx-xxxxxxxx) to deploy to. Leave empty in standalone mode.
     Default: ''
     # AllowedPatterns allows empty for the standalone mode
     AllowedPattern: ^$|^r-[a-z0-9]{4,32}$|^ou-[a-z0-9]+-[a-z0-9]+(,ou-[a-z0-9]+-[a-z0-9]+)*$
