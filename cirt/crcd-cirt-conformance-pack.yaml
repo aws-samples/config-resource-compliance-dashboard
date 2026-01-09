@@ -2,7 +2,7 @@
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard - AWS CIRT Conformance Pack (Organizational) - Hybrid deployment with IAM rules in current region and regional rules organization-wide'
+Description: 'CRCD Dashboard - AWS CIRT Conformance Pack - Deploys IAM rules in current region and regional rules in all regions'
 
 Metadata:
   AWS::CloudFormation::Interface:
