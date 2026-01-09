@@ -87,3 +87,10 @@ Documentation and installation instructions.
 # Updates
 
 To update the parameters of the AWS Config rules of the template open the CloudFormation stack in the main region and update the stack. Changes propagate automatically to all accounts/regions
+
+
+# References
+- [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/)
+- [MITRE ATT&CK® Framework](https://attack.mitre.org/)
+- [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html)
+- [AWS CIRT](https://aws.amazon.com/blogs/security/welcoming-the-aws-customer-incident-response-team/)
