@@ -1,6 +1,6 @@
-# CRCD CIRT Conformance Pack Specification
+# Conformance Pack Specification
 
-This document describes the AWS Config rules included in the CRCD Customer Incident Response Team (CIRT) Conformance Pack. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
+This document describes the AWS Config rules included in the AWS Config Resource Compliance Dashboard (CRCD) Customer Incident Response Team (CIRT) Conformance Pack. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
 
 ## Naming Convention
 
@@ -13,7 +13,7 @@ All rules follow the format: `crcd-cirt-<lv1>-<lv2>-<rule-name>`
 | `lv2` | Level 2 classification (protection domain) | `s3`, `iam`, `ec2` |
 | `rule-name` | Descriptive rule name in kebab-case | `root-account-mfa-enabled` |
 
-### Level 1 Classifications (Attack Tactics)
+### Level 1 Classification (Attack Tactics)
 
 | Abbreviation | Name | Description |
 |--------------|------|-------------|
@@ -30,7 +30,7 @@ All rules follow the format: `crcd-cirt-<lv1>-<lv2>-<rule-name>`
 | `i` | Impact | Techniques used to disrupt availability or compromise integrity |
 | `rd` | Resource Development | Techniques used to develop new resources for AWS targeting |
 
-### Level 2 Classifications (Protection Domains)
+### Level 2 Classification (Protection Domains)
 
 | Abbreviation | Name | Description |
 |--------------|------|-------------|
