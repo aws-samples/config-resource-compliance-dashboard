@@ -1,5 +1,11 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [4.0.2] - 2026-01-20
+Bugfix release for view `config_compliance`. 
+
+## Fixed
+- View `config_compliance` was using a lowercase field and thus not assigning AWS Config rules to their conformance pack. 
+
 # [4.0.1] - 2025-11-10
 Bugfix release: adopting a case sensitive Athena table for the dashboard. 
 The case insensitive table of v4.0.0 does not work if you apply the same tag, but with different capitalization to a resource, e.g. `Environment` and `environment`. In that case, any query to the Athena table will fail and no data will be displayed on the dashboard.
