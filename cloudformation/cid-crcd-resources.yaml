@@ -705,6 +705,16 @@ Resources:
           - "glue:GetDatabase"
           Effect: "Allow"
           Sid: "GluePartitions"
+        # TODO replace with CFN parameter and ttest CFN deployment
+        # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
+        # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: "organization_data"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/optimization_data/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/optimization_data"
+          Action:
+          - "glue:GetPartitions"
+          Effect: "Allow"
+          Sid: "ReadSourceTableMetadata"
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1969,6 +1979,7 @@ Resources:
       Environment:
         Variables:
           # Possible sources of account names, from other CID dashboards
+          # TODO: make these configurable via CFN parameters, customers may have changed the name when deploying
           ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE: "cid_cur"
           ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE: "account_map"
           ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
