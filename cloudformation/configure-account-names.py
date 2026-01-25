@@ -7,8 +7,40 @@ This Lambda requires the following IAM permissions:
 - athena:StartQueryExecution, athena:GetQueryExecution - Execute and poll CREATE/DROP VIEW queries
 - s3:PutObject, s3:GetObject, s3:GetBucketLocation - Store Athena query results
 - logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents - CloudWatch logging
+
+
+
+crcd-read-organization-tags for reference
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowQueryForTags",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::crcddev-cid-data767398072207",
+                "arn:aws:s3:::crcddev-cid-data767398072207/*"
+            ]
+        },
+        {
+            "Sid": "AllowGetQueryResults",
+            "Effect": "Allow",
+            "Action": [
+                "athena:GetQueryResults"
+            ],
+            "Resource": [
+                "arn:aws:athena:eu-west-1:767398072207:workgroup/crcd-dashboard"
+            ]
+        }
+    ]
+}
 """
 
+import re
 import json
 import os
 import boto3
@@ -255,21 +287,98 @@ def create_organization_table(glue, athena):
             # TODO raise?raise AthenaException(f'Query failed: {str(ce)}')
 
     if success:
-        # STEP 3: create the view
-        create_view_query = f"""
-        CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-        SELECT 
-            id as account_id,
-            payer_id as payer_account_id,  
-            name as account_name
-        FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"
-        """
+        # STEP 3: read all org and account tags to build the view
+        create_view_query = build_view_query(athena)
+
+    
+        #create_view_query = f"""
+        #CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+        #SELECT 
+        #    id as account_id,
+        #    payer_id as payer_account_id,  
+        #    name as account_name
+        #FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"
+        #"""
 
         # Execute the view creation query    
         success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
 
     return success
 
+def build_view_query(athena):
+
+    # read the hierarchytags of the entire table and iterates through its rows
+    query = f"""SELECT hierarchytags FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}" """
+    
+    logger.info(f"Executing query to extract tags: {query}")
+    query_execution_id = execute_athena_query(athena, query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+    results = get_query_results(query_execution_id, athena)
+
+    # Skip header row
+    data_rows = results[1:]
+    
+    # Collect all unique keys
+    all_keys = set()
+    
+    logger.info(f"Processing {len(data_rows)} records...")
+    for row in data_rows:
+        if row and row[0]:  # Check if hierarchytags value exists
+            hierarchytags_value = row[0]
+            keys = extract_keys_from_hierarchytags(hierarchytags_value)
+            all_keys.update(keys)
+    
+    # Display results
+    logger.info("=== All Unique Keys Found in hierarchytags ===")
+    query_tags = ""
+    for key in sorted(all_keys):
+        sanitized_tag_name = sanitize_string(key)
+        logger.info(f"  - {key} [{sanitized_tag_name}]")
+        query_tags = query_tags + " " + f", TRY(FILTER(hierarchytags, x -> x.key = '{key}')[1].value) as ou_tag_{sanitized_tag_name}"
+
+    
+    logger.info(f"Total unique keys: {len(all_keys)}")
+    logger.info(f"Final query snippet: {query_tags}")
+    
+    create_view_query = f"""
+        CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+        SELECT 
+            id as account_id
+            , payer_id as payer_account_id
+            , name as account_name
+            , parent as organization_unit
+            {query_tags}
+        FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"
+        """
+    
+    logger.info(f"Final query for the view: {create_view_query}")
+    return create_view_query
+
+def sanitize_string(input_string):
+    """
+    Replace spaces and any character that is not a letter or number with '_'
+    
+    Args:
+        input_string: The string to sanitize
+        
+    Returns:
+        Sanitized string with only letters, numbers, and underscores
+    """
+    # Replace any character that is NOT alphanumeric with underscore
+    sanitized = re.sub(r'[^a-zA-Z0-9]', '_', input_string)
+    return sanitized
+
+def extract_keys_from_hierarchytags(hierarchytags_value):
+    """Extract all keys from a hierarchytags string"""
+    keys = set()
+    
+    # Pattern to match key=value pairs
+    pattern = r'key=([^,}\]]+)'
+    matches = re.findall(pattern, hierarchytags_value)
+    
+    for match in matches:
+        keys.add(match.strip())
+    
+    return keys
 
 def check_table_exists(glue, database_name, table_name):
     """Check if table exists in Glue Data Catalog"""
@@ -332,6 +441,17 @@ def execute_athena_query(athena, query, athena_workgroup, crcd_database, athena_
     except Exception as e:
         logger.error(f'Exception during query execution: {str(e)}')
         raise
+
+def get_query_results(query_execution_id, athena):
+    """Retrieve query results"""
+    results = []
+    paginator = athena.get_paginator('get_query_results')
+    
+    for page in paginator.paginate(QueryExecutionId=query_execution_id):
+        for row in page['ResultSet']['Rows']:
+            results.append([col.get('VarCharValue', '') for col in row['Data']])
+    
+    return results
 
 def send_response(event, context, response_status, response_data):
     # TODO developing the function and testing without Cloud Formation, remove the line below

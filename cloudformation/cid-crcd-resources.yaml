@@ -721,6 +721,36 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
+  # TODO new policy to allow the lambda that builds the account view to extracts all the tags used in the AWS Organization
+  # TODO test
+  IAMManagedPolicyReadOrganizationTagsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsCreateDashboardResources
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "crcd-read-organization-tags"
+      Description: "CRCD Dashboard - Retrieves tags assigned to Accounts and Organization Units from the AWS Organization"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowQueryForTags
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+            Resource:
+              # TODO get the s3 bucket from the parameters
+              # - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::crcddev-cid-data767398072207"
+              - !Sub "arn:${AWS::Partition}:s3:::crcddev-cid-data767398072207/*"
+          - Sid: AllowGetQueryResults
+            Effect: Allow
+            Action:
+              - athena:GetQueryResults
+            Resource:
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroupName}"
+
   IAMManagedPolicyLambdaS3AthenaQueryResults:
     Type: AWS::IAM::ManagedPolicy
     Condition: IsCreateDashboardResources
@@ -1880,6 +1910,7 @@ Resources:
       - Ref: IAMManagedPolicyLambdaGlue
       - Ref: IAMManagedPolicyLambdaS3AthenaQueryResults
       - Ref: IAMManagedPolicyLambdaGlueAccountNames
+      - Ref: IAMManagedPolicyReadOrganizationTagsPolicy # TODO new policy
       MaxSessionDuration: 3600
       RoleName: "crcd-account-names-setup-role"
       AssumeRolePolicyDocument:
