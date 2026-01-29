@@ -2,12 +2,12 @@
 
 ## Overview
 
-The backfill feature processes historical AWS Config records that already exists in your Dashboard bucket and creates the necessary Athena/Glue partitions. This is essential to show your historical compliance on the dashboard when you have existing AWS Config records at the time the dashboard was first deployed.
+The backfill feature processes historical AWS Config records that already exist in your Dashboard bucket and creates the necessary Athena/Glue partitions. This is essential to show your historical compliance on the dashboard when you have existing AWS Config records at the time the dashboard was first deployed.
 
 The backfill process will generate partitions for these AWS Config records:
 1. All AWS Config history records for the previous 12 months.
 2. AWS Config snapshot records on all accounts an regions whose date is the last day of the month, for the previous 5 months.
-3. AWS Config snapshot records on all accounts an regions whose date is within the last 5 days.
+3. AWS Config snapshot records on all accounts and regions whose date is within the last 5 days.
 
 
 ## Architecture
@@ -35,7 +35,7 @@ The backfill worker function is triggered by SQS. The payload to the function is
 
 1. Log into the AWS Management Console for your Dashboard account.
 1. Ensure you are in the same Region where you deployed the AWS Config dashboard resources.
-1. Click this [deploy link](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-backfill-resources.yaml&stackName=config-dashboard-backfill) to open the stack template in your CloudFormation console. This stack will create the dashboard backfilling resources.
+1. Click this [deploy link](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-backfill-resources.yaml&stackName=config-dashboard-backfill) to open the stack template in your CloudFormation Console. This stack will create the dashboard backfilling resources.
 
 4. Configure the following parameters:
 
@@ -53,27 +53,14 @@ The backfill worker function is triggered by SQS. The payload to the function is
 | **AWSOrganizationID** | _(empty)_ | Your AWS Organization ID. Leave empty for standalone accounts. |
 
 5. Run the CloudFormation template.
-1. (OPTIONAL) Open the worker function in the Lambda console and confirm the parameters to the function.
-
-| Parameter | Default Value | Description |
-|-----------|---------------|-------------|
-| **PARTITION_CONFIG_SNAPSHOT_RECORDS** | `1` (i.e. enabled) | Set it to `1` to create partitions for AWS Config snapshot files, or `0` to ignore them. |
-| **PARTITION_CONFIG_HISTORY_RECORDS** | `1` (i.e. enabled) | Set it to `1` to create partitions for AWS Config history files, or `0` to ignore them. |
-| **CONFIG_HISTORY_TIME_LIMIT_MONTHS** | `12` | How long in the past (months) the function will go to generate partitions for AWS Config history records. |
-| **CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS** | `6` | How long in the past (months) the function will go to generate partitions for AWS Config snapshot records. |
-
-The `12` and `5` month limits can be extended if you want to see more data on the dashboard. Be aware that this may cause the Lambda functions to timeout if you have a large number of accounts and regions. You can also run the backfill process several times, the worker function will skip creating a partition if it already exists.
-
-
-7. Open the producer function and run it
-   - Open the Lambda console and open the function `crcd-config-backfill-producer`
+6. Open the producer function and run it
+   - Open the Lambda Console and click on the function `crcd-config-backfill-producer`
    - Click on the **Test** tab.
    - Select **Create new event** under **Test event action**.
    - Click on the **Test** button. The backfill process will start.
    - Monitor CloudWatch logs for the Lambda functions.
    - Check SQS queue metrics to track progress.
-1. Verify Results
-   - Query your Athena tables to confirm historical data is accessible. This SQL will return the earlest Config history and snapshot records in your data:
+1. Verify Results. Query your Athena tables to confirm historical data is accessible. This SQL will return the earliest Config history and snapshot records in your data:
    ```
    select min(dt), datasource from cid_crcd_config group by datasource;
    ```
@@ -83,5 +70,6 @@ The `12` and `5` month limits can be extended if you want to see more data on th
 
 - This is a one-time operation for processing historical data.
 - The process may take several hours depending on the amount of historical data.
+- You can run the backfill process several times, the worker function will skip creating a partition if it already exists.
 - Resources can be deleted after successful backfill completion.
 - Ensure sufficient Lambda execution time and SQS message retention for large datasets.
