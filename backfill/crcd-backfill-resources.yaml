@@ -186,7 +186,6 @@ Resources:
           - id: W48
             reason: "KMS encryption specified in SqsManagedSseEnabled = true"
 
-
   # Grant Permissions to Lambda Producer function to write to the SQS Queue
   SQSQueuePolicy:
     Type: AWS::SQS::QueuePolicy
@@ -260,6 +259,9 @@ Resources:
         rules_to_suppress:
           - id: W84
             reason: "No KMS encryption needed"
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
   
   # Lambda Function that produces the list of AWS Config objects that must be partitioned
   LambdaBackfillProducerFunction:
@@ -468,6 +470,9 @@ Resources:
         rules_to_suppress:
           - id: W84
             reason: "No KMS encryption needed"
+      guard:
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
 
   # Lambda Function that is triggered by the SQS queue
   LambdaBackfillWorkerFunction:
