@@ -2,7 +2,7 @@
 
 ## Overview
 
-The backfill feature processes historical AWS Config records that already exists in your Dashboard bucket and creates the necessary Athena/Glue partitions. This is essential to show your historical compliance on the dashboard when you have existing AWS Config records when the dashboard was first deployed.
+The backfill feature processes historical AWS Config records that already exists in your Dashboard bucket and creates the necessary Athena/Glue partitions. This is essential to show your historical compliance on the dashboard when you have existing AWS Config records at the time the dashboard was first deployed.
 
 The backfill process will generate partitions for these AWS Config records:
 1. All AWS Config history records for the previous 12 months.
@@ -65,21 +65,19 @@ The backfill worker function is triggered by SQS. The payload to the function is
 The `12` and `5` month limits can be extended if you want to see more data on the dashboard. Be aware that this may cause the Lambda functions to timeout if you have a large number of accounts and regions. You can also run the backfill process several times, the worker function will skip creating a partition if it already exists.
 
 
-5. Open the producer function and run it
+7. Open the producer function and run it
    - Open the Lambda console and open the function `crcd-config-backfill-producer`
    - Click on the **Test** tab.
    - Select **Create new event** under **Test event action**.
    - Click on the **Test** button. The backfill process will start.
    - Monitor CloudWatch logs for the Lambda functions.
    - Check SQS queue metrics to track progress.
-
-6. Verify Results
+1. Verify Results
    - Query your Athena tables to confirm historical data is accessible. This SQL will return the earlest Config history and snapshot records in your data:
    ```
    select min(dt), datasource from cid_crcd_config group by datasource;
    ```
-
-7. (OPTIONAL) [Refresh](https://docs.aws.amazon.com/quicksuite/latest/userguide/refreshing-imported-data.html) your Quick Suite datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
+1. (OPTIONAL) [Refresh](https://docs.aws.amazon.com/quicksuite/latest/userguide/refreshing-imported-data.html) your Quick Suite datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
 
 ## Important Notes
 
