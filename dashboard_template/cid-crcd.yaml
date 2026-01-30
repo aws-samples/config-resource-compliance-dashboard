@@ -21,7 +21,7 @@ dashboards:
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    version: v4.0.1
+    version: v4.0.2
     # CUSTOMIZATION - make sure it references cid-crcd-definition.yaml
     file: ./cid-crcd-definition.yaml
 
@@ -1985,7 +1985,7 @@ views:
         FROM
           ((cid_crcd_config
         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configrulelist') AS array(json))) u (rule))
+        CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') 
         AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date))))
         )

@@ -1,6 +1,39 @@
 # Upgrade Instructions
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
+## Upgrade to v4.0.2
+
+### Upgrade to v4.0.2 from v4.0.1
+This version has a new `config_compliance` view.
+
+1. Open AWS CloudShell on the Log Archive account, in the region where you deployed the dashboard.
+1. Execute the following command:
+
+```
+ cid-cmd update \
+   --recursive \
+   --resources 'https://raw.githubusercontent.com/aws-samples/config-resource-compliance-dashboard/refs/heads/main/dashboard_template/cid-crcd.yaml' \
+   --dashboard-id 'cid-crcd' \
+   --athena-database 'cid_crcd_database' \
+   --athena-workgroup 'crcd-dashboard'
+```
+
+3. The `cid-cmd` tool will ask you to confirm the values of parameters `tag1`, `tag2`, `tag3` and `tag4`. Their current value will be displayed.
+4. The `cid-cmd` tool will then analyze each Athena view and identify an updated version of `config_compliance`.
+     - **If `cid-cmd` does not analyze the views, make sure you used the option `--recursive` in the CLI command**
+     - The changes will be highlighted in color, expect to see `configrulelist` being replaced by `configRuleList` within the first lines of the view definition.
+     ```
+      -    CROSS JOIN UNNEST(CAST(json_extract(configurationItem.configuration, '$.configrulelist') AS array(json))) u (rule))
+      +    CROSS JOIN UNNEST(CAST(json_extract(configurationItem.configuration, '$.configRuleList') AS array(json))) u (rule))
+     ```
+5. Select `proceed and override`.
+1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.:` select the time zone for dataset scheduled refresh in your Region (it is already preselected). The tool will not find other updates for the Athena views. 
+1. When prompted `Select taxonomy fields to add as dashboard filters and group by fields` select `Looks good` without adding taxonomy items. Taxonomy is not supported by the dashboard.
+1. The tool will update the dashboard definition and terminate.
+
+## Upgrade to v4.0.2 from earlier versions
+You have to destroy the resources of the current versions and redeploy.
+
 ## Upgrade to v4.0.1
 You have to destroy the resources of the current versions and redeploy.
 
@@ -21,7 +54,7 @@ You only need to redeploy the frontend resources with the `cid-cmd` tool. You ca
 1. Ensure the [environment variables](https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html) `PARTITION_CONFIG_SNAPSHOT_RECORDS` and `PARTITION_CONFIG_HISTORY_RECORDS` are both set to `1`.
 
 #### Step 2: Uninstall the dashboard frontend with the cid-cmd tool
-1. On the same AWS account and region, open Amazon CloudShell
+1. On the same AWS account and region, open AWS CloudShell
 1. Execute the following command to delete the dashboard:
 
 ```
