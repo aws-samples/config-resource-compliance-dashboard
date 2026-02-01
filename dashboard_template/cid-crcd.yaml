@@ -1547,10 +1547,7 @@ views:
       - config_sys_account_data
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}"."config_inventory_account" AS
-      SELECT
-        account_id
-      , payer_account_id
-      , account_name
+      SELECT *
       FROM
         "${athena_database_name}"."config_sys_account_data"
   config_inventory_ebs:
