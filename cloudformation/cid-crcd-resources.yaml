@@ -53,6 +53,13 @@ Metadata:
           - ConfigureS3Replication
       -
         Label:
+          default: "Account names and organizational tags - the AWS Organization Data Collection Module of CID Data Collection or the CUR database can be used as sources"
+        Parameters:
+          - ConfirmCIDOrganizationModuleInstalled
+          - CIDDataCollectionBucketName
+          
+      -
+        Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - AthenaWorkgroupName
@@ -62,8 +69,25 @@ Metadata:
           - LambdaPartitioningFunctionName
           - GlueDataCatalogName
           - CrossAccountReplicationRole
+          - AccountNamesOrganizationDataDatabaseName
+          - AccountNamesOrganizationDataTableName
+          - AccountNamesAccountMapDatabaseName
+          - AccountNamesAccountMapTableName
 
     ParameterLabels:
+      AccountNamesAccountMapDatabaseName:
+        default: "AWS Data Exports (CUR) database"
+      AccountNamesAccountMapTableName:
+        default: "Account map table"
+      AccountNamesOrganizationDataDatabaseName:
+        default: "Organization data database"
+      AccountNamesOrganizationDataTableName:
+        default: "Organization data table"
+      CIDDataCollectionBucketName:
+        default: "CID data collection bucket"
+      ConfirmCIDOrganizationModuleInstalled:
+        default: "Is the AWS Organization Data Collection Module of CID Data Collection installed?"
+
       AthenaWorkgroupName:
         default: "Athena workgroup"
       AthenaDatabaseName:
@@ -153,7 +177,7 @@ Parameters:
     Description: "Select 'yes' to configure object replication between the Log Archive bucket and the Dashboard bucket. Select 'no' if you already have an S3 replication configurations on the Log Archive bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
-  
+
   AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
@@ -212,6 +236,47 @@ Parameters:
     ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files."
     Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)."
 
+  # Account names
+  # TODO probably there is no way to change database and table names
+  AccountNamesAccountMapDatabaseName:
+    Type: "String"
+    Default: "cid_cur"
+    Description: "Name of the Amazon Athena database containing CUR metadata. Keep the default value if you have not installed other CID dashboards or if you haven't changed it at deployment (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Data Exports (CUR) database"
+    
+  AccountNamesAccountMapTableName:
+    Type: "String"
+    Default: "account_map"
+    Description: "Name of the Amazon Athena table of the database above that lists account names. Keep the default value if you have not installed other CID dashboards or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Data Exports (CUR) account map table"
+
+  AccountNamesOrganizationDataDatabaseName:
+    Type: "String"
+    Default: "optimization_data"
+    Description: "Name of the Amazon Athena database containing CID Data Collection metadata. Keep the default value if you have not installed the CID Data Collection module or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: CID Data Collection database"
+
+  AccountNamesOrganizationDataTableName:
+    Type: "String"
+    Default: "organization_data"
+    Description: "Name of the Amazon Athena table of the database above containing AWS Organization metadata such as account ID, account name, organization parent and organization tags (AWS Organization Data Collection Module must be installed to collect this). Keep the default value if you have not installed the CID data collection module or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: CID Data Collection account map table"
+
+  CIDDataCollectionBucketName:
+    Type: "String"
+    Default: ""
+    Description: "Name of the destination bucket for the CID Data Collection module. By default, the value specified on field 'Destination S3 bucket prefix' at Step 2 of the CID Data Collection deployment is 'cid-data-'. This is concatenated with the Data Collection account number, e.g. cid-data-1234567890."
+
+  ConfirmCIDOrganizationModuleInstalled:
+    Type: "String"
+    Description: "Select 'yes' to confirm the AWS Organization Data Collection Module of CID Data Collection is installed. This is the recommended way to extend the dashboard with account names and organization metadata. Select 'no' otherwise. More info: https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html"
+    AllowedValues: ['<select>', 'yes', 'no']
+    Default: "<select>" # This value is used below, careful if you change it
+  
 
 Conditions:
   # used only in case 2.2, when setting up replication on the log archive bucket
@@ -244,7 +309,6 @@ Conditions:
   
   IsDashboardAccountDeploymentKms:
     # use case 2.1 with KMS encrypted buckets
-    # TODO add IsDashboardBucketKms? but then it would not cover 2.1
     Fn::And:
       - !Condition IsDashboardAccountDeployment
       - !Condition IsLogArchiveBucketKms
@@ -297,6 +361,11 @@ Conditions:
       - !Condition IsS3ReplicationOnly
       - !Equals [!Ref ConfigureS3Replication, 'yes']
 
+  IsCIDOrganizationModuleInstalled:
+    Fn::And:
+      - !Condition IsCreateDashboardResources
+      - !Equals [!Ref ConfirmCIDOrganizationModuleInstalled, 'yes']
+
 Rules:
   MandatoryLogArchiveAccountId:
     Assertions:
@@ -329,7 +398,6 @@ Rules:
           - !Ref DashboardBucketName
           - ''
         AssertDescription: "Dashboard bucket name is required"
-
 
   MandatoryAthenaDatabase:
     Assertions:
@@ -440,6 +508,38 @@ Rules:
           - ''
         AssertDescription: "REQUIRED PARAMETER - cannot replicate objects between buckets with different types of encryption. ARN of the KMS key that encrypts the Log Archive bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
 
+  ValidateConfirmCIDOrganizationModuleInstalled:
+    # ConfirmCIDOrganizationModuleInstalled is required only when installing the actual dashboard resources, i.e. IsCreateDashboardResources
+    # The field is not considered in other use cases
+    RuleCondition: 
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+        - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref ConfirmCIDOrganizationModuleInstalled
+          - '<select>'
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if the module is deployed, otherwise select 'no'."
+
+  ValidateCIDDataCollectionBucketName:
+    # CIDDataCollectionBucketName is required if ConfirmCIDOrganizationModuleInstalled is yes
+    # in case CIDDataCollectionBucketName must be given, then the Lambda that configure account names must have additional permissions
+    RuleCondition:
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+        - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+        - !Equals [!Ref ConfirmCIDOrganizationModuleInstalled, 'yes']
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref CIDDataCollectionBucketName
+          - ''
+        AssertDescription: "REQUIRED PARAMETER - Enter the CID Data Collection S3 bucket name."
 
 Resources:
 
@@ -495,6 +595,10 @@ Resources:
             reason: "We accept Athena query result bucket has no access logging"
           - id: W51
             reason: "We accept Athena query result bucket has no bucket policy"
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_LOGGING_ENABLED
+          - S3_BUCKET_VERSIONING_ENABLED
 
   # Athena workgroup to execute CRCD queries with its own result bucket
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
@@ -705,7 +809,7 @@ Resources:
           - "glue:GetDatabase"
           Effect: "Allow"
           Sid: "GluePartitions"
-        # TODO replace with CFN parameter and ttest CFN deployment
+        # TODO replace with CFN parameter and test CFN deployment
         # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
         # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: "organization_data"
         - Resource:
@@ -721,16 +825,15 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
-  # TODO new policy to allow the lambda that builds the account view to extracts all the tags used in the AWS Organization
-  # TODO test
+  # Account names: policy to allow the lambda that builds the account view to extracts all the tags used in the AWS Organization
   IAMManagedPolicyReadOrganizationTagsPolicy:
     Type: AWS::IAM::ManagedPolicy
-    Condition: IsCreateDashboardResources
+    Condition: IsCIDOrganizationModuleInstalled
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       ManagedPolicyName: "crcd-read-organization-tags"
-      Description: "CRCD Dashboard - Retrieves tags assigned to Accounts and Organization Units from the AWS Organization"
+      Description: "CRCD Dashboard - Retrieves tags assigned to Accounts and Organization Units from AWS Organization"
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -740,10 +843,8 @@ Resources:
               - s3:ListBucket
               - s3:GetObject
             Resource:
-              # TODO get the s3 bucket from the parameters
-              # - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucket}"
-              - !Sub "arn:${AWS::Partition}:s3:::crcddev-cid-data767398072207"
-              - !Sub "arn:${AWS::Partition}:s3:::crcddev-cid-data767398072207/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucketName}"
+              - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucketName}/*"
           - Sid: AllowGetQueryResults
             Effect: Allow
             Action:
@@ -873,6 +974,9 @@ Resources:
         rules_to_suppress:
           - id: W84
             reason: "No KMS encryption needed"
+      guard:
+        SuppressedRules:
+        - CLOUDWATCH_LOG_GROUP_ENCRYPTED
 
   LambdaFunctionPartitionerConfig:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
@@ -1326,6 +1430,11 @@ Resources:
         config:
           ignore_checks:
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl. This bucket is created with the same configuration as the AWS Config bucket when created by AWS ControlTower
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_LOGGING_ENABLED
+          - S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED
+          - S3_DEFAULT_ENCRYPTION_KMS
 
   # Authorizing the replication configuration on the receiving side
   ReplicationConfigurationDataCollection:
@@ -1467,7 +1576,6 @@ Resources:
       DestinationAccountId: !Ref DashboardAccountId
       ReplicationRoleArn: !GetAtt ReplicationConfigurationConfigBucketRole.Arn
       
-
   ConfigBucketReplicationConfigurationLambdaRole:
     Type: AWS::IAM::Role
     Condition: IsConfigureS3Replication
@@ -1910,7 +2018,8 @@ Resources:
       - Ref: IAMManagedPolicyLambdaGlue
       - Ref: IAMManagedPolicyLambdaS3AthenaQueryResults
       - Ref: IAMManagedPolicyLambdaGlueAccountNames
-      - Ref: IAMManagedPolicyReadOrganizationTagsPolicy # TODO new policy
+      # - Ref: IAMManagedPolicyReadOrganizationTagsPolicy # TODO new policy
+      - !If [IsCIDOrganizationModuleInstalled, !Ref IAMManagedPolicyReadOrganizationTagsPolicy, !Ref "AWS::NoValue"]
       MaxSessionDuration: 3600
       RoleName: "crcd-account-names-setup-role"
       AssumeRolePolicyDocument:
@@ -2306,9 +2415,6 @@ Resources:
               return results
 
           def send_response(event, context, response_status, response_data):
-              # TODO developing the function and testing without Cloud Formation, remove the line below
-              # return True
-
               """Interacts with the Cloud Formation template that called this Lambda"""
               response_body = json.dumps({
                   'Status': response_status,

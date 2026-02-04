@@ -1,5 +1,11 @@
 """Configure Account Names Lambda
 
+Version that creates a CRCD table on CRCD database pointing to the S3 file where
+CID data collection saves organization_data. This was parked because now the bug that
+made it impossible to JOIN CRCD table (case sensitive) with organization_data is solved.
+
+
+
 TODO add permissions to CFN templete
 This Lambda requires the following IAM permissions:
 - glue:GetTable, glue:GetPartitions - Read source table metadata
@@ -56,6 +62,7 @@ logger.setLevel(logging.INFO)
 # Get the necessary parameters from the environment variables
 # All are required and will raise a KeyError if the environment variable doesn't exist
 CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]
+CRCD_ORGANIZATION_DATA_TABLE = os.environ["CRCD_ORGANIZATION_DATA_TABLE"] # cid_crcd_sys_organization_data or config_sys_organization_data
 CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
 ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
 ATHENA_WORKGROUP = os.environ["ATHENA_WORKGROUP"]
@@ -78,7 +85,10 @@ def lambda_handler(event, context):
     glue = boto3.client('glue') 
     athena = boto3.client('athena')
 
+
     if event['RequestType'] == 'Delete':
+        # TODO delete also CRCD_ORGANIZATION_DATA_TABLE if it exists
+
         # remove view CRCD_ACCOUNT_NAMES_VIEW_NAME
         delete_view_query = f"""
         DROP VIEW IF EXISTS {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME}
@@ -118,42 +128,30 @@ def lambda_handler(event, context):
 
             # Prepare CREATE OR REPLACE VIEW query based on table existence
             if organization_table_exists:
-                create_view_query = build_view_query(athena)
-                #create_view_query = f"""
-                #CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-                #SELECT 
-                #    id as account_id,
-                #    payer_id as payer_account_id,
-                #    parent as organization_unit,
-                #    name as account_name
-                #FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
-                #"""
-
+                success = create_organization_table(glue, athena)
             elif account_map_exists:
-                # Account map table has only: account_id, account_name, parent_account_id, parent_account_name
                 create_view_query = f"""
                 CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
                 SELECT 
                     account_id,
                     parent_account_id as payer_account_id,
-                    'NO_DATA' as organization_unit,
                     account_name
                 FROM "{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE}"
                 """
+                # Execute the view creation query
+                success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
             else:
                 # This creates a view with no rows, but having these columns
                 create_view_query = f"""
                 CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
                 SELECT 
-                    'NO_DATA' as account_id,
-                    'NO_DATA' as payer_account_id,
-                    'NO_DATA' as organization_unit,
-                    'NO_DATA' as account_name
+                    'NO_TABLES_EXIST' as account_id,
+                    'NO_TABLES_EXIST' as payer_account_id,
+                    'NO_TABLES_EXIST' as account_name
                 WHERE false
                 """
-                
-            # Execute the view creation query
-            success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+                # Execute the view creation query
+                success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
 
             if success:
                 logger.info(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} created successfully. Data sources: organization_table_exists {organization_table_exists}, account_map_exists {account_map_exists}")
@@ -170,17 +168,156 @@ def lambda_handler(event, context):
             logger.error(f'Exception during function execution: {str(e)}')
             send_response(event, context, 'FAILED', {'Error': str(e)})
 
+def create_organization_table(glue, athena):
+    """Create a CRCD-owned external table and view from organization data source.
+    The definition of the organization data source table is case insensitive and cannot join with CRCD table (case-sesitive).
+    For this reason, we need to create an external table based on the location of the organization data table.
+    """
+    success = False
+
+    # STEP 1: prep data
+    response = glue.get_table(DatabaseName=ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, Name=ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE)
+    location = response['Table']['StorageDescriptor']['Location']
+    logger.info(f"Location of table {ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE} is {location}")
+
+    partitions = glue.get_partitions(
+        DatabaseName=ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE,
+        TableName=ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE
+    )
+    for p in partitions['Partitions']:
+        payer_id = p['Values'][0]  # First partition key value
+    logger.info(f"Payer ID is {payer_id}")
+
+
+    # STEP 2: Create the external table in the CRCD database, by copying the structure from the source table and
+    # creating a CRCD-owned table based on this location
+    # TODO add comments to the columns?
+    try:
+        glue.create_table(
+            DatabaseName=CRCD_DATABASE_NAME,
+            TableInput={
+                'Name': CRCD_ORGANIZATION_DATA_TABLE,
+                'TableType': 'EXTERNAL_TABLE',
+                'StorageDescriptor': {
+                    'Columns': [
+                        {'Name': 'id', 'Type': 'string'},
+                        {'Name': 'arn', 'Type': 'string'},
+                        {'Name': 'email', 'Type': 'string'},
+                        {'Name': 'name', 'Type': 'string'},
+                        {'Name': 'status', 'Type': 'string'},
+                        {'Name': 'joinedmethod', 'Type': 'string'},
+                        {'Name': 'joinedtimestamp', 'Type': 'string'},
+                        {'Name': 'hierarchy', 'Type': 'array<struct<id:string,type:string,name:string>>'},
+                        {'Name': 'hierarchypath', 'Type': 'string'},
+                        {'Name': 'hierarchytags', 'Type': 'array<struct<key:string,value:string>>'},
+                        {'Name': 'managementaccountid', 'Type': 'string'},
+                        {'Name': 'parent', 'Type': 'string'},
+                        {'Name': 'parentid', 'Type': 'string'},
+                        {'Name': 'parenttags', 'Type': 'array<struct<key:string,value:string>>'},
+                    ],
+                    'Location': location,
+                    'InputFormat': 'org.apache.hadoop.mapred.TextInputFormat',
+                    'OutputFormat': 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat',
+                    'SerdeInfo': {
+                        'SerializationLibrary': 'org.apache.hive.hcatalog.data.JsonSerDe'
+                    }
+                },
+                'PartitionKeys': [
+                    {'Name': 'payer_id', 'Type': 'string'}
+                ]
+            }
+        )
+        success = True
+    except ClientError as ce:
+        success = False
+        error_code = ce.response['Error']['Code']  # e.g., 'AlreadyExistsException'
+        error_message = ce.response['Error']['Message']
+        logger.error(f"Glue error: {error_code} - {error_message}")
+        # TODO raise?raise AthenaException(f'Query failed: {str(ce)}')
+
+
+    #create_external_table_query = f"""
+    #CREATE TABLE "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"(
+    #    "id" string COMMENT 'from deserializer', 
+    #    "arn" string COMMENT 'from deserializer', 
+    #    "email" string COMMENT 'from deserializer', 
+    #    "name" string COMMENT 'from deserializer', 
+    #    "status" string COMMENT 'from deserializer', 
+    #    "joinedmethod" string COMMENT 'from deserializer', 
+    #    "joinedtimestamp" string COMMENT 'from deserializer', 
+    #    "hierarchy" array<struct<id:string,type:string,name:string>> COMMENT 'from deserializer',
+    #    "hierarchypath" string COMMENT 'from deserializer', 
+    #    "hierarchytags" array<struct<key:string,value:string>> COMMENT 'from deserializer', 
+    #    "managementaccountid" string COMMENT 'from deserializer', 
+    #    "parent" string COMMENT 'from deserializer', 
+    #    "parentid" string COMMENT 'from deserializer', 
+    #    "parenttags" array<struct<key:string,value:string>> COMMENT 'from deserializer')
+    #    PARTITIONED BY ( 
+    #    "payer_id" string)
+    #    ROW FORMAT SERDE 
+    #    'org.apache.hive.hcatalog.data.JsonSerDe' 
+    #    STORED AS INPUTFORMAT 
+    #    'org.apache.hadoop.mapred.TextInputFormat' 
+    #    OUTPUTFORMAT 
+    #    'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+    #    LOCATION
+    #    '{location}'
+    #    TBLPROPERTIES ('transient_lastDdlTime'='1750149550')
+    #"""
+    # Execute the view creation query    
+    #success = execute_athena_query(athena, create_external_table_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+
+    # STEP 3: add partition
+    if success:
+        try:
+            glue.batch_create_partition(
+                DatabaseName=CRCD_DATABASE_NAME,
+                TableName=CRCD_ORGANIZATION_DATA_TABLE,
+                PartitionInputList=[
+                    {
+                        'Values': [f'{payer_id}'],  # payer_id value
+                        'StorageDescriptor': {
+                            'Location': f'{location}payer_id={payer_id}/',
+                            'InputFormat': 'org.apache.hadoop.mapred.TextInputFormat',
+                            'OutputFormat': 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat',
+                            'SerdeInfo': {'SerializationLibrary': 'org.apache.hive.hcatalog.data.JsonSerDe'}
+                        }
+                    }
+                ]
+            )
+        except ClientError as ce:
+            success = False
+            error_code = ce.response['Error']['Code']  # e.g., 'AlreadyExistsException'
+            error_message = ce.response['Error']['Message']
+            logger.error(f"Glue error: {error_code} - {error_message}")
+            # TODO raise?raise AthenaException(f'Query failed: {str(ce)}')
+
+    if success:
+        # STEP 3: read all org and account tags to build the view
+        create_view_query = build_view_query(athena)
+
+    
+        #create_view_query = f"""
+        #CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+        #SELECT 
+        #    id as account_id,
+        #    payer_id as payer_account_id,  
+        #    name as account_name
+        #FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"
+        #"""
+
+        # Execute the view creation query    
+        success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+
+    return success
+
 def build_view_query(athena):
 
     # read the hierarchytags of the entire table and iterates through its rows
-    query = f"""
-    SELECT hierarchytags 
-    FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
-    """
-
+    query = f"""SELECT hierarchytags FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}" """
+    
     logger.info(f"Executing query to extract tags: {query}")
-    # execute this query on the organization database
-    query_execution_id = execute_athena_query(athena, query, ATHENA_WORKGROUP, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+    query_execution_id = execute_athena_query(athena, query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
     results = get_query_results(query_execution_id, athena)
 
     # Skip header row
@@ -216,7 +353,7 @@ def build_view_query(athena):
             , name as account_name
             , parent as organization_unit
             {query_tags}
-        FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
+        FROM "{CRCD_DATABASE_NAME}"."{CRCD_ORGANIZATION_DATA_TABLE}"
         """
     
     logger.info(f"Final query for the view: {create_view_query}")
@@ -324,7 +461,7 @@ def get_query_results(query_execution_id, athena):
 
 def send_response(event, context, response_status, response_data):
     # TODO developing the function and testing without Cloud Formation, remove the line below
-    # return True
+    return True
 
     """Interacts with the Cloud Formation template that called this Lambda"""
     response_body = json.dumps({
