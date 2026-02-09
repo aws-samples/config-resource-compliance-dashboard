@@ -1,5 +1,15 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [4.?.?] - ????-??-??
+## Added
+- Backfill feature to partition your existing AWS Config files on a newly installed dashboard.
+- New data source: AWS Organization Data Collection Module of CID Data Collection. This allows the data pipeline of the dashboard to extract metadata from your AWS Organization to be displayed on the dashboard.
+- Support for CID taxonomy. Use your AWS Organization metadata as filters in every tab of the dashboard.
+
+## Changed
+
+## Fixed
+
 # [4.0.2] - 2026-01-20
 Bugfix release for view `config_compliance`. 
 

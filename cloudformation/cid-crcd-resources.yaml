@@ -809,12 +809,9 @@ Resources:
           - "glue:GetDatabase"
           Effect: "Allow"
           Sid: "GluePartitions"
-        # TODO replace with CFN parameter and test CFN deployment
-        # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
-        # ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: "organization_data"
         - Resource:
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/optimization_data/*"
-          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/optimization_data"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AccountNamesOrganizationDataDatabaseName}/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AccountNamesOrganizationDataDatabaseName}"
           Action:
           - "glue:GetPartitions"
           Effect: "Allow"
@@ -2000,7 +1997,7 @@ Resources:
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
   # Account names discovery
-  # Will find account names data from either "optimization_data"."organization_data" or "cid_cur"."account_map"
+  # Will find account names data from either "optimization_data"."organization_data" or "cid_cur"."account_map" (defined as parameters)
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
 
@@ -2120,10 +2117,10 @@ Resources:
         Variables:
           # Possible sources of account names, from other CID dashboards
           # TODO: make these configurable via CFN parameters, customers may have changed the name when deploying
-          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE: "cid_cur"
-          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE: "account_map"
-          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
-          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: "organization_data"
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE: !Ref AccountNamesAccountMapDatabaseName
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE: !Ref AccountNamesAccountMapTableName
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: !Ref AccountNamesOrganizationDataDatabaseName
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: !Ref AccountNamesOrganizationDataTableName
           # Athena view that the Lambda is going to create
           CRCD_ACCOUNT_NAMES_VIEW_NAME: "config_sys_account_data"
           # Other input parameters
@@ -2211,6 +2208,7 @@ Resources:
                       # Prepare CREATE OR REPLACE VIEW query based on table existence
                       if organization_table_exists:
                           create_view_query = build_view_query(athena)
+                          # TODO delete code below
                           #create_view_query = f"""
                           #CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
                           #SELECT 
