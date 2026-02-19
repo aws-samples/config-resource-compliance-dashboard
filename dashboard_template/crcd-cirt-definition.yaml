@@ -13,10 +13,8 @@ CalculatedFields:
   Name: account-name-id
 - DataSetIdentifier: config_compliance
   Expression: |-
-    ifelse(startsWith(rulename, 'crcd-cirt-ia-')
-     , 'Initial Access'
-    , contains(rulename, 'root-account-hardware-mfa-enabled')
-        OR contains(rulename, 'root-account-mfa-enabled')
+    ifelse(startsWith(rulename, 'crcd-cirt-ia-'), 'Initial Access'
+    , contains(rulename, 'root-account-mfa-enabled')
         OR contains(rulename, 'iam-root-access-key-check')
         OR contains(rulename, 'iam-user-mfa-enabled')
         OR contains(rulename, 'mfa-enabled-for-iam-console-access')
@@ -25,23 +23,16 @@ CalculatedFields:
         OR contains(rulename, 'autoscaling-launchconfig-requires-imdsv2')
         OR contains(rulename, 's3-bucket-level-public-access-prohibited')
         OR contains(rulename, 's3-account-level-public-access-blocks-periodic')
-        OR contains(rulename, 's3-account-level-public-access-blocks')
         OR contains(rulename, 's3-access-point-public-access-blocks')
         OR contains(rulename, 's3-access-point-in-vpc-only')
         OR contains(rulename, 's3-bucket-public-write-prohibited')
         OR contains(rulename, 's3-bucket-public-read-prohibited')
-        OR contains(rulename, 'vpc-sg-port-restriction-check')
-        OR contains(rulename, 'vpc-sg-open-only-to-authorized-ports')
-        OR contains(rulename, 'restricted-common-ports')
-        OR contains(rulename, 'redshift-unrestricted-port-access')
-        OR contains(rulename, 'xxx')
-     , 'Initial Access'
+        OR contains(rulename, 'vpc-sg-port-restriction-check') , 'Initial Access'
      , 'Undefined')
   Name: cirt-classification-lv1
 - DataSetIdentifier: config_compliance
   Expression: |-
-    ifelse(contains(rulename, 'root-account-hardware-mfa-enabled')
-        OR contains(rulename, 'root-account-mfa-enabled')
+    ifelse(contains(rulename, 'root-account-mfa-enabled')
         OR contains(rulename, 'iam-root-access-key-check')
         OR contains(rulename, 'iam-user-mfa-enabled')
         OR contains(rulename, 'mfa-enabled-for-iam-console-access')
@@ -54,7 +45,6 @@ CalculatedFields:
         , 'EC2 Protection',
         contains(rulename, 's3-bucket-level-public-access-prohibited')
         OR contains(rulename, 's3-account-level-public-access-blocks-periodic')
-        OR contains(rulename, 's3-account-level-public-access-blocks')
         OR contains(rulename, 's3-access-point-public-access-blocks')
         OR contains(rulename, 's3-access-point-in-vpc-only')
         OR contains(rulename, 's3-bucket-public-write-prohibited')
@@ -62,11 +52,9 @@ CalculatedFields:
         OR startsWith(rulename, 'crcd-cirt-ia-s3-')
         , 'S3 Protection',
         contains(rulename, 'vpc-sg-port-restriction-check')
-        OR contains(rulename, 'vpc-sg-open-only-to-authorized-ports')
-        OR contains(rulename, 'restricted-common-ports')
-        OR contains(rulename, 'redshift-unrestricted-port-access')
         OR startsWith(rulename, 'crcd-cirt-ia-ra-')
-        , 'Resource Access Protection', 'Undefined')
+        , 'Resource Access Protection'
+        , 'Undefined')
   Name: cirt-classification-lv2
 - DataSetIdentifier: config_compliance
   Expression: distinct_count({compliant-rule})/(distinct_count({non-compliant-rule})+distinct_count({compliant-rule}))
@@ -9410,13 +9398,9 @@ FilterGroups:
         DataSetIdentifier: config_compliance
       Configuration:
         FilterListConfiguration:
-          CategoryValues:
-          - EC2 Protection
-          - IAM Protection
-          - Resource Access Protection
-          - S3 Protection
           MatchOperator: CONTAINS
           NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
       FilterId: a0967318-7fc4-4c75-a6f0-9f6dc5630d0e
   ScopeConfiguration:
     SelectedSheets:
@@ -9594,6 +9578,264 @@ FilterGroups:
       SheetVisualScopingConfigurations:
       - Scope: ALL_VISUALS
         SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 06056cc8-f028-4b94-8e4c-9844bf4f627d
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliancetype
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - COMPLIANT
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: 69951d22-3282-437c-b13d-491d23d7e128
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 02e6fdbd-35ee-4f0d-9d4e-7ca94d42fc1b
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: f7d23011-599d-4b2f-afac-6393398dfbd2
+  Filters:
+  - RelativeDatesFilter:
+      AnchorDateConfiguration:
+        AnchorOption: NOW
+      Column:
+        ColumnName: compliancesampledate
+        DataSetIdentifier: config_compliance
+      FilterId: fc724224-920c-411f-9727-097d818a6854
+      MinimumGranularity: DAY
+      NullOption: NON_NULLS_ONLY
+      RelativeDateType: THIS
+      TimeGranularity: MONTH
+  - NumericEqualityFilter:
+      Column:
+        ColumnName: isLatestComplianceStatus
+        DataSetIdentifier: config_compliance
+      FilterId: d598c45e-375e-4cd4-926a-ec92ad4a1952
+      MatchOperator: EQUALS
+      NullOption: NON_NULLS_ONLY
+      Value: 1.0
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 02e6fdbd-35ee-4f0d-9d4e-7ca94d42fc1b
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 57654db3-e367-4e9d-861f-2f0e6da5ce63
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: cirt-classification-lv1
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - Initial Access
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: 856806cd-8150-4d19-a086-fa265f6a9c5b
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 02e6fdbd-35ee-4f0d-9d4e-7ca94d42fc1b
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: b833f769-0ce0-481a-a77f-fec358b043f2
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliancetype
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - COMPLIANT
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: b6fcac6d-0f0c-4b1f-ba0e-29a064f08f5b
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - a75c5d54-1314-4abc-b395-93be4562509f
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 8ce1506e-5af4-41fd-a773-136e7cabd665
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: cirt-classification-lv1
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - Initial Access
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: b6fa3d2d-73b9-46e5-a22f-444dc6c2a9fd
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - a75c5d54-1314-4abc-b395-93be4562509f
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 2ba833f7-9867-4afe-84f8-b9e5e8c6f35d
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliancetype
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - NON_COMPLIANT
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: c2235938-32c4-43c3-bc9e-854e42abc9db
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - ab498db3-06dd-47df-8a03-73d4d86761c1
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 26b6ec90-5a7b-435e-b205-0e08249f18cd
+  Filters:
+  - RelativeDatesFilter:
+      AnchorDateConfiguration:
+        AnchorOption: NOW
+      Column:
+        ColumnName: compliancesampledate
+        DataSetIdentifier: config_compliance
+      FilterId: 30eccec8-a23b-43c6-abab-8e1b1eab151a
+      MinimumGranularity: DAY
+      NullOption: NON_NULLS_ONLY
+      RelativeDateType: THIS
+      TimeGranularity: MONTH
+  - NumericEqualityFilter:
+      Column:
+        ColumnName: isLatestComplianceStatus
+        DataSetIdentifier: config_compliance
+      FilterId: 98d13f2b-9817-4787-8a30-81899282dc30
+      MatchOperator: EQUALS
+      NullOption: NON_NULLS_ONLY
+      Value: 1.0
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - ab498db3-06dd-47df-8a03-73d4d86761c1
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: b6b9992a-bdad-42d2-8820-96c734e284cc
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: cirt-classification-lv1
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - Initial Access
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: b1c03a35-0c85-449e-b4e9-7ec24eef0578
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - ab498db3-06dd-47df-8a03-73d4d86761c1
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: df80420f-36b9-42ef-a4d8-56d19021d196
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliancetype
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - NON_COMPLIANT
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: f2feef1f-6aa2-4426-bdd3-08ed0f1413b6
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 2b4e265b-545f-4190-9dee-6a34ea8c515f
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 74f63d4a-c674-424c-84f5-bba262046728
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: cirt-classification-lv1
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - Initial Access
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: 1d19c112-0cee-4f36-8b2a-d6f543258a80
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 2b4e265b-545f-4190-9dee-6a34ea8c515f
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 86f08de3-beeb-47fb-a25c-a844f5fc964d
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: cirt-classification-lv1
+        DataSetIdentifier: config_compliance
+      Configuration:
+        FilterListConfiguration:
+          CategoryValues:
+          - Initial Access
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+      FilterId: 4c9fb77d-4269-4863-8094-42746444bb27
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
+        VisualIds:
+        - 205a47d3-2c4c-4466-becb-c2db2dc9544f
   Status: ENABLED
 Options: {}
 ParameterDeclarations:
@@ -10665,12 +10907,13 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 58.333333333333215
-                To: 100.0
+                From: 0.0
+                To: 41.66666666666678
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
                 FontSize:
+                  Absolute: 14px
                   Relative: LARGE
             RotationAngle: 0.0
         CategoryLabelOptions:
@@ -12122,6 +12365,7 @@ Sheets:
             LabelOptions:
               FontConfiguration:
                 FontSize:
+                  Absolute: 14px
                   Relative: LARGE
         CategoryLabelOptions:
           SortIconVisibility: HIDDEN
@@ -14551,7 +14795,7 @@ Sheets:
           Visibility: VISIBLE
       FilterControlId: ad85d494-1839-4b14-8c17-35ba874e21d5
       SourceFilterId: a0967318-7fc4-4c75-a6f0-9f6dc5630d0e
-      Title: CIRT Initial Access Classification
+      Title: Initial Access Classification
       Type: MULTI_SELECT
   Layouts:
   - Configuration:
@@ -14566,110 +14810,146 @@ Sheets:
           ElementId: cc8f7d12-af17-4b50-8e7d-acee650f0f84
           ElementType: TEXT_BOX
           RowIndex: 0
-          RowSpan: 7
+          RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 1cefe2c7-3423-480a-8a79-8ee94c5cd45f
           ElementType: VISUAL
-          RowIndex: 7
+          RowIndex: 8
           RowSpan: 6
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: 7e522245-98cc-42fa-aa00-7906d6f387c8
           ElementType: VISUAL
-          RowIndex: 7
+          RowIndex: 8
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: a95a1592-58d7-4e29-ab58-2185c79c05b3
           ElementType: VISUAL
-          RowIndex: 7
+          RowIndex: 8
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: 7d7c0dc8-74ee-4a45-8e75-4c9121dd76f1
           ElementType: VISUAL
-          RowIndex: 10
+          RowIndex: 11
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: aa3b86b5-a79e-4145-9f93-a9a78a837aae
           ElementType: VISUAL
-          RowIndex: 10
+          RowIndex: 11
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 2f027409-3fe4-4bac-9956-2d1711b4c0db
           ElementType: VISUAL
-          RowIndex: 13
+          RowIndex: 14
           RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 3e15370f-b617-42d8-9f70-97ba26049355
           ElementType: VISUAL
-          RowIndex: 23
+          RowIndex: 24
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: bf5d9fd8-930f-4578-9e1a-6b22c6be7a51
           ElementType: VISUAL
-          RowIndex: 23
+          RowIndex: 24
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 58e28790-3d01-4e0b-bdca-1b5209f297b3
           ElementType: VISUAL
-          RowIndex: 35
+          RowIndex: 36
           RowSpan: 13
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: a37682a1-8acc-4316-8031-e5502e7e2b9e
           ElementType: VISUAL
-          RowIndex: 35
+          RowIndex: 36
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 6f347e7f-94e8-4727-8fad-d6d12ac2ebce
           ElementType: TEXT_BOX
-          RowIndex: 48
+          RowIndex: 49
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: d56c816b-ea4c-4f2e-8b58-81ff5720a222
+          ElementType: VISUAL
+          RowIndex: 52
+          RowSpan: 6
+        - ColumnIndex: 18
+          ColumnSpan: 9
+          ElementId: 02e6fdbd-35ee-4f0d-9d4e-7ca94d42fc1b
+          ElementType: VISUAL
+          RowIndex: 52
+          RowSpan: 3
+        - ColumnIndex: 27
+          ColumnSpan: 9
+          ElementId: ab498db3-06dd-47df-8a03-73d4d86761c1
+          ElementType: VISUAL
+          RowIndex: 52
+          RowSpan: 3
+        - ColumnIndex: 18
+          ColumnSpan: 9
+          ElementId: a75c5d54-1314-4abc-b395-93be4562509f
+          ElementType: VISUAL
+          RowIndex: 55
+          RowSpan: 3
+        - ColumnIndex: 27
+          ColumnSpan: 9
+          ElementId: 2b4e265b-545f-4190-9dee-6a34ea8c515f
+          ElementType: VISUAL
+          RowIndex: 55
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
-          ElementId: d56c816b-ea4c-4f2e-8b58-81ff5720a222
+          ElementId: 205a47d3-2c4c-4466-becb-c2db2dc9544f
           ElementType: VISUAL
-          RowIndex: 51
-          RowSpan: 6
+          RowIndex: 58
+          RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 53f81da3-33e6-4a61-8a46-aa8f6d5bc8c2
           ElementType: VISUAL
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 4d1ee8a7-2d77-421c-81ba-cc6ebd38d8d1
           ElementType: VISUAL
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 28
           ElementId: e3f24e62-51da-46db-86f3-b30bc5dc1424
           ElementType: TEXT_BOX
-          RowIndex: 69
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 28
           ColumnSpan: 8
           ElementId: ad85d494-1839-4b14-8c17-35ba874e21d5
           ElementType: FILTER_CONTROL
-          RowIndex: 69
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 2acd7c32-a100-418f-bde0-19a56c366b3b
           ElementType: VISUAL
-          RowIndex: 72
+          RowIndex: 83
           RowSpan: 12
-  Name: CIRT
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: 8e1f98f8-c7cf-4669-a68a-4e7d45104f50
+          ElementType: TEXT_BOX
+          RowIndex: 95
+          RowSpan: 3
+  Name: SIRS
   ParameterControls:
   - Dropdown:
       DisplayOptions:
@@ -14742,35 +15022,46 @@ Sheets:
           RowSpan: 1
   SheetId: d60e3775-2ae5-44cf-9fb8-558419c2816f
   TextBoxes:
-  - Content: "<text-box>\n  <inline font-size=\"36px\">\n    <b>AWS Customer Incident\
-      \ Response Team (CIRT)</b>\n  </inline>\n  <br/>\n  <br/>\n  <inline color=\"\
-      #bdbdbd\" font-size=\"16px\">The AWS CIRT is a specialized 24/7 global</inline>\n\
-      \  <inline font-size=\"16px\">\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"\
-      16px\">\n    <a href=\"https://aws.amazon.com/\" target=\"_blank\">Amazon Web\
-      \ Services (AWS)</a>\n  </inline>\n  <inline font-size=\"16px\">\_</inline>\n\
-      \  <inline color=\"#bdbdbd\" font-size=\"16px\">team that provides support to\
-      \ customers during active security events on the customer side of the</inline>\n\
-      \  <inline font-size=\"16px\">\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"\
-      16px\">\n    <a href=\"https://aws.amazon.com/compliance/shared-responsibility-model/\"\
+  - Content: "<text-box>\n  <inline font-size=\"36px\">\n    <b>AWS Security Incident\
+      \ Response Service Team (SIRS)</b>\n  </inline>\n  <br/>\n  <br/>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"16px\">The\_</inline>\n  <inline color=\"#2f8ee7\"\
+      \ font-size=\"16px\">\n    <a href=\"https://aws.amazon.com/security-incident-response/\"\
+      \ target=\"_blank\">AWS Security Incident Response Service (SIRS)</a>\n  </inline>\n\
+      \  <inline color=\"#bdbdbd\" font-size=\"16px\">\_Team is a specialized 24/7\
+      \ global team that provides proactive and reactive security support to AWS customers\
+      \ for security responsibilities on the customer side of the\_</inline>\n  <inline\
+      \ color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://aws.amazon.com/compliance/shared-responsibility-model/\"\
       \ target=\"_blank\">AWS Shared Responsibility Model</a>\n  </inline>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">. The team is made up of AWS Global Services\
-      \ Consultants and Solutions Architects with experience in incident response.\
-      \ Read more about CIRT</inline>\n  <inline font-size=\"16px\">\_</inline>\n\
-      \  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://aws.amazon.com/blogs/security/welcoming-the-aws-customer-incident-response-team/\"\
-      \ target=\"_blank\">here</a>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
-      16px\">.</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
-      16px\">When the AWS CIRT supports you, you will receive assistance with triage\
-      \ and recovery for an active security event on AWS. We will assist in root cause\
-      \ analysis through the use of AWS service logs and provide you with recommendations\
-      \ for recovery. We will also provide security tips and best practices to help\
-      \ you avoid security events in the future.</inline>\n  <br/>\n  <br/>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">The dashboard classifies AWS Config rules\
-      \ according to the tactics and techniques presented in the\_</inline>\n  <inline\
-      \ color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/\"\
+      \ color=\"#bdbdbd\" font-size=\"16px\">. When the Security Incident Response\
+      \ security engineers support you, you will receive alerts to help triage security\
+      \ findings and assistance during potential active security events in your AWS\
+      \ environment. We provide security recommendations and best practices to help\
+      \ prevent future security incidents.\_</inline>\n  <br/>\n  <br/>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"16px\">This dashboard provides fundamental security\
+      \ posture checks that customers can perform for their AWS environments. The\
+      \ dashboard classifies AWS Config rules according to the tactics and techniques\
+      \ presented in the\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\"\
+      >\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/\"\
       \ target=\"_blank\">Threat Technique Catalog for AWS</a>\n  </inline>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">. The catalog is based off MITRE ATT&amp;CK\xAE\
+      \ color=\"#bdbdbd\" font-size=\"16px\">. The catalog is based on MITRE ATT&amp;CK\xAE\
       \ and is used to identify and categorize threat actor behaviors observed by\
-      \ the AWS CIRT during security events they have investigated.</inline>\n</text-box>"
+      \ AWS.</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      16px\">To fully take advantage of the dashboard we recommend the\_</inline>\n\
+      \  <inline color=\"#bdbdbd\" font-size=\"16px\">\n    <b>AWS Config Resource\
+      \ Compliance Dashboard (CRCD) Security Incident Response Service (SIRS)</b>\n\
+      \  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">\_</inline>\n \
+      \ <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/tree/main/cirt\"\
+      \ target=\"_self\">Conformance Pack</a>\n  </inline>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"16px\">, a comprehensive compliance monitoring solution that deploys\_\
+      </inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/cirt/crcd-cirt-conformance-pack-specification.md\"\
+      \ target=\"_self\">standard and custom</a>\n  </inline>\n  <inline color=\"\
+      #bdbdbd\" font-size=\"16px\">\_AWS Config rules recommended by Security Incident\
+      \ Response security engineers, based on the most common attack patterns being\
+      \ used against customers. This conformance pack helps customers maintain security\
+      \ and compliance best practices across their AWS environments. If you do not\
+      \ install the conformance pack, the dashboard will still display compliance\
+      \ of the recommended standard AWS Config rules that you may have already deployed.</inline>\n\
+      </text-box>"
     SheetTextBoxId: cc8f7d12-af17-4b50-8e7d-acee650f0f84
   - Content: "<text-box>\n  <inline font-size=\"32px\">Initial Access</inline>\n \
       \ <br/>\n  <br/>\n  <inline color=\"#2f8ee7\">\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/Tactics/TA0001.html\"\
@@ -14792,7 +15083,399 @@ Sheets:
         <inline color="#bdbdbd">Shows normalized AWS Config rule names. For example, 'my-rule-[random-text]' is displayed as 'my-rule'.</inline>
       </text-box>
     SheetTextBoxId: e3f24e62-51da-46db-86f3-b30bc5dc1424
+  - Content: |-
+      <text-box>
+        <inline font-size="32px">Good Protections</inline>
+        <br/>
+        <br/>
+        <inline color="#bdbdbd">Coming soon.</inline>
+      </text-box>
+    SheetTextBoxId: 8e1f98f8-c7cf-4669-a68a-4e7d45104f50
   Visuals:
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          ScrollbarOptions:
+            Visibility: HIDDEN
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+            RotationAngle: 0.0
+        CategoryLabelOptions:
+          SortIconVisibility: HIDDEN
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Relative: LARGE
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - DateDimensionField:
+                Column:
+                  ColumnName: compliancesampledate
+                  DataSetIdentifier: config_compliance
+                DateGranularity: MONTH
+                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.0.1727935153133
+                FormatConfiguration:
+                  DateTimeFormat: MMM YYYY
+                  NullValueFormatConfiguration:
+                    NullString: 'null'
+                HierarchyId: 4273a4bf-6d2d-4d62-b58a-ec62702450c9
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliancetype
+                  DataSetIdentifier: config_compliance
+                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: pkruleid
+                  DataSetIdentifier: config_compliance
+                FieldId: b2240c50-59a3-4b50-9baa-2f95c03f86b1.pkruleid.2.1740754153983
+        Legend:
+          Position: BOTTOM
+          Title:
+            Visibility: HIDDEN
+        Orientation: VERTICAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.0.1727935153133
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.0.1727935153133
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
+                Label: Compliance Type
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: b2240c50-59a3-4b50-9baa-2f95c03f86b1.pkruleid.2.1740754153983
+                Label: Rules
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          AxisOffset: 41px
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: b2240c50-59a3-4b50-9baa-2f95c03f86b1.pkruleid.2.1740754153983
+            CustomLabel: Number of rules
+        VisualPalette:
+          ColorMap:
+          - Color: '#B32728'
+            Element:
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
+              FieldValue: NON_COMPLIANT
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
+              FieldValue: COMPLIANT
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: 4273a4bf-6d2d-4d62-b58a-ec62702450c9
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">Evolution of AWS Config rule compliance</inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: 205a47d3-2c4c-4466-becb-c2db2dc9544f
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: compliancesampledate
+                DataSetIdentifier: config_compliance
+              DateGranularity: MONTH
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.1.1727883533205
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: 5a813ec1-ca32-41f8-9620-6e10908b6528
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.1.1750318260923
+        KPIOptions:
+          PrimaryValueDisplayType: COMPARISON
+          ProgressBar:
+            Visibility: HIDDEN
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: HIDDEN
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: CLASSIC
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.1.1727883533205
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: 5a813ec1-ca32-41f8-9620-6e10908b6528
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#B32728'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) > 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#0E6C0E'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#B32728'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) > 0
+                IconOptions:
+                  Icon: CARET_UP
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#F6AA54'
+                Expression: (difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) >= 0) AND (difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) <= 0)
+                IconOptions:
+                  Icon: MINUS
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#0E6C0E'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) < 0
+                IconOptions:
+                  Icon: CARET_DOWN
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: <visual-title>Trend of number of NON_COMPLIANT rules</visual-title>
+        Visibility: VISIBLE
+      VisualId: 2b4e265b-545f-4190-9dee-6a34ea8c515f
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.0.1750317704401
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: PERCENT_DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: <visual-title>Current number of NON_COMPLIANT rules</visual-title>
+        Visibility: VISIBLE
+      VisualId: ab498db3-06dd-47df-8a03-73d4d86761c1
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: compliancesampledate
+                DataSetIdentifier: config_compliance
+              DateGranularity: MONTH
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.1.1727883533205
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: 17f5f226-5ab9-4fed-aba9-446b82cd96ae
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.1.1750318260923
+        KPIOptions:
+          PrimaryValueDisplayType: COMPARISON
+          ProgressBar:
+            Visibility: HIDDEN
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: HIDDEN
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: CLASSIC
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.1.1727883533205
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: 17f5f226-5ab9-4fed-aba9-446b82cd96ae
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#0E6C0E'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) > 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#B32728'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#0E6C0E'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) > 0
+                IconOptions:
+                  Icon: CARET_UP
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#F6AA54'
+                Expression: (difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) >= 0) AND (difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) <= 0)
+                IconOptions:
+                  Icon: MINUS
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#B32728'
+                Expression: difference(DISTINCT_COUNT({pkruleid}),[DISTINCT_COUNT({pkruleid})
+                  DESC],1,[]) < 0
+                IconOptions:
+                  Icon: CARET_DOWN
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: <visual-title>Trend of number of COMPLIANT rules</visual-title>
+        Visibility: VISIBLE
+      VisualId: a75c5d54-1314-4abc-b395-93be4562509f
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.0.1750317694996
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: PERCENT_DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: <visual-title>Current number of COMPLIANT rules</visual-title>
+        Visibility: VISIBLE
+      VisualId: 02e6fdbd-35ee-4f0d-9d4e-7ca94d42fc1b
   - BarChartVisual:
       Actions: []
       ChartConfiguration:
@@ -14802,6 +15485,7 @@ Sheets:
             LabelOptions:
               FontConfiguration:
                 FontSize:
+                  Absolute: 14px
                   Relative: LARGE
         CategoryLabelOptions:
           Visibility: HIDDEN
@@ -15088,14 +15772,14 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-subtitle>
-              <inline color="#bdbdbd">Percentage of AWS Config CIRT rules that are COMPLIANT vs. NON_COMPLIANT</inline>
+              <inline color="#bdbdbd">Percentage of AWS Config rules that are COMPLIANT vs. NON_COMPLIANT</inline>
             </visual-subtitle>
         Visibility: VISIBLE
       Title:
         FormatText:
           RichText: |-
             <visual-title>
-              <inline font-size="16px">Current CIRT Initial Access compliance score</inline>
+              <inline font-size="16px">Current Initial Access compliance score</inline>
             </visual-title>
         Visibility: VISIBLE
       VisualId: d56c816b-ea4c-4f2e-8b58-81ff5720a222
@@ -15111,7 +15795,7 @@ Sheets:
           - CustomLabel: Rule
             FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.normalizedrulename.5.1757781705050
             Width: 549px
-          - CustomLabel: CIRT Classification
+          - CustomLabel: Classification
             FieldId: 733065ea-98a3-4a36-89e7-1f2117317cd9.7.1762628817991
           - CustomLabel: Resource Type
             FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.resourcetype.3.1727884940853
@@ -15229,13 +15913,16 @@ Sheets:
             LabelOptions:
               FontConfiguration:
                 FontSize:
-                  Absolute: 10px
+                  Absolute: 14px
+              Visibility: VISIBLE
         CategoryLabelOptions:
           Visibility: HIDDEN
         DataLabels:
           LabelFontConfiguration:
             FontSize:
               Absolute: 14px
+            FontWeight:
+              Name: NORMAL
           Overlap: DISABLE_OVERLAP
           TotalsVisibility: VISIBLE
           Visibility: VISIBLE
@@ -15289,10 +15976,21 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.2.1762628528744
+                Label: Rules
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
           TooltipVisibility: VISIBLE
+        ValueAxis:
+          AxisOffset: 183px
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: pkruleid
+                DataSetIdentifier: config_compliance
+              FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkruleid.2.1762628528744
+            CustomLabel: Number of AWS Config rules
         VisualPalette:
           ColorMap:
           - Color: '#0E6C0E'
@@ -15308,7 +16006,10 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Compliance by CIRT Initial Access classification</visual-title>
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">AWS Config rule compliance by Initial Access classification</inline>
+            </visual-title>
         Visibility: VISIBLE
       VisualId: 4d1ee8a7-2d77-421c-81ba-cc6ebd38d8d1
   - BarChartVisual:
@@ -15320,6 +16021,7 @@ Sheets:
             LabelOptions:
               FontConfiguration:
                 FontSize:
+                  Absolute: 14px
                   Relative: LARGE
         CategoryLabelOptions:
           Visibility: HIDDEN
@@ -15646,7 +16348,7 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-title>
-              <inline font-size="16px">Evolution of CIRT compliance</inline>
+              <inline font-size="16px">Evolution of AWS Config rule compliance</inline>
             </visual-title>
         Visibility: VISIBLE
       VisualId: 2f027409-3fe4-4bac-9956-2d1711b4c0db
@@ -15740,7 +16442,7 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Current number of NON_COMPLIANT CIRT rules</visual-title>
+          RichText: <visual-title>Trend of number of NON_COMPLIANT rules</visual-title>
         Visibility: VISIBLE
       VisualId: aa3b86b5-a79e-4145-9f93-a9a78a837aae
   - KPIVisual:
@@ -15833,7 +16535,7 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Current number of COMPLIANT CIRT rules</visual-title>
+          RichText: <visual-title>Trend of number of COMPLIANT rules</visual-title>
         Visibility: VISIBLE
       VisualId: 7d7c0dc8-74ee-4a45-8e75-4c9121dd76f1
   - KPIVisual:
@@ -15873,7 +16575,7 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Current number of NON_COMPLIANT CIRT rules</visual-title>
+          RichText: <visual-title>Current number of NON_COMPLIANT rules</visual-title>
         Visibility: VISIBLE
       VisualId: a95a1592-58d7-4e29-ab58-2185c79c05b3
   - KPIVisual:
@@ -15913,7 +16615,7 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Current number of COMPLIANT CIRT rules</visual-title>
+          RichText: <visual-title>Current number of COMPLIANT rules</visual-title>
         Visibility: VISIBLE
       VisualId: 7e522245-98cc-42fa-aa00-7906d6f387c8
   - GaugeChartVisual:
@@ -15994,14 +16696,14 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-subtitle>
-              <inline color="#bdbdbd">Percentage of AWS Config CIRT rules that are COMPLIANT vs. NON_COMPLIANT</inline>
+              <inline color="#bdbdbd">Percentage of AWS Config rules that are COMPLIANT vs. NON_COMPLIANT</inline>
             </visual-subtitle>
         Visibility: VISIBLE
       Title:
         FormatText:
           RichText: |-
             <visual-title>
-              <inline font-size="16px">Current CIRT compliance score</inline>
+              <inline font-size="16px">Current AWS Config rule compliance score</inline>
             </visual-title>
         Visibility: VISIBLE
       VisualId: 1cefe2c7-3423-480a-8a79-8ee94c5cd45f
@@ -16014,7 +16716,7 @@ Sheets:
             LabelOptions:
               FontConfiguration:
                 FontSize:
-                  Absolute: 10px
+                  Absolute: 14px
         CategoryLabelOptions:
           Visibility: HIDDEN
         DataLabels:
@@ -16074,10 +16776,13 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf.pkresourceid.2.1762625457470
+                Label: Resources
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
           TooltipVisibility: VISIBLE
+        ValueAxis:
+          AxisOffset: 181px
         ValueLabelOptions:
           AxisLabelOptions:
           - ApplyTo:
@@ -16101,7 +16806,10 @@ Sheets:
         Visibility: VISIBLE
       Title:
         FormatText:
-          RichText: <visual-title>Compliance by CIRT Initial Access classification</visual-title>
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">Resource compliance by Initial Access classification</inline>
+            </visual-title>
         Visibility: VISIBLE
       VisualId: 53f81da3-33e6-4a61-8a46-aa8f6d5bc8c2
 - ContentType: INTERACTIVE
@@ -17486,11 +18194,10 @@ Sheets:
             AggregationVisibility: HIDDEN
             TooltipFields:
             - FieldTooltipItem:
-                FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
-                Label: Resources
+                FieldId: 7d6d3701-6c4e-4ebc-960d-ffec12360f4c.1.1750236608185
                 Visibility: VISIBLE
             - FieldTooltipItem:
-                FieldId: 7d6d3701-6c4e-4ebc-960d-ffec12360f4c.1.1750236608185
+                FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -18179,8 +18886,8 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 75.60975609756098
-                To: 100.0
+                From: 64.63414634146342
+                To: 89.02439024390245
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
