@@ -4,10 +4,12 @@
 
 Use this guide if you do not want AWS Config files for a specific account to be indexted and displayed on the dashboard.
 
-### Modify the Lambda Partitioner to Exclude the Account
-1. Open the CRCD Lambda Partitioner function in the AWS Lambda console (same account and region where you deployed the dashboard resources).
-1. Go to **Configuration**, **Environment variables**, **Edit**
-1. Add a new environment variable. Key: `EXCLUDED_ACCOUNTS`, Value: a comma-separated list of the account IDs you want to exclude, e.g. `111111111111,222222222222`
+### Modify the Lambda Partitioner to exclude the account
+1. Open the CRCD Lambda Partitioner function in the AWS Lambda console (same AWS account and Region where you deployed the dashboard resources).
+1. Go to **Configuration**, **Environment variables**, click **Edit**.
+1. Add a new environment variable. 
+   - **Key**: `EXCLUDED_ACCOUNTS`
+   - **Value**: a comma-separated list of the account IDs you want to exclude, e.g. `111111111111,222222222222`
 1. Go to the **Code** tab to add the exclusion logic.
    1. Find this part of the code
       ```
@@ -26,10 +28,10 @@ Use this guide if you do not want AWS Config files for a specific account to be 
             'body': 'Account is in the excluded list.'
         }
       ```
-1. Save and Deploy the Lambda function
+1. Save and deploy the Lambda function
 
 ## Process to delete all partitions belonging to an AWS account
-1. (Optional) Here's the AWS CLI command to retrieve all partitions for an account. Replace `XXXXXX` with your account number.
+1. (Optional) Run this AWS CLI command on the AWS account and Region where you deployed the dashboard resources to retrieve all partitions for an account. Replace `XXXXXX` with your account number.
 
    ```
    aws glue get-partitions \
@@ -40,14 +42,14 @@ Use this guide if you do not want AWS Config files for a specific account to be 
    --output table
    ```
 
-2. Save the script below to a local file called `crcd_delete_account_partitions.sh`
-1. Edit the file **Configuration** section to specify your account number and the region where the CRCD table is located.
-1. Open the AWS CLI on the account and region where you deployed the dashboard resouces.
-1. Make the script file executable
+2. Save the **Deletion CLI script** below to a local file called `crcd_delete_account_partitions.sh`.
+1. Edit the file **Configuration** section to specify the AWS account number whose partitions must be delete, and the Region where the AWS Glue table is located.
+1. Open the AWS CLI on the AWS account and Region where you deployed the dashboard resouces.
+1. Make the script file executable.
    ```
    chmod +x crcd_delete_account_partitions.sh
    ```
-1. Run the script (will show a preview and ask for confirmation before deleting)
+1. Run the script (will show a preview and ask for confirmation before deleting).
 
    ```
    ./crcd_delete_account_partitions.sh
@@ -71,7 +73,7 @@ set -euo pipefail
 # ── Configuration ────────────────────────────────────────────
 DATABASE_NAME="cid_crcd_database"
 TABLE_NAME="cid_crcd_config"
-ACCOUNT_FILTER="111111111111" # Set your AWS account id
+ACCOUNT_FILTER="XXXXXX"  # Set your AWS account id
 AWS_REGION="eu-west-1"   # Set your Glue catalog region
 BATCH_SIZE=25
 # ─────────────────────────────────────────────────────────────
