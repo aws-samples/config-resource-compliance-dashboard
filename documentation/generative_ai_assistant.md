@@ -235,7 +235,8 @@ Comprehensive enough to cover all relevant data while remaining focused and acti
    ```
 1. Add these Suggested Prompts:
    ```
-   Show me the current compliance status across all AWS accounts 
+   Show me the current compliance status across all AWS accounts
+   How many EC2 instances are running on us-east-1?
    ```
 
 
