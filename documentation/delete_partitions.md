@@ -69,7 +69,7 @@ This is a complete script that loads the AWS Glue partitions belonging to an acc
 ```
 #!/bin/bash
 # ============================================================
-# delete_glue_partitions.sh
+# crcd_delete_account_partitions.sh
 # Deletes all Glue partitions matching a given accountid
 # Partition key order: accountid, dt, region, datasource
 # ============================================================
