@@ -5,12 +5,12 @@
 # based on the Threat Technique Catalog(TTC) for AWS (MITRE ATT&CK® framework)
 # https://aws-samples.github.io/threat-technique-catalog-for-aws/
 #
-# Naming Convention: crcd-sirs-<lv1>-<lv2>-<rule-name>
+# Naming Convention: crcd-<lv1>-<lv2>-<rule-name>
 
 # Schema Documentation
 # 
 # Rule Structure:
-#   rule_name: string (follows naming convention crcd-sirs-<lv1>-<lv2>-<rule-name>)
+#   rule_name: string (follows naming convention crcd-<lv1>-<lv2>-<rule-name>)
 #   rule_type: enum ["STANDARD", "CUSTOM"]
 #     - STANDARD: AWS-managed Config rule
 #     - CUSTOM: Custom Config rule backed by Lambda function
@@ -160,7 +160,7 @@ taxonomy:
 # ======================================================
 rules:
   # Initial Access - IAM Protection
-  - rule_name: "crcd-sirs-ia-iam-root-account-mfa-enabled"
+  - rule_name: "crcd-ia-iam-root-account-mfa-enabled"
     rule_type: "STANDARD"
     source_identifier: "ROOT_ACCOUNT_MFA_ENABLED"
     classification:
@@ -174,7 +174,7 @@ rules:
     parameters:
       MaximumExecutionFrequency: "TwentyFour_Hours"
 
-  - rule_name: "crcd-sirs-ia-iam-iam-root-access-key-check"
+  - rule_name: "crcd-ia-iam-iam-root-access-key-check"
     rule_type: "STANDARD"
     source_identifier: "IAM_ROOT_ACCESS_KEY_CHECK"
     classification:
@@ -188,7 +188,7 @@ rules:
     parameters:
       MaximumExecutionFrequency: "TwentyFour_Hours"
   
-  - rule_name: "crcd-sirs-ia-iam-iam-root-not-used-regularly"
+  - rule_name: "crcd-ia-iam-iam-root-not-used-regularly"
     rule_type: "CUSTOM"
     source_identifier: "LAMBDA_NAME_PLACEHOLDER"
     classification:
@@ -207,7 +207,7 @@ rules:
         message_type: "ScheduledNotification"
         maximum_execution_frequency: "TwentyFour_Hours"
 
-  - rule_name: "crcd-sirs-ia-iam-iam-user-access-key-check"
+  - rule_name: "crcd-ia-iam-iam-user-access-key-check"
     rule_type: "CUSTOM"
     source_identifier: "LAMBDA_NAME_PLACEHOLDER"
     classification:
@@ -229,7 +229,7 @@ rules:
         message_type: "ScheduledNotification"
         maximum_execution_frequency: "TwentyFour_Hours"
 
-  - rule_name: "crcd-sirs-ia-iam-iam-user-mfa-enabled"
+  - rule_name: "crcd-ia-iam-iam-user-mfa-enabled"
     rule_type: "STANDARD"
     source_identifier: "IAM_USER_MFA_ENABLED"
     classification:
@@ -243,7 +243,7 @@ rules:
       - "AWS::IAM::User"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-iam-mfa-enabled-for-iam-console-access"
+  - rule_name: "crcd-ia-iam-mfa-enabled-for-iam-console-access"
     rule_type: "STANDARD"
     source_identifier: "MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS"
     classification:
@@ -258,7 +258,7 @@ rules:
     parameters: {}
 
   # Initial Access - S3 Protection
-  - rule_name: "crcd-sirs-ia-s3-s3-bucket-public-read-prohibited"
+  - rule_name: "crcd-ia-s3-s3-bucket-public-read-prohibited"
     rule_type: "STANDARD"
     source_identifier: "S3_BUCKET_PUBLIC_READ_PROHIBITED"
     classification:
@@ -272,7 +272,7 @@ rules:
       - "AWS::S3::Bucket"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-s3-s3-bucket-public-write-prohibited"
+  - rule_name: "crcd-ia-s3-s3-bucket-public-write-prohibited"
     rule_type: "STANDARD"
     source_identifier: "S3_BUCKET_PUBLIC_WRITE_PROHIBITED"
     classification:
@@ -287,7 +287,7 @@ rules:
     parameters: {}
 
   # Initial Access - EC2 Security
-  - rule_name: "crcd-sirs-ia-ec2-autoscaling-launchconfig-requires-imdsv2"
+  - rule_name: "crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2"
     rule_type: "STANDARD"
     source_identifier: "AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2"
     classification:
@@ -301,7 +301,7 @@ rules:
       - "AWS::AutoScaling::LaunchConfiguration"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-ec2-ec2-imdsv2-check"
+  - rule_name: "crcd-ia-ec2-ec2-imdsv2-check"
     rule_type: "STANDARD"
     source_identifier: "EC2_IMDSV2_CHECK"
     classification:
@@ -315,7 +315,7 @@ rules:
       - "AWS::EC2::Instance"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-ec2-ec2-launch-template-imdsv2-check"
+  - rule_name: "crcd-ia-ec2-ec2-launch-template-imdsv2-check"
     rule_type: "STANDARD"
     source_identifier: "EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK"
     classification:
@@ -330,7 +330,7 @@ rules:
     parameters: {}
 
   # Initial Access - S3 Protection
-  - rule_name: "crcd-sirs-ia-s3-s3-access-point-in-vpc-only"
+  - rule_name: "crcd-ia-s3-s3-access-point-in-vpc-only"
     rule_type: "STANDARD"
     source_identifier: "S3_ACCESS_POINT_IN_VPC_ONLY"
     classification:
@@ -344,7 +344,7 @@ rules:
       - "AWS::S3::AccessPoint"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-s3-s3-access-point-public-access-blocks"
+  - rule_name: "crcd-ia-s3-s3-access-point-public-access-blocks"
     rule_type: "STANDARD"
     source_identifier: "S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS"
     classification:
@@ -358,7 +358,7 @@ rules:
       - "AWS::S3::AccessPoint"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-s3-s3-account-level-public-access-blocks-periodic"
+  - rule_name: "crcd-ia-s3-s3-account-level-public-access-blocks-periodic"
     rule_type: "STANDARD"
     source_identifier: "S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC"
     classification:
@@ -372,7 +372,7 @@ rules:
     parameters:
       MaximumExecutionFrequency: "TwentyFour_Hours"
 
-  - rule_name: "crcd-sirs-ia-s3-s3-bucket-level-public-access-prohibited"
+  - rule_name: "crcd-ia-s3-s3-bucket-level-public-access-prohibited"
     rule_type: "STANDARD"
     source_identifier: "S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED"
     classification:
@@ -386,7 +386,7 @@ rules:
       - "AWS::S3::Bucket"
     parameters: {}
 
-  - rule_name: "crcd-sirs-ia-ra-vpc-sg-port-restriction-check"
+  - rule_name: "crcd-ia-ra-vpc-sg-port-restriction-check"
     rule_type: "STANDARD"
     source_identifier: "VPC_SG_PORT_RESTRICTION_CHECK"
     classification:
@@ -403,7 +403,7 @@ rules:
 
 # Naming Convention Documentation
 naming_convention:
-  format: "crcd-sirs-<lv1>-<lv2>-<rule-name>"
+  format: "crcd-<lv1>-<lv2>-<rule-name>"
   components:
     - name: "crcd-sirs"
       description: "Fixed prefix identifying CRCD SIRS conformance pack rules"
@@ -414,7 +414,7 @@ naming_convention:
     - name: "rule-name"
       description: "Descriptive rule name in kebab-case"
   examples:
-    - "crcd-sirs-ia-s3-s3-bucket-public-read-prohibited"
-    - "crcd-sirs-p-va-iam-root-access-key-check"
-    - "crcd-sirs-pe-iam-iam-policy-no-statements-with-admin-access"
+    - "crcd-ia-s3-s3-bucket-public-read-prohibited"
+    - "crcd-p-va-iam-root-access-key-check"
+    - "crcd-pe-iam-iam-policy-no-statements-with-admin-access"
 
