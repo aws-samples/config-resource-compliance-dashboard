@@ -1,26 +1,26 @@
-# Foundational Security with AWS Config Resource Compliance Dashboard (CRCD) Security Incident Response Service (SIRS)
+# Threat-Informed Security with Security Incident Response Service (SIRS)
 
 The [AWS Security Incident Response Service (SIRS)](https://aws.amazon.com/security-incident-response/) Team is a specialized 24/7 global team that provides proactive and reactive security support to AWS customers for security responsibilities on the customer side of the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/). When Security Incident Response security engineers support a customer, they will help triage security findings and assist during potential active security events in the customer's AWS environment. They provide security recommendations and best practices to help prevent future security incidents.
 
-This feature of the AWS Config Dashboard was developed in collaboration with the AWS Security Incident Response Service (SIRS) team, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by SIRS security engineers to surface misconfigurations that are known to create vulnerabilities commonly exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
+This feature of the AWS Config Dashboard was developed in collaboration with the AWS Security Incident Response Service (SIRS) team, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by SIRS security engineers to identify misconfigurations that are known to create vulnerabilities commonly exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
 
 **Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
 
-## AWS Config Resource Compliance Dashboard Conformance Pack Overview
+## AWS Config Resource Compliance Dashboard (CRCD) Conformance Pack
 
-The AWS Config Resource Compliance Dashboard (CRCD) Conformance Pack is a comprehensive compliance monitoring solution that deploys AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack helps customers maintain security and compliance best practices across their AWS environments.
+The AWS Config Resource Compliance Dashboard conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
 
-![CRCD](../images/crcd-foundational-security.png "AWS Config Dashboard, Foundational Security tab")
+![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Known Threat Exposures tab")
 
-The **Foundational Security** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-sirs-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-sirs-conformance-pack-specification.md) that you may have already deployed.
+The **Known Threat Exposures** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-sirs-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-sirs-conformance-pack-specification.md) that you may have already deployed.
 
 ### Features
 - **Recommended Rules**: Includes standard AWS Config managed rules and custom Lambda-based rules recommended by SIRS security engineers.
 - **Threat Technique Catalog Classification**: Each rule is classified according to the Threat Technique Catalog for AWS (based on MITRE ATT&CK®).
 - **Flexible Deployment**: Supports both AWS Organizations (organization-wide deployment) and standalone AWS accounts.
 - **Multi-Region Support**: Deploys across all AWS Regions where AWS Config is enabled.
-- **Automatic Updates**: In case of organization-wide deployment, new accounts in AWS Organizations automatically receive the conformance pack.
+- **Automatic Updates**: In case of organization-wide deployment, new accounts joining the AWS Organization automatically receive the conformance pack.
 
 ## Architecture
 
@@ -36,7 +36,7 @@ The **Foundational Security** tab will display compliance status of the [standar
 - Uses the same template as above, tailored to deploy the conformance pack in a single account.
 - Deploys in all Regions of the account.
 
-### Conformance Packs
+### Conformance Pack Composition
 The solution deploys two conformance packs:
 - **CRCD-SIRS-Security-Recommendations** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
 - **CRCD-SIRS-Security-Recommendations-IA-IAM** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
@@ -95,5 +95,5 @@ To update the parameters of the AWS Config rules of the template open the CloudF
 - [MITRE ATT&CK® Framework](https://attack.mitre.org/).
 - [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html).
 - [AWS SIRS](https://aws.amazon.com/security-incident-response/).
-- [Specification of all AWS Config and custom rules](./crcd-sirs-conformance-pack-specification.yaml) that will be deployed as part of the conformance pack.
+- [Specification of all AWS Config and custom rules](./crcd-sirs-conformance-pack-specification.md) that will be deployed as part of the conformance pack.
 - [Cloud Formation template](./crcd-sirs-conformance-pack.yaml) to deploy the conformance pack and the related AWS resources. 
