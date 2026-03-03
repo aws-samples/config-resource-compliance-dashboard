@@ -1,4 +1,4 @@
-# Threat-Informed Security with Security Incident Response Service (SIRS)
+# Threat-Informed Security Posture with Security Incident Response Service (SIRS)
 
 The [AWS Security Incident Response Service (SIRS)](https://aws.amazon.com/security-incident-response/) Team is a specialized 24/7 global team that provides proactive and reactive security support to AWS customers for security responsibilities on the customer side of the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/). When Security Incident Response security engineers support a customer, they will help triage security findings and assist during potential active security events in the customer's AWS environment. They provide security recommendations and best practices to help prevent future security incidents.
 
