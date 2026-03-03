@@ -1,6 +1,6 @@
 # Conformance Pack Specification
 
-This document describes the AWS Config rules included in the AWS Config Resource Compliance Dashboard (CRCD) Conformance Pack, built in collaboration with Security Incident Response Service (SIRS) security engineers. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
+This document describes the AWS Config rules included in the AWS Config Resource Compliance Dashboard (CRCD) Conformance Pack, built in collaboration with Security Incident Response security engineers. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
 
 ## Naming Convention
 
