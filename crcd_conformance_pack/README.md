@@ -2,7 +2,7 @@
 
 The [AWS Security Incident Response Service (SIRS)](https://aws.amazon.com/security-incident-response/) Team is a specialized 24/7 global team that provides proactive and reactive security support to AWS customers for security responsibilities on the customer side of the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/). When Security Incident Response security engineers support a customer, they will help triage security findings and assist during potential active security events in the customer's AWS environment. They provide security recommendations and best practices to help prevent future security incidents.
 
-This feature of the AWS Config Dashboard was developed in collaboration with the AWS Security Incident Response Service (SIRS) team, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by SIRS security engineers to identify misconfigurations that are known to create vulnerabilities commonly exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
+This feature of the AWS Config Dashboard was developed in collaboration with the AWS Security Incident Response Service (SIRS) team, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by SIRS security engineers to identify common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
 
 **Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
@@ -13,7 +13,10 @@ The AWS Config Resource Compliance Dashboard conformance pack is a comprehensive
 
 ![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Known Threat Exposures tab")
 
-The **Known Threat Exposures** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-sirs-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-sirs-conformance-pack-specification.md) that you may have already deployed.
+The **Known Threat Exposures** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
+
+
+
 
 ### Features
 - **Recommended Rules**: Includes standard AWS Config managed rules and custom Lambda-based rules recommended by SIRS security engineers.
@@ -38,8 +41,8 @@ The **Known Threat Exposures** tab will display compliance status of the [standa
 
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
-- **CRCD-SIRS-Security-Recommendations** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
-- **CRCD-SIRS-Security-Recommendations-IA-IAM** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
+- **CRCD-Security-Recommendations** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
+- **CRCD-Security-Recommendations-IA-IAM** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
 
 The conformance packs support all parameters exposed by standard AWS Config rules and manages automatically regional availability of rules - i.e. you can deploy the conformance pack in all Regions where AWS Config is enabled, and if a rule is not available in a Region, it will be automatically skipped.
 
@@ -58,7 +61,8 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 ## Step 1
 1. Log into the AWS Management Console for your account or delegated admin for AWS CloudFormation and AWS Config of your organization.
 1. Select a Region that will be the base Region for your deployment and where you will deploy the IAM-related rules of your Conformance Pack.
-1. Follow the link to open the cloud formation [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-sirs-conformance-pack.yaml&stackName=crcd-sirs-conformance-pack-resources) in your CloudFormation console. 
+1. Follow the link to open the cloud formation [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-conformance-pack-resources) in your CloudFormation console. 
+
 1. Specify the following parameters:
    - `Deployment mode` Choose deployment mode: `AWS Organizations` for organization-wide deployment (all accounts and Regions), or `Standalone` for single-account, multi-region deployment.
    - `Deployment account type` Choose type of deployment account (the current account). Select `Delegated Admin` if this account is the AWS Config and AWS CloudFormation delegated admin, or `Management Account` if you run this template from the management account of your AWS Organization. This parameter is used only when deployment mode is `AWS Organizations`.
@@ -95,5 +99,5 @@ To update the parameters of the AWS Config rules of the template open the CloudF
 - [MITRE ATT&CK® Framework](https://attack.mitre.org/).
 - [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html).
 - [AWS SIRS](https://aws.amazon.com/security-incident-response/).
-- [Specification of all AWS Config and custom rules](./crcd-sirs-conformance-pack-specification.md) that will be deployed as part of the conformance pack.
-- [Cloud Formation template](./crcd-sirs-conformance-pack.yaml) to deploy the conformance pack and the related AWS resources. 
+- [Specification of all AWS Config and custom rules](./crcd-conformance-pack-specification.md) that will be deployed as part of the conformance pack.
+- [Cloud Formation template](./crcd-conformance-pack-stack.yaml) to deploy the conformance pack and the related AWS resources. 

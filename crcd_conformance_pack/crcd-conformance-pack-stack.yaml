@@ -1,8 +1,8 @@
-# CRCD Dashboard - AWS SIRS Conformance Pack
+# CRCD Dashboard Conformance Pack
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard - AWS SIRS Conformance Pack - Deploys IAM rules in current region and regional rules in all regions'
+Description: 'CRCD Dashboard Conformance Pack - Deploys IAM rules in current region and regional rules in all regions'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -118,7 +118,7 @@ Parameters:
 
   ConformancePackName:
     Type: String
-    Default: CRCD-SIRS-Security-Recommendations
+    Default: CRCD-Security-Recommendations
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
@@ -226,14 +226,14 @@ Resources:
   # Then it is referenced by the resources deployed on each DeploymentMode
   # ============================================================================
 
-  CrcdCirtTemplateBucket:
+  CrcdConfPackTemplateBucket:
   # checkov:skip=CKV_AWS_21: Bucket will how the conformance pack templates and is used only once
   # checkov:skip=CKV_AWS_18: No need of Access Logging, customers will add it if required
     Type: AWS::S3::Bucket
     DeletionPolicy: "Delete" # TODO add these to all resources
     UpdateReplacePolicy: "Delete"
     Properties:
-      BucketName: !Sub 'crcd-sirs-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub 'crcd-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -264,13 +264,13 @@ Resources:
           - S3_BUCKET_LOGGING_ENABLED
           - S3_BUCKET_VERSIONING_ENABLED
   
-  CrcdCirtConformancePackUploaderLambdaRole:
+  CrcdConformancePackUploaderLambdaRole:
     Type: AWS::IAM::Role
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard SIRS Conformance Pack - role for a Lambda used during deployment"
-      RoleName: 'CRCDSIRSUploaderUtility'
+      Description: "CRCD Dashboard Conformance Pack - role for a Lambda used during deployment"
+      RoleName: 'CRCDConfPackUploaderUtility'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -293,8 +293,8 @@ Resources:
                   - s3:DeleteObjectVersion
                   - s3:ListBucketVersions
                 Resource: 
-                  - !Sub '${CrcdCirtTemplateBucket.Arn}/*'
-                  - !GetAtt CrcdCirtTemplateBucket.Arn
+                  - !Sub '${CrcdConfPackTemplateBucket.Arn}/*'
+                  - !GetAtt CrcdConfPackTemplateBucket.Arn
   
   TemplateUploaderLambda:
   # checkov:skip=CKV_AWS_115: This lambda is called once at deployment time. No need for reserved concurrency.
@@ -303,8 +303,8 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: 'crcd-sirs-support-uploader'
-      Description: "CRCD Dashboard SIRS Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
+      FunctionName: 'crcd-conf-pack-support-uploader'
+      Description: "CRCD Dashboard Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
       Runtime: python3.12
       Timeout: 120
       MemorySize: 128
@@ -319,7 +319,7 @@ Resources:
       LoggingConfig:
         LogFormat: "Text"
       Handler: index.lambda_handler
-      Role: !GetAtt CrcdCirtConformancePackUploaderLambdaRole.Arn
+      Role: !GetAtt CrcdConformancePackUploaderLambdaRole.Arn
       Code:
         ZipFile: |
           import boto3
@@ -366,12 +366,12 @@ Resources:
             reason: "This function does not need reserved concurrent executions"
 
   # Triggers the Lambda from CloudFormation
-  CrcdCirtConformancePackTemplate:
-    Type: Custom::CrcdCirtConformancePackUploaderLambda
+  CrcdConformancePackTemplate:
+    Type: Custom::CrcdConformancePackUploaderLambda
     Properties:
       ServiceToken: !GetAtt TemplateUploaderLambda.Arn
-      Bucket: !Ref CrcdCirtTemplateBucket
-      Key: 'crcd-sirs-conformance-pack-DO-NOT-DELETE.yaml'
+      Bucket: !Ref CrcdConfPackTemplateBucket
+      Key: 'crcd-conformance-pack-DO-NOT-DELETE.yaml'
       Content: |
         Parameters:
           DeploymentRegion:
@@ -558,7 +558,7 @@ Resources:
           S3BucketPublicReadProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-bucket-public-read-prohibited
+              ConfigRuleName: crcd-ia-s3-s3-bucket-public-read-prohibited
               Description: Checks that S3 buckets do not allow public read access
               Source:
                 Owner: AWS
@@ -570,7 +570,7 @@ Resources:
           S3BucketPublicWriteProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-bucket-public-write-prohibited
+              ConfigRuleName: crcd-ia-s3-s3-bucket-public-write-prohibited
               Description: Checks that S3 buckets do not allow public write access
               Source:
                 Owner: AWS
@@ -583,7 +583,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Condition: IsSupportedRegion3Rules
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-access-point-in-vpc-only
+              ConfigRuleName: crcd-ia-s3-s3-access-point-in-vpc-only
               Description: Checks whether Amazon S3 access points are configured to only allow access from within a VPC
               Source:
                 Owner: AWS
@@ -596,7 +596,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Condition: IsSupportedRegion3Rules
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-access-point-public-access-blocks
+              ConfigRuleName: crcd-ia-s3-s3-access-point-public-access-blocks
               Description: Checks whether Amazon S3 access points have public access block settings enabled
               Source:
                 Owner: AWS
@@ -614,7 +614,7 @@ Resources:
           S3AccountLevelPublicAccessParamBlocksPeriodic:
             Type: AWS::Config::ConfigRule
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-account-level-public-access-blocks-periodic
+              ConfigRuleName: crcd-ia-s3-s3-account-level-public-access-blocks-periodic
               Description: Periodically checks whether Amazon S3 account-level public access block settings remain enabled
               Source:
                 Owner: AWS
@@ -633,7 +633,7 @@ Resources:
           S3BucketLevelPublicAccessProhibited:
             Type: AWS::Config::ConfigRule
             Properties:
-              ConfigRuleName: crcd-sirs-ia-s3-s3-bucket-level-public-access-prohibited
+              ConfigRuleName: crcd-ia-s3-s3-bucket-level-public-access-prohibited
               Description: Checks if S3 buckets are publicly accessible
               Source:
                 Owner: AWS
@@ -656,7 +656,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Condition: IsSupportedRegion3Rules
             Properties:
-              ConfigRuleName: crcd-sirs-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+              ConfigRuleName: crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2
               Description: Checks whether Amazon EC2 Auto Scaling groups have launch configurations that require Instance Metadata Service Version 2 (IMDSv2)
               Source:
                 Owner: AWS
@@ -668,7 +668,7 @@ Resources:
           Ec2Imdsv2Check:
             Type: AWS::Config::ConfigRule
             Properties:
-              ConfigRuleName: crcd-sirs-ia-ec2-ec2-imdsv2-check
+              ConfigRuleName: crcd-ia-ec2-ec2-imdsv2-check
               Description: Checks whether EC2 instances are configured to require Instance Metadata Service Version 2 (IMDSv2)
               Source:
                 Owner: AWS
@@ -681,7 +681,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Condition: IsSupportedRegionImdsv2
             Properties:
-              ConfigRuleName: crcd-sirs-ia-ec2-ec2-launch-template-imdsv2-check
+              ConfigRuleName: crcd-ia-ec2-ec2-launch-template-imdsv2-check
               Description: Checks whether EC2 launch templates are configured to require Instance Metadata Service Version 2 (IMDSv2)
               Source:
                 Owner: AWS
@@ -698,7 +698,7 @@ Resources:
             Type: AWS::Config::ConfigRule
             Condition: IsSupportedRegionSgPortRestriction
             Properties:
-              ConfigRuleName: crcd-sirs-ia-ra-vpc-sg-port-restriction-check
+              ConfigRuleName: crcd-ia-ra-vpc-sg-port-restriction-check
               Source:
                 Owner: AWS
                 SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
@@ -722,7 +722,7 @@ Resources:
 
 
   # ============================================================================
-  # ConformancePack for CRCD-SIRS Config rules
+  # ConformancePack for CRCD Config rules
   #
   # This stackset runs in all specified regions of current account to deploy 
   # 1. [Organization deployment mode] an organization conformance pack which then will deploy in the same region on all accounts
@@ -736,7 +736,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      RoleName: CRCDSIRSStackSetAdministrationRole # was: AWSCloudFormationStackSetAdministrationRole
+      RoleName: CRCDConfPackStackSetAdministrationRole # was: AWSCloudFormationStackSetAdministrationRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -753,7 +753,7 @@ Resources:
                 Action:
                   - sts:AssumeRole
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDSIRSStackSetExecutionRole'
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDConfPackStackSetExecutionRole'
 
   # IAM Role for StackSet Execution (SELF_MANAGED mode)
   StackSetExecutionRole:
@@ -761,7 +761,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      RoleName: CRCDSIRSStackSetExecutionRole # was: AWSCloudFormationStackSetExecutionRole
+      RoleName: CRCDConfPackStackSetExecutionRole # was: AWSCloudFormationStackSetExecutionRole
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -773,14 +773,14 @@ Resources:
         - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
 
   # This stack set iterates through the specified regions of the current account
-  CRCDSIRSStackSet:
+  CRCDConfPackStackSet:
     Type: AWS::CloudFormation::StackSet
-    DependsOn: CrcdCirtConformancePackTemplate
+    DependsOn: CrcdConformancePackTemplate
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       StackSetName: !Sub '${ConformancePackName}-org-stackset'
-      Description: Deploys CRCD SIRS conformance pack rules
+      Description: Deploys CRCD conformance pack rules
       PermissionModel: SELF_MANAGED # Runs on this account only
       AdministrationRoleARN: 
         !GetAtt StackSetAdministrationRole.Arn
@@ -802,7 +802,7 @@ Resources:
 
         # Path to the template file
         - ParameterKey: ConformancePackTemplateS3Uri
-          ParameterValue: !Sub 's3://${CrcdCirtTemplateBucket}/crcd-sirs-conformance-pack-DO-NOT-DELETE.yaml'
+          ParameterValue: !Sub 's3://${CrcdConfPackTemplateBucket}/crcd-conformance-pack-DO-NOT-DELETE.yaml'
 
         # convert the array ExcludedAccountsIDs to String, from now on this parameter is a string in the sub templates
         - Fn::If:
@@ -850,7 +850,7 @@ Resources:
 
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
-        Description: 'CRCD SIRS Conformance Pack - deployed via StackSet'
+        Description: 'CRCD Conformance Pack - deployed via StackSet'
 
         Parameters:
           ConformancePackName:
@@ -907,7 +907,7 @@ Resources:
           DeploymentModeIsStandalone: !Equals [!Ref DeploymentMode, 'Standalone']   
 
         Resources:
-          CRCDSIRSStandaloneConformancePack:
+          CRCDStandaloneConformancePack:
             Type: AWS::Config::ConformancePack
             Condition: DeploymentModeIsStandalone
             Properties:
@@ -956,7 +956,7 @@ Resources:
               # DeliveryS3Bucket:
               TemplateS3Uri: !Ref ConformancePackTemplateS3Uri
 
-          CRCDSIRSOrganizationConformancePack:
+          CRCDOrganizationConformancePack:
             Type: AWS::Config::OrganizationConformancePack
             Condition: DeploymentModeIsOrganization
             Properties:
@@ -1016,11 +1016,11 @@ Resources:
   # [Standalone mode] The stack set contains custom rules whose lambda logic is deployed in the current region
   # [Organization mode] The stack set contains custom rules whose lambda logic is deployed in the current region in all accounts of the organization
   # ============================================================================
-  CRCDSIRSIAMRulesStackSet:
+  CRCDIAMRulesStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties:
       StackSetName: !Sub '${ConformancePackName}-iam-rules-stackset'
-      Description: Deploys CRCD SIRS conformance pack IAM rules
+      Description: Deploys CRCD conformance pack IAM rules
       PermissionModel: !If
         - DeploymentModeIsStandalone
         - SELF_MANAGED
@@ -1070,7 +1070,7 @@ Resources:
           ParameterValue: !Ref RootUsageThresholdDays
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
-        Description: 'CRCD SIRS IAM Rules - deployed via StackSet (region-limited)'
+        Description: 'CRCD IAM Rules - deployed via StackSet (region-limited)'
 
         Parameters:
           ConformancePackName:
@@ -1086,7 +1086,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'CRCDSIRSRuleRootNotUsedRegularly'
+              RoleName: 'CRCDConfPackRuleRootNotUsedRegularly'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1127,7 +1127,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'CRCDSIRSRuleUserAccessKeyCheck'
+              RoleName: 'CRCDConfPackRuleUserAccessKeyCheck'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1169,7 +1169,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              LogGroupName: '/aws/lambda/crcd-sirs-root-not-used-regularly'
+              LogGroupName: '/aws/lambda/crcd-root-not-used-regularly'
               RetentionInDays: 30
             Metadata:
               cfn_nag:
@@ -1187,7 +1187,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              LogGroupName: '/aws/lambda/crcd-sirs-user-access-key-check'
+              LogGroupName: '/aws/lambda/crcd-user-access-key-check'
               RetentionInDays: 30
             Metadata:
               cfn_nag:
@@ -1209,8 +1209,8 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              FunctionName: 'crcd-sirs-root-not-used-regularly'
-              Description: CRCD-SIRS Conformance Pack custom AWS Config rule - Root account not used regularly
+              FunctionName: 'crcd-root-not-used-regularly'
+              Description: CRCD Conformance Pack custom AWS Config rule - Root account not used regularly
               Runtime: python3.11
               Handler: index.lambda_handler
               Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
@@ -1218,7 +1218,7 @@ Resources:
               Code:
                 ZipFile: |
                   """
-                  CRCD SIRS Custom Config Rule: Root Account Not Used Regularly
+                  CRCD Custom Config Rule: Root Account Not Used Regularly
                   
                   Checks whether the root user is not used regularly by examining the IAM Credential Report
                   for root user activity.
@@ -1312,13 +1312,13 @@ Resources:
                               raise ValueError("Missing required field: configRuleId")
                   
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug('CRCD-SIRS: Received invoking event: ' + json.dumps(invoking_event))
+                          logger.debug('CRCD-ConfPack: Received invoking event: ' + json.dumps(invoking_event))
                   
                           AWS_CONFIG_CLIENT = get_client('config', event)
                   
                           # This rule supports only periodic evaluation
                           if invoking_event['messageType'] != 'ScheduledNotification':
-                              logger.logError('CRCD-SIRS: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
+                              logger.logError('CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
                               raise ValueError("Invalid message type: " + str(invoking_event['messageType']))
                   
                           # Extract Config rule parameters
@@ -1596,8 +1596,8 @@ Resources:
             UpdateReplacePolicy: Delete
             DependsOn: UserAccessKeyCheckLogGroup
             Properties:
-              FunctionName: 'crcd-sirs-user-access-key-check'
-              Description: CRCD-SIRS Conformance Pack custom AWS Config rule - IAM users access key check
+              FunctionName: 'crcd-user-access-key-check'
+              Description: CRCD Conformance Pack custom AWS Config rule - IAM users access key check
               Runtime: python3.11
               Handler: index.lambda_handler
               Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
@@ -1605,10 +1605,10 @@ Resources:
               Code:
                 ZipFile: |
                   """
-                  CRCD SIRS Custom Config Rule: IAM User Access Key Check
+                  CRCD Custom Config Rule: IAM User Access Key Check
                   
-                  Checks whether IAM users have access keys. SIRS security engineers strongly recommend against
-                  creating access keys and deleting any that exist, as they provide unrestricted
+                  Checks whether IAM users have access keys. It is strongly recommended to not
+                  create access keys and deleting any that exist, as they provide unrestricted
                   access to AWS resources and are high-value targets for attackers.
                   """
                   
@@ -1655,7 +1655,7 @@ Resources:
                       compliance_type = None
                   
                       global AWS_CONFIG_CLIENT
-                      logger.info(f"CRCD-SIRS: Received event: {json.dumps(event)}")
+                      logger.info(f"CRCD-ConfPack: Received event: {json.dumps(event)}")
                   
                       try:
                           check_defined(event, 'event')
@@ -1664,7 +1664,7 @@ Resources:
                               raise ValueError("Missing required field: configRuleId")
                           
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug(f"CRCD-SIRS: Received invoking event: {json.dumps(invoking_event)}")
+                          logger.debug(f"CRCD-ConfPack: Received invoking event: {json.dumps(invoking_event)}")
                   
                           rule_parameters = {}
                           if 'ruleParameters' in event:
@@ -1676,7 +1676,7 @@ Resources:
                           if invoking_event['messageType'] == 'ScheduledNotification':
                               evaluate_periodic_compliance(rule_parameters, event)
                           else:
-                              logger.error(f"CRCD-SIRS: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
+                              logger.error(f"CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
                               raise ValueError(f"Invalid message type: {invoking_event['messageType']}")
                   
                       except ClientError as e:
@@ -1769,10 +1769,10 @@ Resources:
                               for user in page['Users']:
                                   user_name = user['UserName']
                                   user_id = user['UserId']
-                                  logger.info(f"CRCD-SIRS: periodic compliance, checking IAM user {user_name} (id {user_id})")
+                                  logger.info(f"CRCD-ConfPack: periodic compliance, checking IAM user {user_name} (id {user_id})")
                                   compliance_type, annotation = evaluate_user_compliance(user_name, iam_client)
                   
-                                  logger.info(f"CRCD-SIRS: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
+                                  logger.info(f"CRCD-ConfPack: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
                   
                                   evaluations.append({
                                       'ComplianceResourceType': 'AWS::IAM::User',
@@ -1782,7 +1782,7 @@ Resources:
                                       'OrderingTimestamp': datetime.utcnow()
                                   })
                       except Exception as e:
-                          logger.error(f'CRCD-SIRS: Error during periodic evaluation: {str(e)}')
+                          logger.error(f'CRCD-ConfPack: Error during periodic evaluation: {str(e)}')
                       
                       if evaluations:
                           AWS_CONFIG_CLIENT.put_evaluations(
@@ -1792,7 +1792,7 @@ Resources:
                   
                   def evaluate_user_compliance(user_name, iam_client):
                       """Evaluate a single IAM user's compliance"""
-                      logger.info(f"CRCD-SIRS: checking IAM user {user_name}")
+                      logger.info(f"CRCD-ConfPack: checking IAM user {user_name}")
                       
                       try:
                           response = iam_client.list_access_keys(UserName=user_name)
@@ -1800,7 +1800,7 @@ Resources:
                           
                           # Check for active access keys only
                           active_keys = [key for key in access_keys if key['Status'] == 'Active']
-                          logger.info(f"CRCD-SIRS: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
+                          logger.info(f"CRCD-ConfPack: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
                   
                           compliance_type = 'INSUFFICIENT_DATA'
                           if active_keys:
@@ -1818,7 +1818,7 @@ Resources:
                           return compliance_type, annotation
                   
                       except Exception as exc:
-                          logger.error(f"CRCD-SIRS: Error evaluating IAM user {user_name}: {exc}")
+                          logger.error(f"CRCD-ConfPack: Error evaluating IAM user {user_name}: {exc}")
                           return 'INSUFFICIENT_DATA', f"Error evaluating IAM user {user_name}: {exc}"
                   
                   
@@ -1865,7 +1865,7 @@ Resources:
               SourceAccount: !Ref AWS::AccountId
 
 
-          CRCDSIRSIAMConformancePack:
+          CRCDIAMConformancePack:
             Type: AWS::Config::ConformancePack
             DependsOn:
               - RootNotUsedRegularlyLambdaPermission
@@ -1903,7 +1903,7 @@ Resources:
                   RootAccountMfaEnabled:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-root-account-mfa-enabled
+                      ConfigRuleName: crcd-ia-iam-root-account-mfa-enabled
                       Description: Checks if the root user of your AWS account requires multi-factor authentication for console sign-in
                       Source:
                         Owner: AWS
@@ -1913,7 +1913,7 @@ Resources:
                   IamRootAccessKeyCheck:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-iam-root-access-key-check
+                      ConfigRuleName: crcd-ia-iam-iam-root-access-key-check
                       Description: Checks whether the root user access key exists
                       Source:
                         Owner: AWS
@@ -1923,7 +1923,7 @@ Resources:
                   IamUserMfaEnabled:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-iam-user-mfa-enabled
+                      ConfigRuleName: crcd-ia-iam-iam-user-mfa-enabled
                       Description: Checks if the AWS Identity and Access Management (IAM) users have multi-factor authentication (MFA) enabled.
                       Source:
                         Owner: AWS
@@ -1934,7 +1934,7 @@ Resources:
                   MfaEnabledForIamConsoleAccess:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-mfa-enabled-for-iam-console-access
+                      ConfigRuleName: crcd-ia-iam-mfa-enabled-for-iam-console-access
                       Description: Checks if AWS multi-factor authentication (MFA) is enabled for all AWS Identity and Access Management (IAM) users that use a console password.
                       Source:
                         Owner: AWS
@@ -1948,7 +1948,7 @@ Resources:
                   IamRootNotUsedRegularly:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-iam-root-not-used-regularly
+                      ConfigRuleName: crcd-ia-iam-iam-root-not-used-regularly
                       Description: Checks whether the root user is not used regularly. Parameter RootUsageThresholdDays (integer) - Number of days to look back for root usage.
                       Source:
                         Owner: CUSTOM_LAMBDA
@@ -1966,7 +1966,7 @@ Resources:
                   IamUserAccessKeyCheck:
                     Type: AWS::Config::ConfigRule
                     Properties:
-                      ConfigRuleName: crcd-sirs-ia-iam-iam-user-access-key-check
+                      ConfigRuleName: crcd-ia-iam-iam-user-access-key-check
                       Description: Checks whether an IAM user access key exists
                       Source:
                         Owner: CUSTOM_LAMBDA
