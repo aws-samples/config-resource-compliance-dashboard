@@ -49,7 +49,9 @@ All rules follow the format: `crcd-<lv1>-<lv2>-<rule-name>`
 | `ebs` | EBS Security | Elastic Block Store security controls |
 | `sm` | Secrets Management | Secrets Manager and credential protection controls |
 
-## Config Rules
+## AWS Config Rules
+
+### Initial Access rules
 
 | Rule Name | Description | Type | Source Identifier | Classification | Resource Types |
 |-----------|-------------|------|-------------------|----------------|----------------|
@@ -73,18 +75,20 @@ All rules follow the format: `crcd-<lv1>-<lv2>-<rule-name>`
 ## Rule Details
 For STANDARD rules, all parameters are supported and will not be repated in this file. Rule parameters are specified for custom rules.
 
-### IAM Protection Rules
+### Initial Access rules
 
-#### crcd-ia-iam-root-account-mfa-enabled
+#### IAM Protection Rules
+
+##### crcd-ia-iam-root-account-mfa-enabled
 The AWS account root user has unrestricted access to all resources within that account, its usage must be protected by Multi-Factor Authentication (MFA).
 
-#### crcd-ia-iam-iam-root-access-key-check
+##### crcd-ia-iam-iam-root-access-key-check
 Root access keys provide unrestricted access to all AWS resources and are high-value targets for attackers. Recommendation: do not create root access keys and delete any that exist.
 
-#### crcd-ia-iam-iam-root-not-used-regularly (CUSTOM)
+##### crcd-ia-iam-iam-root-not-used-regularly (CUSTOM)
 Root users have unrestricted access to all AWS resources and are high-value targets for attackers. Recommendation: use this user as little as possible.
 
-##### Parameters
+###### Parameters
 
 | Parameter Name | Description | Default value |
 |----------------|-------------|---------------|
@@ -92,38 +96,38 @@ Root users have unrestricted access to all AWS resources and are high-value targ
 
 
 
-#### crcd-ia-iam-iam-user-access-key-check (CUSTOM)
+##### crcd-ia-iam-iam-user-access-key-check (CUSTOM)
 Access keys provide unrestricted access to all AWS resources and are high-value targets for attackers. Recommendation: do not create access keys and delete any that exist.
 
-#### crcd-ia-iam-iam-user-mfa-enabled / crcd-ia-iam-mfa-enabled-for-iam-console-access
+##### crcd-ia-iam-iam-user-mfa-enabled / crcd-ia-iam-mfa-enabled-for-iam-console-access
 Multi-factor authentication provides an additional layer of security against compromised credentials. Enabling MFA significantly reduces the risk of unauthorized access even when passwords are compromised.
 
-### S3 Protection Rules
+#### S3 Protection Rules
 
-#### crcd-ia-s3-s3-bucket-public-read-prohibited
+##### crcd-ia-s3-s3-bucket-public-read-prohibited
 Publicly readable S3 buckets are a common attack vector for initial access and data exposure.
 
-#### crcd-ia-s3-s3-bucket-public-write-prohibited
+##### crcd-ia-s3-s3-bucket-public-write-prohibited
 Publicly writable S3 buckets can be exploited for data injection, malware distribution, and resource abuse.
 
-#### crcd-ia-s3-s3-access-point-in-vpc-only
+##### crcd-ia-s3-s3-access-point-in-vpc-only
 S3 access points that allow public internet access increase the attack surface for data exfiltration and unauthorized access. Restricting to VPC-only access ensures data can only be accessed through controlled network paths.
 
-#### crcd-ia-s3-s3-access-point-public-access-blocks
+##### crcd-ia-s3-s3-access-point-public-access-blocks
 Public access block settings on S3 access points provide defense-in-depth protection against accidental public exposure of data.
 
-#### crcd-ia-s3-s3-account-level-public-access-blocks-periodic
+##### crcd-ia-s3-s3-account-level-public-access-blocks-periodic
 Continuous monitoring of account-level public access block settings ensures they remain enabled and have not been inadvertently disabled.
 
-#### crcd-ia-s3-s3-bucket-level-public-access-prohibited
+##### crcd-ia-s3-s3-bucket-level-public-access-prohibited
 Bucket-level public access blocks provide defense-in-depth protection against accidental exposure.
 
-### EC2 Protection Rules
+#### EC2 Protection Rules
 
-#### crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2 / crcd-ia-ec2-ec2-imdsv2-check / crcd-ia-ec2-ec2-launch-template-imdsv2-check
+##### crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2 / crcd-ia-ec2-ec2-imdsv2-check / crcd-ia-ec2-ec2-launch-template-imdsv2-check
 IMDSv2 provides enhanced security for instance metadata by requiring session-oriented requests, which prevents Server-Side Request Forgery (SSRF) attacks. Enforcing IMDSv2 significantly reduces the risk of credential theft through metadata service exploitation.
 
-### Resource Access Protection Rules
+#### Resource Access Protection Rules
 
-#### crcd-ia-ra-vpc-sg-port-restriction-check
+##### crcd-ia-ra-vpc-sg-port-restriction-check
 Unrestricted inbound ports enable lateral movement within AWS environments.
