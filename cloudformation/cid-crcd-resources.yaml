@@ -4,23 +4,25 @@ Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD)"
 # Data pipeline installs dashboard resources until an Athena table. Athena views and QuickSight resources are not installed by this template
 #
 # The following use cases are supported
-# 1. deployment on Log Archive account (all in one account)
+# 1. deployment on AWS Config account (all in one account)
 #    In this case the AWS Config bucket is the source of logs, the Lambda is triggered from this bucket directly
 #
 # 2. deployment on Dashboard account 
-#    AWS Config logs are delivered to the Log Archive account, then replicated to the Dashboard account where all the resources related to the dashboard are deployed
+#    AWS Config logs are delivered to the AWS Config account, then replicated to the Dashboard account where all the resources related to the dashboard are deployed
 #
 #    2.1 - always start by running this template on the Dashboard account
 #    Create the S3 bucket for the copy of the logs
-#    Add permissions to the bucket to allow replication from the Log Archive Account
+#    Add permissions to the bucket to allow replication from the AWS Config account
 #    Trigger the lambda function from the bucket created in the Dashboard account
-#    If the Log Archive bucket is encrypted with a KMS key, then the Dashboard bucket will also be encrypted
+#    If the AWS Config Logs bucket is encrypted with a KMS key, then the Dashboard bucket will also be encrypted
 #
 #    2.2
-#    Run the Log Archive account to setup replication to the bucket created on 2.1
+#    Run on the AWS Config account to setup replication to the bucket created on 2.1
 #
 # 3. Deployment on a single account
 #    This is exactly the same as use case 1
+
+# TODO: Log Archive account/bucket becomes AWS Config
 
 # The template requires these parameters, which must always be provided by users:
 # A: LogArchiveAccountId  X: LogArchiveBucketName

@@ -2,11 +2,18 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 
 # [4.?.?] - ????-??-??
 ## Added
+### External features
 - Backfill feature to partition your existing AWS Config files on a newly installed dashboard.
-- New data source: AWS Organization Data Collection Module of CID Data Collection. This allows the data pipeline of the dashboard to extract metadata from your AWS Organization to be displayed on the dashboard.
+- Quick Suite chat agent
+- AWS Config conformance pack
+
+### Dashbaord features
+- New data source for account metadata: AWS Organization Data Collection Module of [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html). This allows the data pipeline of the dashboard to extract metadata from your AWS Organization to be displayed on the dashboard.
 - Support for CID taxonomy. Use your AWS Organization metadata as filters in every tab of the dashboard.
+- Threat-Informed Security Posture
 
 ## Changed
+- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
 
 ## Fixed
 
