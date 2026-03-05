@@ -1,4 +1,4 @@
-# Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
+# Cloud Intelligence Dashboards — AWS Config Resource Compliance Dashboard (CRCD)
 
 ## About
 
@@ -28,10 +28,11 @@ The AWS Config Dashboard helps security teams establish a compliance practice an
 Field teams will see their non-compliant resources as quickly as security teams. This creates a short feedback loop that helps keep non-compliant resources to a minimum and helps organizations establish a consistent compliance review process with a shorter path to get to green compliance.
 
 #### A simplified Configuration Management Database (CMDB) experience in AWS
-Avoid investment in a dedicated external CMDB system or third-party tools. Access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each account and Region. Filter resources by account, Region, and fields that are specific to the resource such as IP address. If you tag consistently your resources - for example to map them to the application, owning team and environment - specify those tags to the dashboard and they will be displayed alongside the other resource-specific information, and used for filtering your configuration items. Manage and plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
+Avoid investment in a dedicated external CMDB system or third-party tools. Access the inventory of resources in a single pane of glass, without accessing the AWS Management Console on each account and Region. Filter resources by account, Region, and fields that are specific to the resource such as IP address. If you tag consistently your resources — for example to map them to the application, owning team and environment — specify those tags to the dashboard and they will be displayed alongside the other resource-specific information, and used for filtering your configuration items. Manage and plan the upgrade of Amazon RDS DB engines and AWS Lambda runtimes.
 
-#### Optimize AWS Config cost
-Visualize the contributors to your Config costs: resource change events and Config rule evaluations over time. Identify duplicate rules and conformance packs that contain rules that cannot be evaluated in your environments.
+#### Optimize AWS Config usage
+AWS Config costs can be difficult to attribute without the right visibility. The dashboard surfaces the patterns behind your spending — so you can streamline your AWS Config setup, eliminate redundant evaluations, and maintain the same level of compliance coverage with less overhead.
+
 
 ### Dashboard features
 
@@ -81,7 +82,6 @@ You can deploy the dashboard resources in the same account where your AWS Config
 
 ### Deploy in a separate Dashboard Account
 Alternatively, you can create a separate Dashboard account to deploy the dashboard resources. In this case, objects from the AWS Config Logs bucket in the Config account are replicated to another bucket in the Dashboard account.
-
 
 ![CRCD](images/architecture-dashboard-account.png "AWS Config Dashboard: deployment on AWS Organization, dedicated Dashboard account")
 
