@@ -108,9 +108,6 @@ Parameters:
 
   DeploymentRegions:
     Type: CommaDelimitedList
-    # TODO development values these are the regions in dev environment
-    # TODO eu-south-2,eu-central-2 regions that are active in the dev environment and rule EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK is not available
-    # TODO using 2 regions so it's faster, full list eu-west-1,eu-west-2,eu-west-3,eu-south-1,eu-north-1,eu-central-1,eu-south-2,eu-central-2
     Default: 'us-east-1,us-east-2,us-west-2,eu-west-1,eu-central-1,ap-southeast-1'
     Description: Comma-separated list of regions where AWS Config is enabled and the conformance pack should be deployed.
     AllowedPattern: ^[a-z]{2}-[a-z]+-\d{1}$
@@ -118,7 +115,7 @@ Parameters:
 
   ConformancePackName:
     Type: String
-    Default: CRCD-Security-Recommendations
+    Default: CRCD-Threat-Informed-Security-Compliance # Was CRCD-Security-Recommendations
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
@@ -146,7 +143,6 @@ Parameters:
     Default: ''
     Description: "Comma-separated list of names for allowed public Amazon S3 access points - for info https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-public-access-blocks.html"
 
-  # TODO test the case of empty input parameter... this can be empty
   VPCSecurityGroupPortRestrictionParamRestrictedPorts:
     Type: String
     Default: '22,3389'

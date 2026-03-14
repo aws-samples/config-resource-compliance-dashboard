@@ -323,7 +323,7 @@ def get_query_results(query_execution_id, athena):
     return results
 
 def send_response(event, context, response_status, response_data):
-    # TODO developing the function and testing without Cloud Formation, remove the line below
+    # when developing the function and testing without Cloud Formation, uncomment the line below
     # return True
 
     """Interacts with the Cloud Formation template that called this Lambda"""

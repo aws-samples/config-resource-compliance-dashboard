@@ -38,7 +38,7 @@ AWS Config costs can be difficult to attribute without the right visibility. The
 
 #### AWS Config compliance
 - At-a-glance status of compliant and non-compliant resources and AWS Config rules.
-- Compliance score for AWS Config rules and conformance packs, and AWS resources.
+- Compliance score for AWS Config rules, conformance packs, and AWS resources.
 - Month-by-month compliance trend for resources and AWS Config rules.
 - Compliance breakdown by service, account, and Region.
 - Compliance tracking for AWS Config rules and conformance packs.
@@ -53,7 +53,7 @@ Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Servi
 Graphs that report summarized insights about resource configuration data, including detailed information about EC2 and EBS. Evaluate your resilience to AZ-level events by checking the distribution of your EC2 instances across Availability Zones.
 
 #### Tag compliance
-Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html). You can deploy this rule to find resources in your accounts that were not launched with your desired tag configurations by specifying which resource types should have tags and the expected value for each tag. The rule can be deployed multiple times in AWS Config.
+Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html) or one of the several [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`. You can deploy these rules to find resources in your accounts that were not launched with your desired tag configurations.
 
 ![CRCD](images/tag-compliance-summary.png "AWS Config Dashboard, Tag Compliance")
 
@@ -67,6 +67,13 @@ Rule evaluations are triggered continuously in response to resource configuratio
 Another cost pattern worth monitoring involves conformance pack rules with a compliance status of `INSUFFICIENT_DATA`. These rules have no AWS resources currently in scope, yet evaluations are still triggered — and you are charged for each evaluation regardless of its outcome. Identifying these rules allows you to deactivate them, avoiding charges for evaluations that provide no compliance value.
 
 The **Config Usage Insights** tab provides the visibility needed to address these patterns systematically. By tracking CI recording volumes and rule evaluation counts over time, the dashboard helps you identify where spending is concentrated, surface redundant or inactive rules, and make informed decisions about where to streamline your AWS Config configuration — without compromising your compliance posture.
+
+### Additional features
+These features work alongside the AWS Config Resource Compliance Dashboard (CRCD) solution.
+- Organizational taxonomy - Deploy the [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) to collect organization data. You will be able to add your organizational taxonomy to the dashboard during deployment.
+- [Backfill](./backfill/README.md) - Make your compliance history visible on the dashboard right after deployment.
+- [Generative AI assistant](./documentation/generative_ai_assistant.md) - Create a compliance chat agent that understands your environment and provides contextual insights by using Amazon Quick Suite’s generative AI capabilities powered by your AWS Config dashboard. 
+- [CRCD conformance pack](./conformance_pack/README.md) - Deploy a curated set of AWS Config rules that identify misconfigurations leveraged during the most common security incidents. Evaluate your threat-informed security posture on a dedicated section of the dashboard.
 
 
 ## Architecture
