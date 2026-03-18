@@ -1,5 +1,5 @@
 dashboards:
-  CRCD-410-DEV:
+  CRCD-410-WIP:
     dependsOn:
       datasets:
       - config_compliance
@@ -14,12 +14,12 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
-    name: crcd-410-dev
-    dashboardId: crcd-410-dev
+    name: crcd-410-wip
+    dashboardId: crcd-410-wip
     category: Custom
     theme: MIDNIGHT
-    version: v4.0.2
-    file: ./crcd-20260307-taxonomy-definition.yaml
+    version: v4.1.0
+    file: ./crcd-410-wip-definition.yaml
 datasets:
   config_compliance:
     data:
@@ -77,18 +77,6 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
-              Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -198,18 +186,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         b1dc94eb-7e87-4886-bf78-fac2bd9faee9:
@@ -280,18 +256,6 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
-              Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
               Type: STRING
         52353df5-38cb-4ea7-a3fe-d00bb9a9d7d0:
           RelationalTable:
@@ -410,18 +374,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         02611018-14d1-4077-a518-b9e438b0fa0d:
@@ -507,18 +459,6 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
-              Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -626,18 +566,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         126737e7-3694-4e8e-97d7-e300f3ae8bc4:
@@ -714,18 +642,6 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
-              Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
               Type: STRING
         4c48eceb-766e-4f61-a77f-3aabc65a4e64:
           RelationalTable:
@@ -904,18 +820,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         1a7d2300-b0c8-419b-840d-8d7362018210:
@@ -1072,18 +976,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         18801cc2-6530-401f-8213-5b252a5196a1:
@@ -1230,18 +1122,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         10e5bbbd-d5b4-4e08-af70-875df9cefe82:
@@ -1324,18 +1204,6 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
-              Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
               Type: STRING
         eddabfc0-67c7-4ccf-91d4-237802c462f1:
           RelationalTable:
@@ -1515,18 +1383,6 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
-            - Name: ou_tag_application
-              Type: STRING
-            - Name: ou_tag_costcenter
-              Type: STRING
-            - Name: ou_tag_environment
-              Type: STRING
-            - Name: ou_tag_owner
-              Type: STRING
-            - Name: ou_tag_environment2
-              Type: STRING
         f9fe062d-acce-4e23-a6fa-26655a09d2cd:
           RelationalTable:
             DataSourceArn: ${athena_datasource_arn}
@@ -1690,17 +1546,10 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_sys_account_data AS
       SELECT
-        id account_id
-      , payer_id payer_account_id
-      , name account_name
-      , parent organization_unit
-      , TRY(FILTER(hierarchytags, (x) -> (x.key = 'Application'))[1].value) ou_tag_Application
-      , TRY(FILTER(hierarchytags, (x) -> (x.key = 'CostCenter'))[1].value) ou_tag_CostCenter
-      , TRY(FILTER(hierarchytags, (x) -> (x.key = 'Environment'))[1].value) ou_tag_Environment
-      , TRY(FILTER(hierarchytags, (x) -> (x.key = 'Owner'))[1].value) ou_tag_Owner
-      , TRY(FILTER(hierarchytags, (x) -> (x.key = 'environment'))[1].value) ou_tag_environment2
-      FROM
-        "optimization_data"."organization_data"
+        'NO_TABLES_EXIST' account_id
+      , 'NO_TABLES_EXIST' payer_account_id
+      , 'NO_TABLES_EXIST' account_name
+      WHERE false
   config_compliance_conformance_pack:
     dependsOn: {}
     data: |-
