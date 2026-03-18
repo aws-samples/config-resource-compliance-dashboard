@@ -1,9 +1,9 @@
 # Delete AWS Glue/Athena partitions belonging to an AWS account
 
-Use this guide afre the deployment of the AWS Config Resource Compliance Dashboard if you do not want AWS Config files for a specific account to be indexted and displayed on the dashboard.
+Use this guide after the deployment of the AWS Config Resource Compliance Dashboard if you do not want AWS Config files for a specific account to be indexed and displayed on the dashboard.
 
 
-## Stop creating partitions for AWS Config files belonging to an AWS account
+## Step 1: Stop creating partitions for AWS Config files belonging to an AWS account
 First, you have to modify the partitioning logic to exclude the AWS account(s) that you do not want to be displayed on the dashboard.
 
 ### Modify the Lambda Partitioner to exclude the account
@@ -20,7 +20,7 @@ First, you have to modify the partitioning logic to exclude the AWS account(s) t
       date = '{year}-{month}-{day}'.format(**match.groupdict())
       table = CRCD_TABLE_NAME # Athena table for Config History and Snapshot records
       ```
-   1. Add this code under the line: `accountid = match.groupdict()['account_id']`:
+   1. Add this code **under** the line: `accountid = match.groupdict()['account_id']`:
       ```
       # Account exclusion logic
       if accountid in os.environ['EXCLUDED_ACCOUNTS']:
@@ -33,7 +33,7 @@ First, you have to modify the partitioning logic to exclude the AWS account(s) t
 1. Save and deploy the Lambda function.
 1. You can verify the account is excluded by checking the CloudWatch logs of the function for a log message like this (where `111111111111` is the excluded account): "SKIPPING: Account 111111111111 is in the excluded list."
 
-## Delete all AWS Glue partitions belonging to an AWS account
+## Step 2: Delete all AWS Glue partitions belonging to an AWS account
 Now you can remove the AWS Glue partitions that were created in the meantime. You have to repeat this part of the procedure for each AWS account.
 
 If you want to retrieve all partitions for an account, run this AWS CLI command on the AWS account and Region where you deployed the dashboard resources. Replace `XXXXXX` with your account number.
@@ -76,7 +76,7 @@ This is a complete script that loads the AWS Glue partitions belonging to an acc
 
 set -euo pipefail
 
-# ── Configuration ────────────────────────────────────────────
+# ── Configuration ─ Edit the fields below ────────────────────
 DATABASE_NAME="cid_crcd_database"
 TABLE_NAME="cid_crcd_config"
 ACCOUNT_FILTER="XXXXXX"  # Set your AWS account id
