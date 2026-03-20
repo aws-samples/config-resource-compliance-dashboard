@@ -139,6 +139,12 @@ datasets:
               - pkruleid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf
@@ -234,6 +240,12 @@ datasets:
               - pkconformancepackid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: fc17b8d4-1613-4544-a16c-3c0a4238d6eb
@@ -333,6 +345,12 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 64552c6c-a332-4c76-bf4a-f89fd2d0e154
@@ -420,6 +438,12 @@ datasets:
               - payer_account_id
               - account_name
               - total_changes_by_resource
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 02611018-14d1-4077-a518-b9e438b0fa0d
@@ -491,6 +515,12 @@ datasets:
               - latestconfigitemcapturetime
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5
@@ -618,6 +648,12 @@ datasets:
               - account_id
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: a19867d1-5163-48b4-9a2e-5f5a33332ae3
@@ -715,6 +751,12 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631
@@ -872,6 +914,12 @@ datasets:
               - configitemstatus
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 4039d32f-1791-40e0-8a03-22a7181a9dd1
@@ -1031,6 +1079,12 @@ datasets:
               - configitemstatus
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 6af82678-b6e5-4bef-b251-290e2cef2eec
@@ -1166,6 +1220,12 @@ datasets:
               - configitemstatus
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf
@@ -1345,6 +1405,12 @@ datasets:
               - backupretention
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 24dc16df-7afd-4c6f-9474-034e021989f2
@@ -1448,6 +1514,12 @@ datasets:
               - account_id
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 1decc8a3-7437-4a12-a8ec-348ed436b41e
@@ -1467,7 +1539,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
 
 # CUSTOMIZATION - daily incremental refresh configuration
 schedules:
@@ -1496,9 +1567,9 @@ schedules:
           Size: 3
           SizeUnit: DAY
 
-
-
 crawlers: {}
+
+
 views:
   config_compliance:
     dependsOn: {}
@@ -1565,7 +1636,6 @@ views:
       SELECT *
       FROM
         "cid_crcd_database"."config_sys_account_data"
-
   config_compliance_conformance_pack:
     dependsOn: {}
     data: |-
