@@ -115,7 +115,7 @@ Parameters:
 
   ConformancePackName:
     Type: String
-    Default: CRCD-Threat-Informed-Security-Compliance # Was CRCD-Security-Recommendations
+    Default: CRCD-Threat-Informed-Security-Compliance
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
@@ -220,13 +220,16 @@ Resources:
   # ============================================================================
   # Uploads the AWS Config Conformance Pack template to S3
   # Then it is referenced by the resources deployed on each DeploymentMode
+  # The template is the same for organization and single account deployment, 
+  # but these two modes use different cloud formation resources. 
+  # Without referencing the conf pack template from S3, we'd have to duplicate the entire conformance pack template.
   # ============================================================================
 
   CrcdConfPackTemplateBucket:
   # checkov:skip=CKV_AWS_21: Bucket will how the conformance pack templates and is used only once
   # checkov:skip=CKV_AWS_18: No need of Access Logging, customers will add it if required
     Type: AWS::S3::Bucket
-    DeletionPolicy: "Delete" # TODO add these to all resources
+    DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       BucketName: !Sub 'crcd-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
