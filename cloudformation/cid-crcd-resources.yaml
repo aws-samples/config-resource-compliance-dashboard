@@ -62,6 +62,12 @@ Metadata:
           - LambdaPartitioningFunctionName
           - GlueDataCatalogName
           - CrossAccountReplicationRole
+      -
+        Label:
+          default: "Missing Rules Detection Feature"
+        Parameters:
+          - EnableMissingRulesDetection
+          - MissingRulesSyncSchedule
 
     ParameterLabels:
       AthenaWorkgroupName:
@@ -94,6 +100,10 @@ Metadata:
         default: "Configure cross-account replication of AWS Config files from Log Archive to Dashboard account"
       CrossAccountReplicationRole:
         default: "Name of the role used in cross-account replication of AWS Config files"
+      EnableMissingRulesDetection:
+        default: "Enable Missing Rules Detection feature"
+      MissingRulesSyncSchedule:
+        default: "Schedule for syncing required rules from GitHub"
 
 Parameters:
 
@@ -203,14 +213,27 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that partitions AWS Config files."
     Description: "Name of the AWS Lambda function that partitions AWS Config files (Required)."
   
-  CrossAccountReplicationRole: 
+  CrossAccountReplicationRole:
     Type: "String"
     # cannot concatenate with source bucket name as there is a limit on 64 characters for role names
     # will use a fixed string
-    Default: "crcd-s3replication-role-for-config-files" 
+    Default: "crcd-s3replication-role-for-config-files"
     MinLength: 1
     ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files."
     Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)."
+
+  # Missing Rules Detection Feature Parameters
+  EnableMissingRulesDetection:
+    Type: "String"
+    Description: "Enable the Missing Rules Detection feature that syncs required rules from AWS GitHub conformance packs and identifies compliance gaps."
+    AllowedValues: ['yes', 'no']
+    Default: "yes"
+
+  MissingRulesSyncSchedule:
+    Type: "String"
+    Description: "Schedule expression for syncing required rules from GitHub (cron or rate expression). Default is weekly."
+    Default: "rate(7 days)"
+    MinLength: 1
 
 
 Conditions:
@@ -296,6 +319,13 @@ Conditions:
     Fn::And:
       - !Condition IsS3ReplicationOnly
       - !Equals [!Ref ConfigureS3Replication, 'yes']
+
+  IsMissingRulesDetectionEnabled:
+    # Missing Rules Detection feature - syncs required rules from AWS GitHub conformance packs
+    # Only enabled when dashboard resources are being created and the feature is enabled
+    Fn::And:
+      - !Condition IsCreateDashboardResources
+      - !Equals [!Ref EnableMissingRulesDetection, 'yes']
 
 Rules:
   MandatoryLogArchiveAccountId:
@@ -819,6 +849,97 @@ Resources:
           - id: W28
             reason: "Policy names are as per our design"
 
+  # ********************************************************************************************************************************************************
+  # Missing Rules Detection - GitHub Sync Lambda IAM Resources
+  # ********************************************************************************************************************************************************
+
+  IAMManagedPolicyGitHubSyncS3:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsMissingRulesDetectionEnabled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "crcd-github-sync-s3-policy"
+      Path: "/"
+      Description: "CRCD Dashboard - Policy that allows GitHub sync Lambda to write required rules to S3"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "S3WriteRequiredRules"
+            Effect: "Allow"
+            Action:
+              - "s3:PutObject"
+              - "s3:GetObject"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}/crcd/required_rules/*"
+          - Sid: "S3ListBucket"
+            Effect: "Allow"
+            Action:
+              - "s3:ListBucket"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketName}"
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - "crcd/required_rules/*"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
+
+  IAMManagedPolicyGitHubSyncLogs:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsMissingRulesDetectionEnabled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "crcd-github-sync-logs-policy"
+      Path: "/"
+      Description: "CRCD Dashboard - Policy that gives CloudWatch Logs permissions to GitHub sync Lambda"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "CloudWatchLogGroup"
+            Effect: "Allow"
+            Action:
+              - "logs:PutLogEvents"
+              - "logs:CreateLogStream"
+              - "logs:CreateLogGroup"
+            Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/crcd-github-sync:*"
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Policy names are as per our design"
+
+  IAMRoleGitHubSync:
+    Type: AWS::IAM::Role
+    Condition: IsMissingRulesDetectionEnabled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      RoleName: "crcd-github-sync-role"
+      Description: "CRCD Dashboard - Allows GitHub sync Lambda to write required rules to S3 and log to CloudWatch"
+      Path: "/"
+      MaxSessionDuration: 3600
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowLambdaAssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service: "lambda.amazonaws.com"
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - !Ref IAMManagedPolicyGitHubSyncS3
+        - !Ref IAMManagedPolicyGitHubSyncLogs
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Role names are as per our design"
+
   LambdaFunctionPartitionerConfigLogGroup:
   # checkov:skip=CKV_AWS_158: No KMS encryption needed
     Type: AWS::Logs::LogGroup
@@ -1120,6 +1241,316 @@ Resources:
           - id: W92
             reason: "This function does not need reserved concurrent executions"
 
+  # ********************************************************************************************************************************************************
+  # Missing Rules Detection - GitHub Sync Lambda Function
+  # ********************************************************************************************************************************************************
+
+  LambdaFunctionGitHubSyncLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    Condition: IsMissingRulesDetectionEnabled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      LogGroupName: "/aws/lambda/crcd-github-sync"
+      RetentionInDays: 14
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "No KMS encryption needed"
+
+  LambdaFunctionGitHubSync:
+  # checkov:skip=CKV_AWS_115: This Lambda runs on a weekly schedule and does not need reserved concurrency.
+  # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
+  # checkov:skip=CKV_AWS_116: No DLQ needed for scheduled sync.
+    Type: AWS::Lambda::Function
+    Condition: IsMissingRulesDetectionEnabled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    DependsOn:
+      - LambdaFunctionGitHubSyncLogGroup
+    Properties:
+      FunctionName: "crcd-github-sync"
+      Description: "CRCD Dashboard - Syncs required Config rules from AWS GitHub conformance packs to S3"
+      MemorySize: 256
+      EphemeralStorage:
+        Size: 512
+      Timeout: 300
+      Runtime: "python3.12"
+      Architectures:
+        - "x86_64"
+      TracingConfig:
+        Mode: "Active"
+      Handler: "index.lambda_handler"
+      Role: !GetAtt IAMRoleGitHubSync.Arn
+      LoggingConfig:
+        LogFormat: "Text"
+      Environment:
+        Variables:
+          S3_BUCKET_NAME: !Ref DashboardBucketName
+          S3_OUTPUT_PREFIX: "crcd/required_rules"
+          GITHUB_API_URL: "https://api.github.com/repos/awslabs/aws-config-rules/contents/aws-config-conformance-packs"
+      Code:
+        ZipFile: |
+          import json
+          import os
+          import boto3
+          import logging
+          import csv
+          import io
+          from urllib.request import urlopen, Request
+          from urllib.error import URLError, HTTPError
+          from datetime import datetime
+
+          # Configure logging
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          S3_BUCKET_NAME = os.environ['S3_BUCKET_NAME']
+          S3_OUTPUT_PREFIX = os.environ['S3_OUTPUT_PREFIX']
+          GITHUB_API_URL = os.environ['GITHUB_API_URL']
+
+          # Conformance pack patterns to fetch
+          CONFORMANCE_PACK_PATTERNS = [
+              'Operational-Best-Practices-for-',
+              'Security-Best-Practices-for-'
+          ]
+
+          s3 = boto3.client('s3')
+
+          def lambda_handler(event, context):
+              logger.info('Starting GitHub sync for required rules')
+
+              try:
+                  # Fetch directory listing from GitHub API
+                  yaml_files = fetch_yaml_file_list()
+                  logger.info(f'Found {len(yaml_files)} YAML files in repository')
+
+                  # Filter to conformance pack patterns
+                  matching_files = [f for f in yaml_files if any(p in f['name'] for p in CONFORMANCE_PACK_PATTERNS)]
+                  logger.info(f'Found {len(matching_files)} matching conformance pack files')
+
+                  # Parse all conformance packs and extract rules
+                  all_rules = []
+                  for file_info in matching_files:
+                      try:
+                          rules = fetch_and_parse_conformance_pack(file_info)
+                          all_rules.extend(rules)
+                          logger.info(f"Extracted {len(rules)} rules from {file_info['name']}")
+                      except Exception as e:
+                          logger.warning(f"Failed to parse {file_info['name']}: {str(e)}")
+                          continue
+
+                  # Deduplicate rules
+                  unique_rules = deduplicate_rules(all_rules)
+                  logger.info(f'Total unique rules: {len(unique_rules)}')
+
+                  # Write to S3 as CSV
+                  write_rules_to_s3(unique_rules)
+
+                  return {
+                      'statusCode': 200,
+                      'body': json.dumps({
+                          'message': 'Successfully synced required rules',
+                          'total_files_processed': len(matching_files),
+                          'unique_rules_count': len(unique_rules)
+                      })
+                  }
+
+              except Exception as e:
+                  logger.error(f'Error during sync: {str(e)}')
+                  raise
+
+          def fetch_yaml_file_list():
+              """Fetch list of YAML files from GitHub API"""
+              request = Request(GITHUB_API_URL)
+              request.add_header('Accept', 'application/vnd.github.v3+json')
+              request.add_header('User-Agent', 'CRCD-Dashboard')
+
+              with urlopen(request, timeout=30) as response:
+                  data = json.loads(response.read().decode('utf-8'))
+
+              return [f for f in data if f['name'].endswith('.yaml')]
+
+          def fetch_and_parse_conformance_pack(file_info):
+              """Fetch and parse a single conformance pack YAML file using regex (no PyYAML dependency)"""
+              import re
+
+              download_url = file_info.get('download_url')
+              if not download_url:
+                  raise ValueError(f"No download URL for {file_info['name']}")
+
+              request = Request(download_url)
+              request.add_header('User-Agent', 'CRCD-Dashboard')
+
+              with urlopen(request, timeout=60) as response:
+                  content = response.read().decode('utf-8')
+
+              pack_name = file_info['name'].replace('.yaml', '')
+              standard_name = extract_standard_name(pack_name)
+
+              rules = []
+
+              # Split content into resource blocks - find all AWS::Config::ConfigRule resources
+              # Pattern matches resource blocks that have Type: AWS::Config::ConfigRule
+              resource_pattern = r'^\s{2}(\w+):\s*\n((?:\s{4,}.*\n)*?)(?=^\s{2}\w+:|^Resources:|^Parameters:|^Conditions:|^Outputs:|^Mappings:|$)'
+              resource_blocks = re.findall(resource_pattern, content, re.MULTILINE)
+
+              for resource_name, resource_content in resource_blocks:
+                  # Check if this is a Config rule
+                  if 'Type: AWS::Config::ConfigRule' not in resource_content and "Type: 'AWS::Config::ConfigRule'" not in resource_content:
+                      continue
+
+                  # Extract ConfigRuleName
+                  config_rule_name = extract_rule_name_regex(resource_content, resource_name)
+
+                  # Extract SourceIdentifier
+                  source_identifier = extract_source_identifier_regex(resource_content)
+
+                  if config_rule_name:
+                      rules.append({
+                          'rule_name': config_rule_name,
+                          'conformance_pack': pack_name,
+                          'standard_name': standard_name,
+                          'source_identifier': source_identifier
+                      })
+
+              return rules
+
+          def extract_rule_name_regex(content, resource_name):
+              """Extract rule name from YAML content using regex"""
+              import re
+
+              # Try to find ConfigRuleName with simple string value
+              # Matches: ConfigRuleName: rule-name or ConfigRuleName: "rule-name" or ConfigRuleName: 'rule-name'
+              simple_pattern = r'ConfigRuleName:\s*["\']?([a-zA-Z0-9_-]+)["\']?\s*(?:\n|$)'
+              match = re.search(simple_pattern, content)
+              if match:
+                  return match.group(1)
+
+              # Try to find ConfigRuleName with Fn::Sub
+              # Matches: ConfigRuleName: !Sub "prefix-${var}-suffix" or multi-line Fn::Sub
+              sub_pattern = r'ConfigRuleName:\s*(?:!Sub\s+)?["\']?([a-zA-Z0-9_-]+(?:-\$\{[^}]+\})*(?:-[a-zA-Z0-9_-]+)*)["\']?'
+              match = re.search(sub_pattern, content)
+              if match:
+                  # Remove ${...} placeholders
+                  rule_name = re.sub(r'\$\{[^}]+\}', '', match.group(1)).strip('-')
+                  if rule_name:
+                      return rule_name
+
+              # Try to find Fn::Sub with list syntax
+              fn_sub_list_pattern = r'ConfigRuleName:\s*\n\s*Fn::Sub:\s*\n?\s*-\s*["\']?([^"\'$\n]+)'
+              match = re.search(fn_sub_list_pattern, content)
+              if match:
+                  rule_name = re.sub(r'\$\{[^}]+\}', '', match.group(1)).strip('-')
+                  if rule_name:
+                      return rule_name
+
+              # Fallback: use SourceIdentifier converted to rule name format
+              source_id = extract_source_identifier_regex(content)
+              if source_id:
+                  return source_id.lower().replace('_', '-')
+
+              # Last resort: use resource name
+              return resource_name.lower().replace('_', '-')
+
+          def extract_source_identifier_regex(content):
+              """Extract SourceIdentifier from YAML content using regex"""
+              import re
+
+              # Match SourceIdentifier: VALUE
+              pattern = r'SourceIdentifier:\s*["\']?([A-Z_0-9]+)["\']?'
+              match = re.search(pattern, content)
+              if match:
+                  return match.group(1)
+              return ''
+
+          def extract_standard_name(pack_name):
+              """Extract the standard name from conformance pack name"""
+              for pattern in CONFORMANCE_PACK_PATTERNS:
+                  if pattern in pack_name:
+                      return pack_name.replace(pattern, '').replace('-', ' ')
+              return pack_name
+
+          def deduplicate_rules(rules):
+              """Deduplicate rules by rule_name, keeping all conformance pack associations"""
+              rule_map = {}
+              for rule in rules:
+                  key = rule['rule_name']
+                  if key not in rule_map:
+                      rule_map[key] = {
+                          'rule_name': rule['rule_name'],
+                          'conformance_packs': [rule['conformance_pack']],
+                          'standards': [rule['standard_name']],
+                          'source_identifier': rule['source_identifier']
+                      }
+                  else:
+                      if rule['conformance_pack'] not in rule_map[key]['conformance_packs']:
+                          rule_map[key]['conformance_packs'].append(rule['conformance_pack'])
+                      if rule['standard_name'] not in rule_map[key]['standards']:
+                          rule_map[key]['standards'].append(rule['standard_name'])
+
+              return list(rule_map.values())
+
+          def write_rules_to_s3(rules):
+              """Write rules to S3 as CSV"""
+              output = io.StringIO()
+              writer = csv.writer(output)
+
+              # Write header
+              writer.writerow(['rule_name', 'source_identifier', 'conformance_packs', 'standards', 'sync_timestamp'])
+
+              # Write data
+              sync_timestamp = datetime.utcnow().isoformat()
+              for rule in rules:
+                  writer.writerow([
+                      rule['rule_name'],
+                      rule['source_identifier'],
+                      '|'.join(rule['conformance_packs']),
+                      '|'.join(rule['standards']),
+                      sync_timestamp
+                  ])
+
+              # Upload to S3
+              s3.put_object(
+                  Bucket=S3_BUCKET_NAME,
+                  Key=f'{S3_OUTPUT_PREFIX}/data.csv',
+                  Body=output.getvalue().encode('utf-8'),
+                  ContentType='text/csv'
+              )
+
+              logger.info(f'Wrote {len(rules)} rules to s3://{S3_BUCKET_NAME}/{S3_OUTPUT_PREFIX}/data.csv')
+
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W58
+            reason: "Permission to write CloudWatch logs is given in IAMRoleGitHubSync"
+          - id: W92
+            reason: "This function runs on schedule and does not need reserved concurrent executions"
+
+  EventBridgeRuleGitHubSync:
+    Type: AWS::Events::Rule
+    Condition: IsMissingRulesDetectionEnabled
+    Properties:
+      Name: "crcd-github-sync-schedule"
+      Description: "CRCD Dashboard - Triggers GitHub sync Lambda to fetch required Config rules from AWS conformance packs"
+      ScheduleExpression: !Ref MissingRulesSyncSchedule
+      State: "ENABLED"
+      Targets:
+        - Id: "GitHubSyncLambdaTarget"
+          Arn: !GetAtt LambdaFunctionGitHubSync.Arn
+
+  LambdaPermissionEventBridgeGitHubSync:
+    Type: AWS::Lambda::Permission
+    Condition: IsMissingRulesDetectionEnabled
+    Properties:
+      FunctionName: !Ref LambdaFunctionGitHubSync
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt EventBridgeRuleGitHubSync.Arn
+
   IAMRoleLambdaPartitionerConfig:
     Type: AWS::IAM::Role
     Condition: IsCreateDashboardResources
@@ -1208,6 +1639,53 @@ Resources:
           - Name: dataSource
             Type: string
             Comment: "Config Snapshot or History record"
+
+  # ********************************************************************************************************************************************************
+  # Missing Rules Detection - Glue Table for Required Rules Reference
+  # ********************************************************************************************************************************************************
+
+  GlueTableRequiredRules:
+    Type: AWS::Glue::Table
+    Condition: IsMissingRulesDetectionEnabled
+    DependsOn:
+      - LambdaFunctionGitHubSync
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: "required_rules_reference"
+        Description: "CRCD Dashboard - Reference table for required Config rules from AWS conformance packs"
+        TableType: EXTERNAL_TABLE
+        StorageDescriptor:
+          Columns:
+            - Name: rule_name
+              Type: string
+              Comment: "The Config rule identifier (e.g., access-keys-rotated)"
+            - Name: source_identifier
+              Type: string
+              Comment: "AWS managed rule source identifier (e.g., ACCESS_KEYS_ROTATED)"
+            - Name: conformance_packs
+              Type: string
+              Comment: "Pipe-delimited list of conformance packs containing this rule"
+            - Name: standards
+              Type: string
+              Comment: "Pipe-delimited list of compliance standards"
+            - Name: sync_timestamp
+              Type: string
+              Comment: "Timestamp when this rule was synced from GitHub"
+          Location: !Sub 's3://${DashboardBucketName}/crcd/required_rules/'
+          InputFormat: 'org.apache.hadoop.mapred.TextInputFormat'
+          OutputFormat: 'org.apache.hadoop.hive.ql.io.IgnoreKeyTextOutputFormat'
+          SerdeInfo:
+            SerializationLibrary: 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+            Parameters:
+              separatorChar: ','
+              quoteChar: '"'
+              escapeChar: '\\'
+          Compressed: false
+        Parameters:
+          skip.header.line.count: '1'
+          classification: 'csv'
 
   # Allows the S3 bucket that contains the Config files to invoke the lambda function
   # not needed if the S3 bucket does not send object notifications directly to lambda
@@ -2247,6 +2725,17 @@ Outputs:
     Condition: IsCreateDashboardResources
     Value: !Ref IAMManagedPolicyQuickSightDataSource
     Export: { Name: "cid-CRCDConfigDashboard-ReadAccessPolicyARN" }
+
+  # Missing Rules Detection Feature Outputs
+  GitHubSyncLambdaArn:
+    Description: "ARN of the GitHub Sync Lambda function for Missing Rules Detection. Invoke manually to sync rules immediately."
+    Condition: IsMissingRulesDetectionEnabled
+    Value: !GetAtt LambdaFunctionGitHubSync.Arn
+
+  RequiredRulesTableName:
+    Description: "Name of the Glue table containing required Config rules from AWS conformance packs"
+    Condition: IsMissingRulesDetectionEnabled
+    Value: "required_rules_reference"
 
   # these are great for development 
 #  ConditionIsConfigureS3EventNotificationToLambda:

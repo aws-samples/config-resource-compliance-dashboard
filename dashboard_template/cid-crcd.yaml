@@ -15,7 +15,7 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
-    
+
     # CUSTOMIZATION - descriptive name of the dashboard
     name: "AWS Config Resource Compliance Dashboard (CRCD)"
     dashboardId: cid-crcd
@@ -2169,3 +2169,182 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
+
+  # ********************************************************************************************************************************************************
+  # Missing Rules Detection - Athena Views
+  # ********************************************************************************************************************************************************
+
+  config_enabled_rules:
+    dependsOn: {}
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_enabled_rules" AS
+      WITH
+        enabled_rules_raw AS (
+          SELECT DISTINCT
+            "accountId" AS accountid
+          , "region"
+          , "json_extract_scalar"(rule, '$.configRuleId') AS rule_id
+          , "json_extract_scalar"(rule, '$.configRuleName') AS rule_name
+          , "json_extract_scalar"(rule, '$.configRuleArn') AS rule_arn
+          FROM
+            (cid_crcd_config
+            CROSS JOIN UNNEST("configurationitems") t (configurationItem)
+            CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+          WHERE
+            "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -7, current_date)
+            AND datasource = 'ConfigSnapshot'
+        ),
+        normalized_rules AS (
+          SELECT
+            accountid
+          , region
+          , rule_id
+          , rule_name
+          , rule_arn
+          , LOWER(regexp_extract(
+              CASE
+                WHEN rule_name LIKE 'securityhub-%' AND NOT rule_name LIKE '%conformance-pack%' THEN SUBSTR(rule_name, 13)
+                WHEN rule_name LIKE 'AWSControlTower_AWS-GR_%' THEN SUBSTR(rule_name, 24)
+                WHEN rule_name LIKE 'AWSControlTower_%' THEN SUBSTR(rule_name, 17)
+                WHEN rule_name LIKE 'AWSControlTower-%' THEN SUBSTR(rule_name, 17)
+                ELSE rule_name
+              END,
+              '(.*?)(?:-conformance-pack-.*|-[a-z0-9]{8})?$', 1
+            )) AS core_rule_name
+          FROM enabled_rules_raw
+        )
+      SELECT
+        accountid
+      , region
+      , rule_id
+      , rule_name
+      , rule_arn
+      , core_rule_name
+      , concat(concat(accountid, '-'), region) AS pk_account_region
+      FROM normalized_rules
+
+  config_missing_rules:
+    dependsOn:
+      views:
+        - config_enabled_rules
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_missing_rules" AS
+      WITH
+        active_account_regions AS (
+          SELECT DISTINCT
+            accountid
+          , region
+          , pk_account_region
+          FROM "${athena_database_name}"."config_enabled_rules"
+        ),
+        required AS (
+          SELECT
+            rule_name
+          , source_identifier
+          , conformance_packs
+          , standards
+          , sync_timestamp
+          FROM "${athena_database_name}"."required_rules_reference"
+        ),
+        account_required_rules AS (
+          SELECT
+            ar.accountid
+          , ar.region
+          , ar.pk_account_region
+          , r.rule_name AS required_rule_name
+          , r.source_identifier
+          , r.conformance_packs
+          , r.standards
+          FROM active_account_regions ar
+          CROSS JOIN required r
+        ),
+        enabled AS (
+          SELECT DISTINCT
+            accountid
+          , region
+          , core_rule_name
+          FROM "${athena_database_name}"."config_enabled_rules"
+        ),
+        missing_analysis AS (
+          SELECT
+            arr.accountid
+          , arr.region
+          , arr.pk_account_region
+          , arr.required_rule_name
+          , arr.source_identifier
+          , arr.conformance_packs
+          , arr.standards
+          , CASE WHEN e.core_rule_name IS NULL THEN 'MISSING' ELSE 'ENABLED' END AS rule_status
+          , e.core_rule_name AS enabled_rule_name
+          FROM account_required_rules arr
+          LEFT JOIN enabled e
+            ON arr.accountid = e.accountid
+            AND arr.region = e.region
+            AND LOWER(arr.required_rule_name) = e.core_rule_name
+        )
+      SELECT
+        accountid
+      , region
+      , pk_account_region
+      , required_rule_name AS rule_name
+      , source_identifier
+      , conformance_packs
+      , standards
+      , rule_status
+      , CAST(current_timestamp AS timestamp) AS analysis_timestamp
+      , concat(concat(concat(accountid, '-'), region), concat('-', required_rule_name)) AS pk_missing_rule
+      FROM missing_analysis
+      WHERE rule_status = 'MISSING'
+
+  config_rules_coverage:
+    dependsOn:
+      views:
+        - config_enabled_rules
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}"."config_rules_coverage" AS
+      WITH
+        active_account_regions AS (
+          SELECT DISTINCT
+            accountid
+          , region
+          FROM "${athena_database_name}"."config_enabled_rules"
+        ),
+        required_count AS (
+          SELECT COUNT(*) AS total_required_rules
+          FROM "${athena_database_name}"."required_rules_reference"
+        ),
+        enabled_per_account AS (
+          SELECT
+            accountid
+          , region
+          , COUNT(DISTINCT core_rule_name) AS enabled_rules_count
+          FROM "${athena_database_name}"."config_enabled_rules"
+          GROUP BY accountid, region
+        ),
+        coverage_calc AS (
+          SELECT
+            aar.accountid
+          , aar.region
+          , COALESCE(epa.enabled_rules_count, 0) AS enabled_rules_count
+          , rc.total_required_rules
+          , CAST(COALESCE(epa.enabled_rules_count, 0) AS DOUBLE) / NULLIF(CAST(rc.total_required_rules AS DOUBLE), 0) AS coverage_ratio
+          FROM active_account_regions aar
+          CROSS JOIN required_count rc
+          LEFT JOIN enabled_per_account epa
+            ON aar.accountid = epa.accountid AND aar.region = epa.region
+        )
+      SELECT
+        accountid
+      , region
+      , enabled_rules_count
+      , total_required_rules
+      , total_required_rules - enabled_rules_count AS missing_rules_count
+      , coverage_ratio
+      , CASE
+          WHEN coverage_ratio >= 0.9 THEN 'HIGH'
+          WHEN coverage_ratio >= 0.7 THEN 'MEDIUM'
+          ELSE 'LOW'
+        END AS coverage_level
+      , concat(concat(accountid, '-'), region) AS pk_account_region
+      FROM coverage_calc
