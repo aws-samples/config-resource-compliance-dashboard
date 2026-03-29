@@ -61,7 +61,6 @@ Metadata:
           - ConfigureS3Replication
       -
         Label:
-          # TODO add to the documentation that the AWS Organization Data Collection Module of CID Data Collection or the CUR database can be used as sources
           default: "Account names and organizational tags"
         Parameters:
           - ConfirmCIDOrganizationModuleInstalled
@@ -246,7 +245,6 @@ Parameters:
     Description: "Name of the S3 service role used in the AWS Config files replication from the AWS Config Logs bucket to the Dashboard bucket (Required)."
 
   # Account names
-  # TODO probably there is no way to change database and table names
   AccountNamesAccountMapDatabaseName:
     Type: "String"
     Default: "cid_cur"
@@ -733,6 +731,7 @@ Resources:
               - "athena:GetQueryResultsStream"
               - "athena:ListTableMetadata"
               - "athena:GetTableMetadata"
+              - "athena:GetWorkGroup"
             Effect: "Allow"
             Resource:
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${GlueDataCatalogName}"
@@ -1453,7 +1452,6 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          # TODO test
           # BSC17 Risk mitigation
           - Sid: "AllowSSLRequestsOnly"
             Action: "s3:*"
@@ -2220,16 +2218,6 @@ Resources:
                       # Prepare CREATE OR REPLACE VIEW query based on table existence
                       if organization_table_exists:
                           create_view_query = build_view_query(athena)
-                          # TODO delete code below
-                          #create_view_query = f"""
-                          #CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-                          #SELECT 
-                          #    id as account_id,
-                          #    payer_id as payer_account_id,
-                          #    parent as organization_unit,
-                          #    name as account_name
-                          #FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
-                          #"""
 
                       elif account_map_exists:
                           # Account map table has only: account_id, account_name, parent_account_id, parent_account_name
