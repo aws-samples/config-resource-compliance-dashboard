@@ -155,7 +155,7 @@ CalculatedFields:
   Name: account-name-id
 - DataSetIdentifier: config_event_delivery
   Expression: dateDiff(now(), latestpartitiondate, "DD")
-  Name: config-file-delay
+  Name: config-snapshot-delay
 - DataSetIdentifier: config_event_rule_evaluation
   Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
     accountid))
@@ -221,16 +221,18 @@ DataSetIdentifierDeclarations:
   Identifier: config_compliance
 - DataSetArn: arn:aws:quicksight:::dataset/6a209bbd-782d-48eb-810d-2ee770849663
   Identifier: config_inventory
-- DataSetArn: arn:aws:quicksight:::dataset/b6acd8c6-96c9-4073-901a-df399fd9ce68
-  Identifier: config_event
 - DataSetArn: arn:aws:quicksight:::dataset/bff53ae6-246a-479a-8d36-3ab03c4ef1f0
   Identifier: config_inventory_ec2
+- DataSetArn: arn:aws:quicksight:::dataset/89570728-8d10-4e62-bae2-9c9bb0a2a74b
+  Identifier: config_event_delivery
+- DataSetArn: arn:aws:quicksight:::dataset/b6acd8c6-96c9-4073-901a-df399fd9ce68
+  Identifier: config_event
 - DataSetArn: arn:aws:quicksight:::dataset/99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
   Identifier: config_compliance_resource
 - DataSetArn: arn:aws:quicksight:::dataset/78d5f479-44d4-4763-b901-0de3d48a0098
   Identifier: config_inventory_s3
-- DataSetArn: arn:aws:quicksight:::dataset/89570728-8d10-4e62-bae2-9c9bb0a2a74b
-  Identifier: config_event_delivery
+- DataSetArn: arn:aws:quicksight:::dataset/253f17eb-d489-4bdc-babc-f809d4dae318
+  Identifier: config_compliance_actual
 - DataSetArn: arn:aws:quicksight:::dataset/d45218d0-83c2-45af-9f5d-ce71be1e4bb2
   Identifier: config_compliance_conformance_pack
 - DataSetArn: arn:aws:quicksight:::dataset/e296cb2f-878a-4884-8813-21afeb26db8d
@@ -258,258 +260,6 @@ FilterGroups:
       SheetVisualScopingConfigurations:
       - Scope: ALL_VISUALS
         SheetId: 0639db86-f285-4277-8d29-1f1e4e59a6ac
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4bb825f9-0e1f-4400-b488-a1c62c811ddf
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 342183c6-fe52-44f5-9e79-868042e1866f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 45e5cb57-b57a-402e-b7cc-c8c58d8a2c43
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: d083cb28-e0d6-46a1-b3b3-506fb150ec7d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3e4a7cb4-3953-48b2-b595-21dedd170c88
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: d60fa709-51dd-4c23-8222-1299cca46a7a
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e3c86bad-52e6-4ba8-9ec4-6824d7ec4d4f
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: afb58fdf-c2ff-4f8e-b894-f594b4ec9e1a
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: ab11dc3c-4412-4f78-b526-17612717c20b
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 9c07335d-e9cd-455a-98f1-30894852463c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: c7c430d9-94e2-40c2-9327-8877a1a47018
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 5bbcad9c-68fa-44ca-b0a5-845cc250adb4
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 8d540ead-3270-4c49-88b4-fe0016800966
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 86b45acb-aff9-4d74-9a83-dcc4b14eae21
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: c2e837d6-b2d4-421c-8c4b-19c4ce8801e2
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: f043a576-8fd5-485b-bcd6-17fef7a0ee6f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: bb8580c0-5a3e-4825-979c-4eb57a74885f
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: be1c495b-aae7-4ad1-8ddc-a8b63a4427bd
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3e414e87-82a0-463b-a1d7-5942b1381dac
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 5a2c81da-1136-4241-b687-578e38e0bd7f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: ed2540ed-deac-482b-b74c-8a3711dfbdf8
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 7fb623af-1195-413e-b0e7-3206542e5042
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 0022c4e5-fcf9-423d-a915-698b07042e43
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: f145de8d-d686-48af-a26c-d5fcf788f6d3
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: efbda0dd-47df-4d51-8272-d2bc75597e29
@@ -614,48 +364,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - d3a5711f-258c-43e1-87e3-9e079f06b1d3
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e8655503-739a-4b06-9ac9-a45e4cab04ae
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: b44529a4-1c86-4970-9116-3e3aa22889a4
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: d6a12d17-c23f-46a1-8fa2-5efcd8dc2d99
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: ae3e7f8f-896a-40ed-84ca-775b8eb009f9
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: bcaf6203-3efe-40c6-aae5-80b328364139
@@ -784,510 +492,6 @@ FilterGroups:
         - d3a5711f-258c-43e1-87e3-9e079f06b1d3
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
-  FilterGroupId: ce2823fd-8eaf-4c1f-ae5a-909ff99f8a06
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: eca90b13-6054-4206-bdea-99f1535e4897
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e521db71-72cf-4866-a746-984922370b89
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: fdefb012-f397-4c09-aa38-e357062b59ae
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: c9755957-580e-4f3f-bddd-490dfe03ef82
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: fca3e9a0-9f48-4a18-a7e3-9d00a981eb59
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: deedb7c9-2ac0-4abd-ac60-b2d7bd5b8358
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 8233a64c-8d17-426f-80d5-4a92d1e7ec3f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 762bd2d9-5bde-4d8e-a416-fbd9fee1e734
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: bad97199-a61f-46a0-bb01-6053cfb5691a
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 03b3318c-1d4f-4dcf-ba99-b9f67f5b34ef
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 499bf784-f536-437c-85fe-402325a64f0e
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: bcf00532-00cd-41fd-9a3f-10bcb256a05b
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: f7a31ab0-61b6-43a9-ba4a-3487f8acd54d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: a93cb522-48b5-4458-a5f8-8ad42331c903
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 420a9881-a835-45e3-ad73-faf96b16ccd2
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: cb624899-2e08-46b2-9417-5f464ab21323
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 54f41bce-100a-4ceb-ab3c-d1245cb293ac
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 45770212-5792-4fcd-9395-7f09a84c5561
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: c5f0c763-6dc1-4edd-ac8e-5722d092fec0
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: eaa6a24c-177b-4143-8fe7-7bfceaade451
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 64369800-f1dd-40ad-b7bc-6922ade5ab82
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 670d778b-d986-47f3-a842-db8f669c69c9
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 921f98d9-6fdc-4605-9fe5-0c0a36bfe7bd
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4d7b3413-ba6f-4cde-8eb2-da4b57fd5d1c
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: 93fad4e2-3d69-4692-89b9-1b0042d5cecf
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: be947488-9a56-4d94-93c5-f7e5362bdeaa
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 858417fb-1f9a-4ee5-81d8-d79f289c78f4
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: a6b5625c-e983-4def-bb8d-caccc5fb3cff
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: df4faac6-5c16-442f-b272-6ce6331ee75c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: ff3585de-b4f4-41cc-b390-577d5aebfd2a
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: f17f0ab7-cd4b-4e67-928e-216c36c02afe
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: a389e9f3-5eef-4df9-8d18-68a44581a23d
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: b315a51e-0618-4298-8cf7-cd41404b256b
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4dbbba6e-a7ba-4e09-959f-558451cf9ad5
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 8eb2e8bb-a476-4db2-ba62-5e79352a52ab
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 65a59c30-a9f8-48d9-ba1c-2dadcb19d190
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: d8df2694-dca8-442f-90d5-e26b3e07c85a
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3a4a5792-535f-46c9-97c6-821aa25ac978
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 5869b21f-4228-476a-b3c6-f85f44ce80bc
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4d5c844e-e3e4-4439-9903-48777b416011
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 9c83951f-9337-469c-8707-de0138c6dfda
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4dbbbc52-a22d-450e-b168-745546877c68
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 293e8fcc-1b05-49f7-bec5-f06b7428dd3e
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e6572b9c-2115-4e92-97d0-a9e666a15200
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 1e00285a-281e-4774-a9d5-33afa3ae0b58
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 2207012d-27be-4dd8-bde8-cfd7e98344ec
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 78c39520-638e-4f1e-aa33-a044eeb60c5e
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
   FilterGroupId: 50a9384f-1afa-4e59-83d1-e7dd3797dbde
   Filters:
   - CategoryFilter:
@@ -1307,132 +511,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: ff7eabbc-5227-4728-a8ee-86a9cc5381da
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: fb647345-91c0-4429-b0a1-450acc48bc4c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b7527675-7270-4869-9db2-307ff99f5737
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: f799f28b-f28f-4d26-8c55-0ef420db4803
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 90a1c250-d199-4179-88c1-01fbb14c9f51
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 9106b7cf-c0bc-450f-807c-c4da7d41dae7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: dd19390b-f9ec-43a3-8451-79f3f425fd80
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: ff86c1c4-e6b1-41e8-91c5-8a4966caf1ee
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3168c0af-9a0a-4477-aacb-153f28734f78
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: db9f57bc-c082-42e9-966f-a792d0602219
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 9cbc8fce-de8e-4d4a-98e2-0e6fd81989d6
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 783e1d71-b293-47fc-a1f5-33421392c90d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 2c87b372-22b8-4612-9e9c-559f942ae741
@@ -1496,132 +574,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 2f369308-f1fb-4f9e-9fa6-c48b742189c3
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 331e165c-1f6e-4fce-8d73-481e68f469cc
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 75b489a8-138e-44ea-afe2-1a0fcea8ff18
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: bdd47c31-c7b0-4507-b430-6431de42f5a5
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3a113c59-8a74-4846-85b7-f56bcd61137f
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: f779daba-bea8-4717-98ea-8187dcf1277e
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 1ee1c582-7ad1-4a35-84fc-b5cb1fd57d72
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 18e1fca0-d68d-4024-aec7-c1e731173dde
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b77a86f9-d919-4e00-b097-d64aa8f73465
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 8c81dde6-b1f0-4a60-a70f-9c4a2f36e461
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 6a101189-278f-4c14-8871-69a26d08cdda
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 438478f7-0676-4157-9e2d-52101a3eb46c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: f59a3bbe-9dc5-4cb8-b236-739ecbf28e4a
@@ -1756,49 +708,7 @@ FilterGroups:
         VisualIds:
         - 1da36817-1898-477a-bfb8-93229158fccc
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 189b4da7-0d28-486b-8b80-7fcfaa5783f4
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 987d1bd0-e71c-46da-96a8-95209604630f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 54a109be-1228-456a-a78a-cd95de709663
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: b845cb52-bcdd-43f1-9250-dfbd1e5cb01f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: d4365476-f140-41a4-898c-bb0ffa7f119a
   Filters:
   - CategoryFilter:
@@ -1817,9 +727,34 @@ FilterGroups:
       - Scope: SELECTED_VISUALS
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
+        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
+        - 9023325c-2c4b-4818-a57a-4bb575ae6034
+        - 85a7b8bf-28eb-41c6-9eef-a4fafab4a477
+        - e3fef15e-b083-4d88-b40b-8d4787951dd7
+        - 9c755fb1-d737-4c98-9c45-056bc140bae0
+        - ec413027-c133-43b0-bb8e-76f0983eeaf7
+        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
+        - 144f1fcf-39cc-49d5-a022-96d50e30b234
+        - e93c09da-6f67-4242-9402-e582c0fdf269
+        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
+        - 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
+        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
+        - e77e998d-1e2a-451a-9e40-3e4109c7130d
+        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
         - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
+        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
+        - 397dc57e-2605-481d-b8cf-27412bf114d5
+        - 49d877fd-3c33-4ed0-bad5-359108decb45
+        - 5c3ab2c4-7545-4b9d-b75a-3f9b52a75efa
+        - a52bc094-0c1d-4568-9714-1bfa9e7140a5
+        - 6a33cc13-506c-46be-a167-e0379d18f19b
+        - 57cc82fb-8961-42c4-8169-38b95a7135fc
+        - 080db616-bd5d-4a49-93f1-6b260077c9e1
+        - 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+        - 50bef8fc-bcd7-45e9-826d-b483e632220b
+        - 7812eb01-9609-4c03-a68d-157405579851
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: a71e6c62-8287-4cdb-8e1c-90304da67ae4
   Filters:
   - CategoryFilter:
@@ -1838,9 +773,34 @@ FilterGroups:
       - Scope: SELECTED_VISUALS
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
+        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
+        - 9023325c-2c4b-4818-a57a-4bb575ae6034
+        - 85a7b8bf-28eb-41c6-9eef-a4fafab4a477
+        - e3fef15e-b083-4d88-b40b-8d4787951dd7
+        - 9c755fb1-d737-4c98-9c45-056bc140bae0
+        - ec413027-c133-43b0-bb8e-76f0983eeaf7
+        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
+        - 144f1fcf-39cc-49d5-a022-96d50e30b234
+        - d5ab6538-2a7b-448b-919a-c2492e1a0aff
+        - e93c09da-6f67-4242-9402-e582c0fdf269
+        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
+        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
+        - e77e998d-1e2a-451a-9e40-3e4109c7130d
+        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
         - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
+        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
+        - 397dc57e-2605-481d-b8cf-27412bf114d5
+        - 49d877fd-3c33-4ed0-bad5-359108decb45
+        - 5c3ab2c4-7545-4b9d-b75a-3f9b52a75efa
+        - a52bc094-0c1d-4568-9714-1bfa9e7140a5
+        - 6a33cc13-506c-46be-a167-e0379d18f19b
+        - 57cc82fb-8961-42c4-8169-38b95a7135fc
+        - 080db616-bd5d-4a49-93f1-6b260077c9e1
+        - 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+        - 50bef8fc-bcd7-45e9-826d-b483e632220b
+        - 7812eb01-9609-4c03-a68d-157405579851
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: 45a99881-5218-4e67-88c0-b19187b7f062
   Filters:
   - CategoryFilter:
@@ -1859,28 +819,32 @@ FilterGroups:
       - Scope: SELECTED_VISUALS
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
+        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
+        - 9023325c-2c4b-4818-a57a-4bb575ae6034
+        - 85a7b8bf-28eb-41c6-9eef-a4fafab4a477
+        - e3fef15e-b083-4d88-b40b-8d4787951dd7
+        - 9c755fb1-d737-4c98-9c45-056bc140bae0
+        - ec413027-c133-43b0-bb8e-76f0983eeaf7
+        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
+        - 144f1fcf-39cc-49d5-a022-96d50e30b234
+        - a3ef4b5c-850a-4868-9f9c-cbd0b459a913
+        - e93c09da-6f67-4242-9402-e582c0fdf269
+        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
+        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
+        - e77e998d-1e2a-451a-9e40-3e4109c7130d
+        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
         - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b6669690-e0ef-4447-ad96-24312e66a2e5
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: c46d415f-bfea-4532-b6b2-ca2dacdaa402
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
+        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
+        - 397dc57e-2605-481d-b8cf-27412bf114d5
+        - 49d877fd-3c33-4ed0-bad5-359108decb45
+        - 5c3ab2c4-7545-4b9d-b75a-3f9b52a75efa
+        - a52bc094-0c1d-4568-9714-1bfa9e7140a5
+        - 6a33cc13-506c-46be-a167-e0379d18f19b
+        - 57cc82fb-8961-42c4-8169-38b95a7135fc
+        - 080db616-bd5d-4a49-93f1-6b260077c9e1
+        - 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+        - 50bef8fc-bcd7-45e9-826d-b483e632220b
+        - 7812eb01-9609-4c03-a68d-157405579851
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 9de15b20-bcdb-4999-8bce-168de084ddb6
@@ -1965,384 +929,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: bafddc63-1131-4a1c-974f-18426e12de26
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 0d3d3be4-86fa-492e-941e-5b4baa6117ce
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e1564301-2799-446d-a8b7-ad83904db804
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: 02747ca1-0c99-49c4-875a-79dc9d40d9d7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: a66b065e-918e-436d-9dc7-1f846ae1f364
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 311d81ff-d453-41c2-b1ff-fdabddca0227
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3889b52d-5276-46a8-b8de-e7dd4f78a672
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 773a00e5-caae-4a88-924c-9d97f46c33fe
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 225c8377-a390-4aaf-9202-7864bbc91079
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 99501eef-2136-4a34-820b-feef81666f47
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 63a568cd-6c6e-49eb-82fe-936124c01d1e
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 3ffe2b7c-a78d-438a-b073-a2ad72395554
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b78bc104-f932-4798-b69f-1054cfd07793
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: ffd4c33b-0309-4390-944d-aec2b7e26a8c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 5a2f32f4-ab8d-420c-b20a-10e508fcf1df
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: 3f3f2d3a-4af6-4070-8442-a467342498f1
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 8a1605ce-95b8-48f9-a92a-4f4f1e06c46f
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: b2556dda-6dfc-4858-96af-b92bc952ecd1
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 408a4398-662b-4035-a495-0df7d5c67a5f
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: c72cd495-ad0b-4d2c-8434-8acf8b9c4320
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 8ebf0ed6-4c7e-4149-b76e-0a293a7bee6d
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 9bcbb38a-1e47-48fd-af3e-22911e2f2395
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4e31ee69-d331-4f30-9a44-06cd730cf821
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 9dbcf124-fe8c-443a-a69d-cd4e6f7c3a66
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 5e4e93f9-ee8b-4987-ace8-40d5696ce2f1
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 4b47c6c4-8f8c-480a-b3e5-0e4b568bfa44
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 17f37760-0180-43ff-8188-6a5662a5db47
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: c6b8f12f-5c4a-4896-964d-1c5521a9f213
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 575c1548-b308-46b7-8674-2d36f15be14d
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 8be12e33-083f-49b6-a3e6-4a00143f3f5f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: fe50803a-149d-47c7-954a-01becf8a11a6
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 63eadfaa-718c-465f-99d0-ea0fd8198ca2
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 7c8c7aff-b19e-4ebb-b362-43a597b26de4
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 9c2538c6-78da-470b-bb61-8e539977cee2
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 7458a4c4-6354-48f1-b8ae-ef72ed8fe18d
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: db179758-6a92-4460-9e08-9bc6415243c7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 3fd39590-a9e3-498d-aa56-2203a30b70b7
@@ -2621,90 +1207,6 @@ FilterGroups:
         - c41bafbf-2f9f-4766-a37a-9a5b37e0dbf8
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
-  FilterGroupId: f96b407a-a82b-497b-8e57-f868a1a448aa
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evAccountID
-      FilterId: 686fd5ae-86d2-4f2f-ab15-d4f17e8d8a5d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - c2dc06fd-3ce1-4c88-b6be-2aab474825d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 2a0b33d7-7391-4230-b94a-aec615513301
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evRegion
-      FilterId: d7e0ca1f-cbea-4017-92f0-7c7e285b6ea0
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - c2dc06fd-3ce1-4c88-b6be-2aab474825d5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: bd3e9adb-d909-44f1-9b57-f0325ddee2c8
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evAccountID
-      FilterId: 19ffb01e-b8c8-4d45-9d65-284c4e54dfa2
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - 1da36817-1898-477a-bfb8-93229158fccc
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: f9d388c5-64d6-416a-b495-fb0b7e89342a
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evRegion
-      FilterId: 8cf8bcab-b957-4e18-991c-e991d2648871
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - 1da36817-1898-477a-bfb8-93229158fccc
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
   FilterGroupId: c2485229-bc9b-4c92-82aa-b43a69366803
   Filters:
   - CategoryFilter:
@@ -2725,132 +1227,6 @@ FilterGroups:
         SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
         VisualIds:
         - 1da36817-1898-477a-bfb8-93229158fccc
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b3a4d686-3e47-4dc9-a183-e7c7b3d567ad
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: 5588573e-fd23-4af9-9947-567bc956e2c8
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 38026471-7212-4c4d-80c9-338a7353a71c
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: dc4582eb-5279-4d95-b8a9-7a9fc7ffadfb
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b7d2591d-1d0b-4bbf-bc11-193c694ade79
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 1a3c9bb8-6035-4b3f-bc95-2e66ce20c725
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: b147ba44-8515-4cfd-84e7-e66542a1457a
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: d9aa60eb-89e9-49bc-81fc-be34e0aca532
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: fb39c2a7-368c-42ed-87d9-2b8bf931b9c0
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 1a5499ce-cf9a-42bf-a149-7f32bdc05955
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 428ac10e-26c0-4e40-9ad8-bf48b44f9ccc
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: 56e7cf78-fbc1-4d90-8acf-6d2b70703a01
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 974edcf7-c48c-4fb0-a903-e56a615ff4d2
@@ -3650,48 +2026,6 @@ FilterGroups:
         - 0e11810a-bb71-4c62-b15c-ab84b53212b1
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
-  FilterGroupId: b09b0948-a606-4db9-ae6c-3a4f52f0dc91
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evAccountID
-      FilterId: f19ab67d-865a-4259-8d2f-ce9e306cda7f
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - e1b9e4df-0bf3-4271-9e87-036a3fa79c02
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: cbffca6d-d0e7-4ab6-b95d-6cb9cf7b13c0
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evRegion
-      FilterId: beaa9724-a7a0-4bed-ae81-da050790b47d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - e1b9e4df-0bf3-4271-9e87-036a3fa79c02
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
   FilterGroupId: 06dec59f-a293-4b7f-96e2-f45c2d5e5fc3
   Filters:
   - CategoryFilter:
@@ -3875,7 +2209,7 @@ FilterGroups:
       MinimumGranularity: DAY
       NullOption: NON_NULLS_ONLY
       RelativeDateType: LAST
-      RelativeDateValue: 15
+      RelativeDateValue: 30
       TimeGranularity: DAY
   ScopeConfiguration:
     SelectedSheets:
@@ -3885,49 +2219,7 @@ FilterGroups:
         VisualIds:
         - b116e483-d384-4480-b3fa-15e4c26642c3
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 39d15a4e-b479-47c4-ad89-3f2af58eaa6b
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evAccountID
-      FilterId: a92bc7a5-9011-4c7e-996a-56cee354b6c7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - b116e483-d384-4480-b3fa-15e4c26642c3
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: d11e4ef6-bdfc-4ad9-a317-21b73680429c
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: evRegion
-      FilterId: 9aa5122b-afe9-42c9-855e-b5e400324d82
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - b116e483-d384-4480-b3fa-15e4c26642c3
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: 9bd053d4-0cc7-4266-82b4-f817e4aa7287
   Filters:
   - CategoryFilter:
@@ -3943,12 +2235,10 @@ FilterGroups:
   ScopeConfiguration:
     SelectedSheets:
       SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
+      - Scope: ALL_VISUALS
         SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - 042eabec-e1cc-45bb-a771-8ac8ea864c31
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: 8cfaeda6-d6cd-475f-9682-fa0df61225d7
   Filters:
   - CategoryFilter:
@@ -3964,12 +2254,10 @@ FilterGroups:
   ScopeConfiguration:
     SelectedSheets:
       SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
+      - Scope: ALL_VISUALS
         SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
-        VisualIds:
-        - 042eabec-e1cc-45bb-a771-8ac8ea864c31
   Status: ENABLED
-- CrossDataset: SINGLE_DATASET
+- CrossDataset: ALL_DATASETS
   FilterGroupId: cfb9080e-b7a8-4e48-aa2f-b98349ec726d
   Filters:
   - CategoryFilter:
@@ -3985,94 +2273,8 @@ FilterGroups:
   ScopeConfiguration:
     SelectedSheets:
       SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
+      - Scope: ALL_VISUALS
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 94df3504-cebf-4d4f-8f47-5b15cdda2a65
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: fb065cad-167f-4f62-ab26-92301405016e
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e77e998d-1e2a-451a-9e40-3e4109c7130d
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 003d2463-8235-4494-a993-d9f176f8d011
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_s3
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 03faf83a-2093-43fb-8723-ad51a453deb3
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e93c09da-6f67-4242-9402-e582c0fdf269
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 03750cae-0049-4902-adbe-851230dbd336
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_rds
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: f6dbdc7a-b3ae-46b7-80a0-f9d8d3bf264c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: fccb4647-d7ee-41d5-9759-d1e47b1327d1
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_lambda
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 027ea02b-52a8-4798-a314-088183741b20
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 397dc57e-2605-481d-b8cf-27412bf114d5
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 22fcb44e-3ba4-44d2-adcc-7a4e65eed6fc
@@ -4157,174 +2359,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - d3a5711f-258c-43e1-87e3-9e079f06b1d3
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: d11e2d9b-bef3-49ff-8def-672baefbc7fa
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: c6851a07-1b76-4a27-a6dc-f8f6b5450aea
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 5b0a4716-ac17-48ea-8925-ad98ddc45ee0
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 7fbca0d8-547e-45be-827e-cb91a2f5fdba
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 144f1fcf-39cc-49d5-a022-96d50e30b234
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 72380a07-a75e-4805-8f15-30a421185712
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: f37fc253-27d8-46ba-a969-5b76897dc7e2
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 7587bacb-22b7-40fa-912c-ebfaa4898e89
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: f486133b-4d78-4d02-b70a-48a8d5f3af69
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - ec413027-c133-43b0-bb8e-76f0983eeaf7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: dcd05f44-7116-4ee4-a737-a10a09529347
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 53560c3b-831d-4f82-ab75-d872eebb70f6
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 3b3667df-de60-4616-9daa-d2dc393b123c
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 307a9b67-f49b-4141-afc2-76ecd1afdfb7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9c755fb1-d737-4c98-9c45-056bc140bae0
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 6168d44b-c0c0-4454-8bd6-2a85af26b27b
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 1b3892d8-686d-470f-a2bb-65734660a4e6
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 197a9869-8945-4fb5-bae7-4aec7e588c84
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ebs
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: a8f86b23-ca17-4e26-a044-58fe7324c1b3
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - e3fef15e-b083-4d88-b40b-8d4787951dd7
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: b3d775dd-c995-47fa-9553-85b523b78523
@@ -5462,300 +3496,6 @@ FilterGroups:
         SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
         VisualIds:
         - 6a33cc13-506c-46be-a167-e0379d18f19b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 92f3b090-6b72-4ba9-88c7-3d423f0c8aa7
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: ba4a96e3-698f-4bc6-b5f0-62d46e658f70
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 28e988b1-1312-4ea9-bf5a-4cf1310f3810
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: 931c998d-d0b2-4957-aa89-f21de069cea1
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: e857c36e-c13a-4731-a01d-6b498a4dbaed
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: 9f234044-a0d7-4c05-9f89-ac660ee65a31
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: eeb80bc7-6819-4a16-8a93-5874fd75469a
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 153a5143-526e-48b5-bf5f-a50c50e9de57
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4844af55-bdf3-4ffa-84c6-17de312fca65
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: 1b452d52-f42a-48e3-abda-953ee8b10bb4
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: ee50710c-7f85-44ed-8d82-bc299549361e
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: e2cf7f71-0010-4ddf-b4fc-08716bdba9a6
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 92a23e8f-6ce2-4cd2-aa7d-6478531fd008
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 041197da-9478-46ab-82a0-3968f9f57df6
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - 9023325c-2c4b-4818-a57a-4bb575ae6034
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 8f540e47-2545-405a-84a1-6579ee8ed35e
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: accountid
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountID
-      FilterId: e63e2834-4cc8-4586-9cb1-d0c76457fdc7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 2a4eba8d-97dd-4f26-8158-51de87496ad5
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: region
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIRegion
-      FilterId: 3d525297-d15a-4a2b-9e7a-27b6e6184edf
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 0f636486-4c19-45ea-af7e-e31bfb875caa
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag1
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag1
-      FilterId: badff1d0-cab7-4411-9821-6fbb837d9c8b
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: d99d47ea-b7b5-49d8-b83a-ae6b3ca6a760
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag2
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag2
-      FilterId: 3cfea25a-fd25-40c1-912f-b0484d613f9d
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 4a25be93-b195-4117-a289-542f8ccf8ca0
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag3
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag3
-      FilterId: b071ec9d-9c34-48d6-bf3c-30d68350d303
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: f06effdb-3f7d-47da-8960-365a2ea99f13
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: tag4
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CITag4
-      FilterId: abc44207-1aa1-477f-9cf3-b5ecc7a6787a
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: bdf1c8a3-c7a9-47a4-a15b-8e08fd70ac63
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: account_name
-        DataSetIdentifier: config_inventory_ec2
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: CIAccountName
-      FilterId: 5357fe19-412f-4b8c-84e2-d54e8167d79c
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
-        VisualIds:
-        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 5b1168d5-8b33-451d-8dc8-d1e9d20a95f2
@@ -8431,6 +6171,279 @@ FilterGroups:
         VisualIds:
         - d80986ed-4284-4b82-bca0-8dfca3e5feb5
   Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: b6669690-e0ef-4447-ad96-24312e66a2e5
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: tag4
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CITag4
+      FilterId: c46d415f-bfea-4532-b6b2-ca2dacdaa402
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - b8299aa2-c557-4762-b4fb-0fe23e7fa88b
+        - 9023325c-2c4b-4818-a57a-4bb575ae6034
+        - 85a7b8bf-28eb-41c6-9eef-a4fafab4a477
+        - e3fef15e-b083-4d88-b40b-8d4787951dd7
+        - 9c755fb1-d737-4c98-9c45-056bc140bae0
+        - ec413027-c133-43b0-bb8e-76f0983eeaf7
+        - 4fd98310-c237-4c14-a8fe-d08abd0f79da
+        - 144f1fcf-39cc-49d5-a022-96d50e30b234
+        - d3a5711f-258c-43e1-87e3-9e079f06b1d3
+        - e93c09da-6f67-4242-9402-e582c0fdf269
+        - 901c7126-32a8-4ed4-8a01-4d1a1e68afd8
+        - ab4831d7-a546-4b51-a2ca-9aecd2b01704
+        - e77e998d-1e2a-451a-9e40-3e4109c7130d
+        - c1547e7b-c5e2-4c88-bd2f-43833896cdf8
+        - 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
+        - 12a6f888-57d3-4103-b97b-d1f0fcba21e7
+        - 397dc57e-2605-481d-b8cf-27412bf114d5
+        - 49d877fd-3c33-4ed0-bad5-359108decb45
+        - 5c3ab2c4-7545-4b9d-b75a-3f9b52a75efa
+        - a52bc094-0c1d-4568-9714-1bfa9e7140a5
+        - 6a33cc13-506c-46be-a167-e0379d18f19b
+        - 57cc82fb-8961-42c4-8169-38b95a7135fc
+        - 080db616-bd5d-4a49-93f1-6b260077c9e1
+        - 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+        - 50bef8fc-bcd7-45e9-826d-b483e632220b
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: d6a12d17-c23f-46a1-8fa2-5efcd8dc2d99
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: region
+        DataSetIdentifier: config_inventory
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIRegion
+      FilterId: ae3e7f8f-896a-40ed-84ca-775b8eb009f9
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: e8655503-739a-4b06-9ac9-a45e4cab04ae
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: accountid
+        DataSetIdentifier: config_inventory
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIAccountID
+      FilterId: b44529a4-1c86-4970-9116-3e3aa22889a4
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: 54a109be-1228-456a-a78a-cd95de709663
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: region
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIRegion
+      FilterId: b845cb52-bcdd-43f1-9250-dfbd1e5cb01f
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: 189b4da7-0d28-486b-8b80-7fcfaa5783f4
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: accountid
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIAccountID
+      FilterId: 987d1bd0-e71c-46da-96a8-95209604630f
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ae0f731a-8f77-40be-814e-9bead300c5ab
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: tagname
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIEC2Name
+      FilterId: 7e224a1b-7259-4cec-b1a1-7bd6dd6616e4
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: DISABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 82ef0152-9fb2-456b-958b-8acf552e92dd
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: SSMAssociationStatus
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: CIEC2SystemsManagerAssociation
+      FilterId: bbda94f5-fdea-4837-a313-64fa00a60350
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 425c0732-5d46-4d1c-84b7-04cf756a926e
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: instanceid
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: 1e3fa8a6-f13a-4f57-8a6c-e93d38b88b90
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 6a42f42a-dff2-470b-ae81-be8208add280
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: instanceid
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: d08b1967-bd63-42e1-ae2f-96a3f656d43d
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 5e988968-55e7-486c-a720-37333eb869bb
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: state
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: 428f8fdf-3e3d-4772-8836-92cc2b23fbae
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: 3ef85552-373f-4451-99c4-09172d47afd3
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: platformdetails
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: c9fd6083-a7bf-4c35-b3ed-0c45c87f5b3b
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: d4a35e42-0c80-45ba-8072-580411cd3d94
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: tagname
+        DataSetIdentifier: config_inventory_ec2
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: b8596f14-54e7-48d1-bb98-a77a484e8cec
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
+        VisualIds:
+        - 7812eb01-9609-4c03-a68d-157405579851
+  Status: ENABLED
 Options: {}
 ParameterDeclarations:
 - IntegerParameterDeclaration:
@@ -8755,6 +6768,12 @@ ParameterDeclarations:
     ParameterValueType: MULTI_VALUED
     ValueWhenUnset:
       ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: CIEC2SystemsManagerAssociation
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
 - DateTimeParameterDeclaration:
     DefaultValues:
       RollingDate:
@@ -9070,12 +7089,14 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: conformancepackname
-          DataSetIdentifier: config_compliance
+          DataSetIdentifier: config_compliance_actual
       SourceParameterName: ComConformancePack
       Title: Conformance Pack
       Type: MULTI_SELECT
   - Dropdown:
       DisplayOptions:
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
         SelectAllOptions:
           Visibility: VISIBLE
         TitleOptions:
@@ -9087,7 +7108,7 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: rulename
-          DataSetIdentifier: config_compliance
+          DataSetIdentifier: config_compliance_actual
       SourceParameterName: ComConfigRule
       Title: AWS Config Rule
       Type: MULTI_SELECT
@@ -9106,7 +7127,7 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: resourceid
-          DataSetIdentifier: config_compliance
+          DataSetIdentifier: config_compliance_actual
       SourceParameterName: ComResource
       Title: Resource
       Type: MULTI_SELECT
@@ -9577,8 +7598,8 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 31.250000000000075
-                To: 72.91666666666684
+                From: 58.333333333333215
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -9846,7 +7867,7 @@ Sheets:
                   DataSetIdentifier: config_compliance_resource
                 FieldId: e1ae9407-7b7c-4f5c-99e5-3fc8a2948302.pkresourceid.2.1741074343855
         Legend:
-          Height: 113px
+          Height: 98px
           Position: BOTTOM
           Title:
             CustomLabel: Resource Type
@@ -10251,7 +8272,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 1ef0313e-3c9f-4c54-a86d-b54aa4ac36e6.pkconformancepackid.2.1740754831997
-                Label: Conformance Pack
+                Label: Conformance Packs
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -10364,7 +8385,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 1ef0313e-3c9f-4c54-a86d-b54aa4ac36e6.pkconformancepackid.2.1740754811192
-                Label: Conformance Pack
+                Label: Conformance Packs
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 3ec9476b-93f3-4080-965d-a47098aa90af.2.1750177791442
@@ -10485,7 +8506,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 1ef0313e-3c9f-4c54-a86d-b54aa4ac36e6.pkconformancepackid.2.1740754863034
-                Label: Conformance Pack
+                Label: Conformance Packs
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -11053,8 +9074,8 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 32.0
-                To: 52.0
+                From: 80.0
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -13414,6 +11435,7 @@ Sheets:
       ChartConfiguration:
         BarsArrangement: STACKED
         CategoryAxis:
+          AxisOffset: 24px
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -13635,6 +11657,67 @@ Sheets:
         Visibility: HIDDEN
       VisualId: c41bafbf-2f9f-4766-a37a-9a5b37e0dbf8
 - ContentType: INTERACTIVE
+  FilterControls:
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: adcb5ddb-5160-4b23-9787-dfbe3ffc3204
+      SourceFilterId: d08b1967-bd63-42e1-ae2f-96a3f656d43d
+      Title: Instance ID
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: 46a1e2ad-553b-47ba-a15e-3c3ad902e824
+      SourceFilterId: 428f8fdf-3e3d-4772-8836-92cc2b23fbae
+      Title: Instance State
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: 2eae8dfe-0df1-4c4a-ab2d-fe158f046ea1
+      SourceFilterId: c9fd6083-a7bf-4c35-b3ed-0c45c87f5b3b
+      Title: Platform
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: 027e8b7e-51eb-4463-ab63-e358a4a3c090
+      SourceFilterId: b8596f14-54e7-48d1-bb98-a77a484e8cec
+      Title: Name (tag)
+      Type: MULTI_SELECT
   Layouts:
   - Configuration:
       GridLayout:
@@ -13662,25 +11745,25 @@ Sheets:
           RowIndex: 3
           RowSpan: 3
         - ColumnIndex: 17
-          ColumnSpan: 6
+          ColumnSpan: 7
           ElementId: 4ee4630e-1858-4bb9-b74c-36c4a2bfd4ca
           ElementType: PARAMETER_CONTROL
           RowIndex: 3
           RowSpan: 3
-        - ColumnIndex: 23
+        - ColumnIndex: 24
           ColumnSpan: 4
           ElementId: 1383471a-0f77-44b3-89c8-7a07471f48e5
           ElementType: PARAMETER_CONTROL
           RowIndex: 3
           RowSpan: 3
-        - ColumnIndex: 27
+        - ColumnIndex: 28
           ColumnSpan: 4
           ElementId: 1a73a084-9306-4796-8289-d70b083bedb6
           ElementType: PARAMETER_CONTROL
           RowIndex: 3
           RowSpan: 3
-        - ColumnIndex: 31
-          ColumnSpan: 5
+        - ColumnIndex: 32
+          ColumnSpan: 4
           ElementId: 91403418-bfc6-40c1-a23b-7f7da427651a
           ElementType: PARAMETER_CONTROL
           RowIndex: 3
@@ -13758,19 +11841,19 @@ Sheets:
           RowIndex: 38
           RowSpan: 3
         - ColumnIndex: 17
-          ColumnSpan: 7
+          ColumnSpan: 6
           ElementId: ac4ce953-3607-4f69-9260-cf8b8eebe3ea
           ElementType: PARAMETER_CONTROL
           RowIndex: 38
           RowSpan: 3
-        - ColumnIndex: 24
+        - ColumnIndex: 23
           ColumnSpan: 6
           ElementId: b5d623f6-7d7f-4f5c-a0f2-f093d20acd02
           ElementType: PARAMETER_CONTROL
           RowIndex: 38
           RowSpan: 3
-        - ColumnIndex: 30
-          ColumnSpan: 6
+        - ColumnIndex: 29
+          ColumnSpan: 7
           ElementId: 25c8b747-1094-48ce-ae66-4c25ecc4711e
           ElementType: PARAMETER_CONTROL
           RowIndex: 38
@@ -13782,130 +11865,196 @@ Sheets:
           RowIndex: 41
           RowSpan: 7
         - ColumnIndex: 0
-          ColumnSpan: 11
+          ColumnSpan: 10
           ElementId: b1ddee91-b695-4e57-a6e9-e08d67d9f934
           ElementType: TEXT_BOX
           RowIndex: 48
           RowSpan: 3
-        - ColumnIndex: 11
+        - ColumnIndex: 10
           ColumnSpan: 7
           ElementId: 6a33cc13-506c-46be-a167-e0379d18f19b
           ElementType: VISUAL
           RowIndex: 48
           RowSpan: 3
-        - ColumnIndex: 18
+        - ColumnIndex: 17
           ColumnSpan: 6
           ElementId: 22888b0b-a82c-4523-ae73-fbe71f431fc8
           ElementType: PARAMETER_CONTROL
-          RowIndex: 51
+          RowIndex: 48
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 397dc57e-2605-481d-b8cf-27412bf114d5
           ElementType: VISUAL
-          RowIndex: 54
+          RowIndex: 51
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 7941aeaa-6084-4ec4-a368-ffa8b1b1195d
           ElementType: TEXT_BOX
-          RowIndex: 66
+          RowIndex: 63
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 4ed1bf1c-c1a7-46c5-9954-15dea731e5f5
           ElementType: VISUAL
-          RowIndex: 68
+          RowIndex: 65
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: d5ab6538-2a7b-448b-919a-c2492e1a0aff
           ElementType: VISUAL
-          RowIndex: 68
+          RowIndex: 65
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: a3ef4b5c-850a-4868-9f9c-cbd0b459a913
           ElementType: VISUAL
-          RowIndex: 80
+          RowIndex: 77
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: d3a5711f-258c-43e1-87e3-9e079f06b1d3
           ElementType: VISUAL
-          RowIndex: 80
+          RowIndex: 77
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: f4ec8bf2-649a-4fe9-8935-3498c7caf110
           ElementType: TEXT_BOX
-          RowIndex: 92
+          RowIndex: 89
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 4fd98310-c237-4c14-a8fe-d08abd0f79da
           ElementType: VISUAL
-          RowIndex: 94
+          RowIndex: 91
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 144f1fcf-39cc-49d5-a022-96d50e30b234
           ElementType: VISUAL
-          RowIndex: 94
+          RowIndex: 91
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: ab4831d7-a546-4b51-a2ca-9aecd2b01704
           ElementType: VISUAL
-          RowIndex: 106
+          RowIndex: 103
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: ec413027-c133-43b0-bb8e-76f0983eeaf7
           ElementType: VISUAL
-          RowIndex: 106
+          RowIndex: 103
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 12a6f888-57d3-4103-b97b-d1f0fcba21e7
           ElementType: VISUAL
-          RowIndex: 118
+          RowIndex: 115
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 9c755fb1-d737-4c98-9c45-056bc140bae0
           ElementType: VISUAL
-          RowIndex: 118
+          RowIndex: 115
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: c1547e7b-c5e2-4c88-bd2f-43833896cdf8
           ElementType: VISUAL
-          RowIndex: 130
+          RowIndex: 127
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: e3fef15e-b083-4d88-b40b-8d4787951dd7
           ElementType: VISUAL
-          RowIndex: 130
+          RowIndex: 127
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: af22c4dc-aeba-4d9c-8a4c-32e53e004b5f
           ElementType: TEXT_BOX
-          RowIndex: 142
+          RowIndex: 139
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 9023325c-2c4b-4818-a57a-4bb575ae6034
           ElementType: VISUAL
-          RowIndex: 144
+          RowIndex: 141
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: b8299aa2-c557-4762-b4fb-0fe23e7fa88b
           ElementType: VISUAL
-          RowIndex: 144
+          RowIndex: 141
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 19
+          ElementId: 3c4ba35e-955c-4243-826c-77e37430d01b
+          ElementType: TEXT_BOX
+          RowIndex: 153
+          RowSpan: 5
+        - ColumnIndex: 19
+          ColumnSpan: 6
+          ElementId: 1e5f196e-6fef-40d6-a37c-929ccf729523
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 153
+          RowSpan: 2
+        - ColumnIndex: 25
+          ColumnSpan: 5
+          ElementId: adcb5ddb-5160-4b23-9787-dfbe3ffc3204
+          ElementType: FILTER_CONTROL
+          RowIndex: 153
+          RowSpan: 2
+        - ColumnIndex: 30
+          ColumnSpan: 6
+          ElementId: 027e8b7e-51eb-4463-ab63-e358a4a3c090
+          ElementType: FILTER_CONTROL
+          RowIndex: 153
+          RowSpan: 5
+        - ColumnIndex: 19
+          ColumnSpan: 6
+          ElementId: 46a1e2ad-553b-47ba-a15e-3c3ad902e824
+          ElementType: FILTER_CONTROL
+          RowIndex: 155
+          RowSpan: 3
+        - ColumnIndex: 25
+          ColumnSpan: 5
+          ElementId: 2eae8dfe-0df1-4c4a-ab2d-fe158f046ea1
+          ElementType: FILTER_CONTROL
+          RowIndex: 155
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: 7812eb01-9609-4c03-a68d-157405579851
+          ElementType: VISUAL
+          RowIndex: 158
+          RowSpan: 9
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: 57cc82fb-8961-42c4-8169-38b95a7135fc
+          ElementType: VISUAL
+          RowIndex: 167
+          RowSpan: 12
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: 080db616-bd5d-4a49-93f1-6b260077c9e1
+          ElementType: VISUAL
+          RowIndex: 167
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+          ElementType: VISUAL
+          RowIndex: 179
+          RowSpan: 12
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: 50bef8fc-bcd7-45e9-826d-b483e632220b
+          ElementType: VISUAL
+          RowIndex: 179
           RowSpan: 12
   Name: Resource Inventory
   ParameterControls:
@@ -14259,6 +12408,27 @@ Sheets:
       SourceParameterName: CILambdaRuntime
       Title: Runtime
       Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Indicates whether the instance is associated with SSM or if
+            the association was deleted to stopped
+          Visibility: HIDDEN
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: 1e5f196e-6fef-40d6-a37c-929ccf729523
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: SSMAssociationStatus
+          DataSetIdentifier: config_inventory_ec2
+      SourceParameterName: CIEC2SystemsManagerAssociation
+      Title: AWS Systems Manager Association
+      Type: MULTI_SELECT
   SheetControlLayouts:
   - Configuration:
       GridLayout:
@@ -14307,14 +12477,12 @@ Sheets:
           RowSpan: 1
   SheetId: b29b31d7-9726-43b7-bfb9-7e705817b1d9
   TextBoxes:
-  - Content: |-
-      <text-box>
-        <inline font-size="20px">
-          <b>EC2 inventory</b>
-        </inline>
-        <br/>
-        <inline color="#bdbdbd" font-size="14px">Use controls on the right to apply additional filters.</inline>
-      </text-box>
+  - Content: "<text-box>\n  <inline font-size=\"20px\">\n    <b>EC2 inventory</b>\n\
+      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">Use controls\
+      \ on the right to apply additional filters. Click on an EC2 instance to filter\
+      \ its attached volume(s) in the\_</inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">\n    <b>EBS volume inventory</b>\n  </inline>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"14px\">\_table below.</inline>\n</text-box>"
     SheetTextBoxId: f87fab62-71c6-462e-ac85-93babceb7ed2
   - Content: |-
       <text-box>
@@ -14395,7 +12563,460 @@ Sheets:
         <inline color="#bdbdbd" font-size="14px">Evaluate your resilience to AZ-level events by checking the distribution of your EC2 instances across Availability Zones. Use filters at the top to narrow down to your account or workload.</inline>
       </text-box>
     SheetTextBoxId: af22c4dc-aeba-4d9c-8a4c-32e53e004b5f
+  - Content: |-
+      <text-box>
+        <br/>
+        <inline font-size="20px">
+          <b>AWS Systems Manager inventory</b>
+        </inline>
+        <br/>
+        <inline color="#bdbdbd" font-size="14px">Visualize your managed EC2 instances and identify instances that are not associated with AWS Systems Manager (SSM). The association status can be:</inline>
+        <br/>
+        <ul>
+          <li class="ql-indent-0">
+            <inline color="#bdbdbd" font-size="14px">Associated - the instance is managed by AWS Systems Manager.</inline>
+          </li>
+          <li class="ql-indent-0">
+            <inline color="#bdbdbd" font-size="14px">Not associated - the instance is not managed by AWS Systems Manager.</inline>
+          </li>
+          <li class="ql-indent-0">
+            <inline color="#bdbdbd" font-size="14px">Deleted - the instance was managed by AWS Systems Manager, but it has been in stopped state for a long time and the association was deleted. This is tracked for max 6 months in the past, meaning that if an instance has been in stopped state for longer that 6 months may have been managed before the visibility window of this dashboard.</inline>
+          </li>
+        </ul>
+      </text-box>
+    SheetTextBoxId: 3c4ba35e-955c-4243-826c-77e37430d01b
   Visuals:
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: 31c6c68a-3245-483a-901b-a2792df82dc8.13.1750236448403
+            Width: 156px
+          - CustomLabel: Region
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
+            Width: 87px
+          - CustomLabel: Instance ID
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.instanceid.2.1727795513621
+          - CustomLabel: Latest EC2 Instance Record
+            FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.configitemcapturetime.12.1774688640233
+          - CustomLabel: SSM Association
+            FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.15.1774635768322
+          - CustomLabel: Latest SSM Association Record
+            FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.ssmconfigitemcapturetime.12.1774688382145
+          - CustomLabel: Platform
+            FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.platformdetails.15.1774688298166
+            Width: 186px
+          - CustomLabel: Architecture
+            FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.architecture.13.1774726483988
+          - CustomLabel: State
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.state.4.1727795526569
+          - CustomLabel: Name (tag)
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tagname.7.1727795545097
+            Width: 181px
+          - CustomLabel: ${tag1} (tag)
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag1.8.1727795545760
+            Width: 127px
+          - CustomLabel: ${tag2} (tag)
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag2.9.1727795546426
+            Width: 149px
+          - CustomLabel: ${tag3} (tag)
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag3.10.1727795547195
+            Width: 156px
+          - CustomLabel: ${tag4} (tag)
+            FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag4.11.1727795547993
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 31c6c68a-3245-483a-901b-a2792df82dc8.13.1750236448403
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: instanceid
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.instanceid.2.1727795513621
+            - DateDimensionField:
+                Column:
+                  ColumnName: configitemcapturetime
+                  DataSetIdentifier: config_inventory_ec2
+                DateGranularity: SECOND
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.configitemcapturetime.12.1774688640233
+                FormatConfiguration:
+                  DateTimeFormat: MMM D, YYYY hh:mm:ss A
+                  NullValueFormatConfiguration:
+                    NullString: 'null'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.15.1774635768322
+            - DateDimensionField:
+                Column:
+                  ColumnName: ssmconfigitemcapturetime
+                  DataSetIdentifier: config_inventory_ec2
+                DateGranularity: SECOND
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.ssmconfigitemcapturetime.12.1774688382145
+                FormatConfiguration:
+                  DateTimeFormat: MMM D, YYYY hh:mm:ss A
+                  NullValueFormatConfiguration:
+                    NullString: 'null'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: platformdetails
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.platformdetails.15.1774688298166
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: architecture
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.architecture.13.1774726483988
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: state
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.state.4.1727795526569
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tagname
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tagname.7.1727795545097
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tag1
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag1.8.1727795545760
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tag2
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag2.9.1727795546426
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tag3
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag3.10.1727795547195
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tag4
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.tag4.11.1727795547993
+            Values: []
+        SortConfiguration:
+          RowSort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: 31c6c68a-3245-483a-901b-a2792df82dc8.13.1750236448403
+          - FieldSort:
+              Direction: ASC
+              FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
+          - FieldSort:
+              Direction: ASC
+              FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.instanceid.2.1727795513621
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 29
+            TextWrap: WRAP
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        Visibility: HIDDEN
+      VisualId: 7812eb01-9609-4c03-a68d-157405579851
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Absolute: 14px
+        CategoryLabelOptions:
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Absolute: 14px
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: platformdetails
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.platformdetails.2.1774639307500
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: instanceid
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+        Legend:
+          Height: 73px
+          Position: BOTTOM
+          Title:
+            CustomLabel: AWS Systems Manager Association
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.platformdetails.2.1774639307500
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: instanceid
+                DataSetIdentifier: config_inventory_ec2
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+            CustomLabel: Number of EC2 instances
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">
+                <b>EC2 instance count by platform</b>
+              </inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: 50bef8fc-bcd7-45e9-826d-b483e632220b
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Absolute: 14px
+        CategoryLabelOptions:
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Absolute: 14px
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: state
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.state.2.1774639206580
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: instanceid
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+        Legend:
+          Height: 73px
+          Position: BOTTOM
+          Title:
+            CustomLabel: AWS Systems Manager Association
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.state.2.1774639206580
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: instanceid
+                DataSetIdentifier: config_inventory_ec2
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+            CustomLabel: Number of EC2 instances
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">
+                <b>EC2 instance count by state</b>
+              </inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: 00f16663-0b24-4f2e-adf8-1f9a4b82532f
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Absolute: 14px
+        CategoryLabelOptions:
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Absolute: 14px
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.region.2.1774638839733
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: instanceid
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+        Legend:
+          Height: 73px
+          Position: BOTTOM
+          Title:
+            CustomLabel: AWS Systems Manager Association
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.region.2.1774638839733
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: instanceid
+                DataSetIdentifier: config_inventory_ec2
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+            CustomLabel: Number of EC2 instances
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">
+                <b>EC2 instance count by Region</b>
+              </inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: 080db616-bd5d-4a49-93f1-6b260077c9e1
   - PivotTableVisual:
       Actions: []
       ChartConfiguration:
@@ -14915,8 +13536,8 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 16.666666666666668
-                To: 100.0
+                From: 0.0
+                To: 83.33333333333331
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -15057,6 +13678,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
+                Label: Resources
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -15179,6 +13801,11 @@ Sheets:
       ChartConfiguration:
         BarsArrangement: CLUSTERED
         CategoryAxis:
+          ScrollbarOptions:
+            VisibleRange:
+              PercentRange:
+                From: 0.0
+                To: 83.33333333333331
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -15288,7 +13915,7 @@ Sheets:
         Legend:
           Position: BOTTOM
           Title:
-            CustomLabel: Resource type
+            CustomLabel: Resource Type
         Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
@@ -15365,7 +13992,7 @@ Sheets:
         Legend:
           Position: BOTTOM
           Title:
-            CustomLabel: Resource type
+            CustomLabel: Resource Type
         Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
@@ -15695,7 +14322,7 @@ Sheets:
           Height: 89px
           Position: BOTTOM
           Title:
-            CustomLabel: Resource type
+            CustomLabel: Resource Type
         Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
@@ -15747,8 +14374,8 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 70.73170731707317
-                To: 95.1219512195122
+                From: 75.60975609756098
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -15988,6 +14615,8 @@ Sheets:
       Subtitle:
         Visibility: VISIBLE
       Title:
+        FormatText:
+          RichText: <visual-title>EBS inventory table</visual-title>
         Visibility: HIDDEN
       VisualId: e77e998d-1e2a-451a-9e40-3e4109c7130d
   - BarChartVisual:
@@ -16087,7 +14716,20 @@ Sheets:
         Visibility: VISIBLE
       VisualId: c1547e7b-c5e2-4c88-bd2f-43833896cdf8
   - TableVisual:
-      Actions: []
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFields:
+              - 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.instanceid.2.1727795513621
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisuals:
+                - e77e998d-1e2a-451a-9e40-3e4109c7130d
+        CustomActionId: 12d0da5c-7b3c-4a57-b6e0-eb6772358729
+        Name: Action 1
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
       ChartConfiguration:
         FieldOptions:
           SelectedFieldOptions:
@@ -16124,6 +14766,8 @@ Sheets:
             FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.ipv6address.12.1727795581757
           - CustomLabel: AMI ID
             FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.amiid.13.1727795613260
+          - CustomLabel: SSM Association
+            FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.15.1774635768322
         FieldWells:
           TableAggregatedFieldWells:
             GroupBy:
@@ -16202,9 +14846,17 @@ Sheets:
                   ColumnName: amiid
                   DataSetIdentifier: config_inventory_ec2
                 FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.amiid.13.1727795613260
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.15.1774635768322
             Values: []
         SortConfiguration:
           RowSort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: 31c6c68a-3245-483a-901b-a2792df82dc8.13.1750236448403
           - FieldSort:
               Direction: ASC
               FieldId: 68a51c26-8e5e-4bf2-b9b8-9f21cfd8968a.region.1.1727795507567
@@ -16223,6 +14875,8 @@ Sheets:
       Subtitle:
         Visibility: VISIBLE
       Title:
+        FormatText:
+          RichText: <visual-title>EC2 inventory table</visual-title>
         Visibility: HIDDEN
       VisualId: 85085ab4-5cc9-41cd-b5e7-a86185bec9f5
   - BarChartVisual:
@@ -16230,6 +14884,11 @@ Sheets:
       ChartConfiguration:
         BarsArrangement: CLUSTERED
         CategoryAxis:
+          ScrollbarOptions:
+            VisibleRange:
+              PercentRange:
+                From: 0.0
+                To: 80.2660753880266
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -16585,6 +15244,100 @@ Sheets:
           RichText: <visual-title>Lambda function count</visual-title>
         Visibility: VISIBLE
       VisualId: 6a33cc13-506c-46be-a167-e0379d18f19b
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Absolute: 14px
+        CategoryLabelOptions:
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Absolute: 14px
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 1d8a297b-8828-40ff-a4c3-a3f16c232d14.0.1774638396593
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: SSMAssociationStatus
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: instanceid
+                  DataSetIdentifier: config_inventory_ec2
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+        Legend:
+          Height: 73px
+          Position: BOTTOM
+          Title:
+            CustomLabel: AWS Systems Manager Association
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: 1d8a297b-8828-40ff-a4c3-a3f16c232d14.0.1774638396593
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec.1.1774638415413
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: instanceid
+                DataSetIdentifier: config_inventory_ec2
+              FieldId: 6af82678-b6e5-4bef-b251-290e2cef2eec.instanceid.2.1774638471073
+            CustomLabel: Number of EC2 instances
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="16px">
+                <b>EC2 instance count by account</b>
+              </inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: 57cc82fb-8961-42c4-8169-38b95a7135fc
 - ContentType: INTERACTIVE
   Layouts:
   - Configuration:
@@ -16601,268 +15354,274 @@ Sheets:
           RowIndex: 0
           RowSpan: 6
         - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: d418b82a-3985-4da1-9f55-860159c898ee
+          ElementType: VISUAL
+          RowIndex: 6
+          RowSpan: 11
+        - ColumnIndex: 0
           ColumnSpan: 24
           ElementId: bdf39d29-79a2-48ea-a43d-094f2186f6a3
           ElementType: TEXT_BOX
-          RowIndex: 6
+          RowIndex: 17
           RowSpan: 3
         - ColumnIndex: 24
           ColumnSpan: 6
           ElementId: 2a4903be-daad-473b-92d3-1fb2993e2e00
           ElementType: PARAMETER_CONTROL
-          RowIndex: 6
+          RowIndex: 17
           RowSpan: 3
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: b89e363d-313f-4b83-b3f7-6dfe173b8699
           ElementType: PARAMETER_CONTROL
-          RowIndex: 6
+          RowIndex: 17
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 22815a46-0487-44f0-8cfd-89d4192465d4
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 20
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: bbf38951-1056-43b0-8262-ccd9a50f0896
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 20
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 3768217c-40ff-427a-b6fc-49ccf3c5c9e0
           ElementType: VISUAL
-          RowIndex: 21
+          RowIndex: 32
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 5251f820-ee5d-4160-aa21-0f94d7b50b45
           ElementType: VISUAL
-          RowIndex: 21
+          RowIndex: 32
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 15451383-816d-4205-b34c-c869bf03187b
           ElementType: VISUAL
-          RowIndex: 33
+          RowIndex: 44
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 17559412-9c8b-433e-8a32-82641fa0f679
           ElementType: VISUAL
-          RowIndex: 33
+          RowIndex: 44
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: f76ba328-7918-481f-9d68-a8b60891d293
           ElementType: VISUAL
-          RowIndex: 45
+          RowIndex: 56
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 7d860160-fb32-44ac-8ae8-7a02d992078b
           ElementType: VISUAL
-          RowIndex: 45
+          RowIndex: 56
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 81765ef8-ac80-432c-947f-d956fec6b017
           ElementType: TEXT_BOX
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 4
         - ColumnIndex: 18
           ColumnSpan: 5
           ElementId: fa5ad9ab-16cb-4f93-8aad-d056b1df9816
           ElementType: PARAMETER_CONTROL
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 4
         - ColumnIndex: 23
           ColumnSpan: 5
           ElementId: 33f7b3f4-3bc3-4936-a8a9-463c168c92c5
           ElementType: PARAMETER_CONTROL
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 4
         - ColumnIndex: 28
           ColumnSpan: 8
           ElementId: 4a29fce1-1a02-443e-acc0-58fff00160cc
           ElementType: PARAMETER_CONTROL
-          RowIndex: 57
+          RowIndex: 68
           RowSpan: 4
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: c6ae171c-01f0-4c83-b297-3f2f0d0e40ac
           ElementType: VISUAL
-          RowIndex: 61
+          RowIndex: 72
           RowSpan: 13
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 8819bdaf-caeb-4e38-8c02-befb586201b0
           ElementType: VISUAL
-          RowIndex: 61
+          RowIndex: 72
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 758831b4-7cb9-446a-9f1f-034b7f89782f
           ElementType: VISUAL
-          RowIndex: 74
+          RowIndex: 85
           RowSpan: 5
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 89369925-01c6-40f5-8edc-f59dae692e4c
           ElementType: VISUAL
-          RowIndex: 79
+          RowIndex: 90
           RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 21
           ElementId: 91ff4ebc-7309-4a96-b4f3-327b05f079a3
           ElementType: TEXT_BOX
-          RowIndex: 87
+          RowIndex: 98
           RowSpan: 4
         - ColumnIndex: 21
           ColumnSpan: 7
           ElementId: 2c28fc82-c3b8-414b-ade8-642d68e6e834
           ElementType: PARAMETER_CONTROL
-          RowIndex: 87
+          RowIndex: 98
           RowSpan: 4
         - ColumnIndex: 28
           ColumnSpan: 8
           ElementId: 190ae99f-b94f-4ef9-8d42-54c0f8e26a46
           ElementType: PARAMETER_CONTROL
-          RowIndex: 87
+          RowIndex: 98
           RowSpan: 4
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 8fde5624-087f-4953-b793-75ab8bcb09a4
           ElementType: VISUAL
-          RowIndex: 91
+          RowIndex: 102
           RowSpan: 13
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: ea26e17a-fc26-48a6-b922-213002ab4e89
           ElementType: VISUAL
-          RowIndex: 91
+          RowIndex: 102
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 9073784c-e9bc-44ce-93ae-8b5fda91ccf0
           ElementType: VISUAL
-          RowIndex: 104
+          RowIndex: 115
           RowSpan: 5
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 4594790b-7c8b-4bc2-ae9b-0ed26a18baf7
           ElementType: VISUAL
-          RowIndex: 109
+          RowIndex: 120
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 30
           ElementId: e015ca90-3b8e-4571-b65e-6b29eacace93
           ElementType: TEXT_BOX
-          RowIndex: 121
+          RowIndex: 132
           RowSpan: 4
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: cf73b8f3-4f50-40c6-bc05-43e19ee981b8
           ElementType: PARAMETER_CONTROL
-          RowIndex: 121
+          RowIndex: 132
           RowSpan: 4
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: ff205b39-57a7-4ff6-930d-c1bd87cde30c
           ElementType: VISUAL
-          RowIndex: 125
+          RowIndex: 136
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 7940fd00-f394-4889-9ab3-693181cf0806
           ElementType: VISUAL
-          RowIndex: 125
+          RowIndex: 136
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 95511197-61e0-409f-b65f-0f3871c10cdc
           ElementType: VISUAL
-          RowIndex: 137
+          RowIndex: 148
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 33c54c01-d6af-457f-aee8-a376096f8566
           ElementType: VISUAL
-          RowIndex: 137
+          RowIndex: 148
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 945f4eab-26ed-4529-85f7-58e051539d7d
           ElementType: VISUAL
-          RowIndex: 149
+          RowIndex: 160
           RowSpan: 5
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 9b82dc0b-24cc-4d24-8ba7-92292ff803cd
           ElementType: VISUAL
-          RowIndex: 154
+          RowIndex: 165
           RowSpan: 9
         - ColumnIndex: 0
           ColumnSpan: 30
           ElementId: 75417c6f-15e1-44d2-9bb8-049dccdfcde1
           ElementType: TEXT_BOX
-          RowIndex: 163
+          RowIndex: 174
           RowSpan: 3
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: 102cfcd6-4d6f-4e15-b3b6-412a258e4261
           ElementType: PARAMETER_CONTROL
-          RowIndex: 163
+          RowIndex: 174
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 12
           ElementId: 36752655-1093-442c-86de-e464ecdea906
           ElementType: VISUAL
-          RowIndex: 166
+          RowIndex: 177
           RowSpan: 8
         - ColumnIndex: 12
           ColumnSpan: 12
           ElementId: 64269cae-e349-443b-a8e1-de4022f32fae
           ElementType: VISUAL
-          RowIndex: 166
+          RowIndex: 177
           RowSpan: 8
         - ColumnIndex: 24
           ColumnSpan: 12
           ElementId: 0d5095a0-4cda-4ef3-89a1-350628cc0c23
           ElementType: VISUAL
-          RowIndex: 166
+          RowIndex: 177
           RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 30
           ElementId: 2263521b-de6e-41b5-9b9f-3efdd1dd1105
           ElementType: TEXT_BOX
-          RowIndex: 174
+          RowIndex: 185
           RowSpan: 8
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: 5fa3eeb9-136c-4b25-a18c-10d70dfe0940
           ElementType: PARAMETER_CONTROL
-          RowIndex: 174
+          RowIndex: 185
           RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 8
           ElementId: 87493619-e858-409e-b856-e29f1c5bd59a
           ElementType: PARAMETER_CONTROL
-          RowIndex: 182
-          RowSpan: 12
+          RowIndex: 193
+          RowSpan: 15
         - ColumnIndex: 8
           ColumnSpan: 28
           ElementId: 675a16ba-823e-4e54-9897-225495f467a9
           ElementType: VISUAL
-          RowIndex: 182
-          RowSpan: 12
+          RowIndex: 193
+          RowSpan: 15
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 9e4ab420-2f7f-4393-b226-298a1b32d891
           ElementType: VISUAL
-          RowIndex: 194
+          RowIndex: 208
           RowSpan: 7
   Name: Config Usage Insights
   ParameterControls:
@@ -16885,7 +15644,7 @@ Sheets:
           ColumnName: corerulename
           DataSetIdentifier: config_event_rule_evaluation
       SourceParameterName: dupRuleCoreNames
-      Title: Rule evaluation filter
+      Title: Rule evaluation
       Type: MULTI_SELECT
   - Dropdown:
       DisplayOptions:
@@ -17275,6 +16034,110 @@ Sheets:
       \ days of data are displayed in this section.</inline>\n</text-box>"
     SheetTextBoxId: 2263521b-de6e-41b5-9b9f-3efdd1dd1105
   Visuals:
+  - BarChartVisual:
+      Actions: []
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          ScrollbarOptions:
+            VisibleRange:
+              PercentRange:
+                From: 0.0
+                To: 100.0
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          Visibility: HIDDEN
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Relative: LARGE
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: config_inventory
+                FieldId: 7d6d3701-6c4e-4ebc-960d-ffec12360f4c.1.1750236608185
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: config_inventory
+                FieldId: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631.region.2.1774280574117
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: pkresourceid
+                  DataSetIdentifier: config_inventory
+                FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
+        Legend:
+          Position: BOTTOM
+        Orientation: VERTICAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: 7d6d3701-6c4e-4ebc-960d-ffec12360f4c.1.1750236608185
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
+                Label: Resources
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631.region.2.1774280574117
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: pkresourceid
+                DataSetIdentifier: config_inventory
+              FieldId: 2a32c7b6-e6b2-42f7-a9bf-95761dbc6219.pkresourceid.1.1741082473501
+            CustomLabel: Number of resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: |-
+            <visual-subtitle>
+              <inline color="#bdbdbd">Consider how many resouces are in each account when looking at the data in this dashboard. Focus on accounts with resource change or rule evaluation volumes that are disproportionate to their resource count.</inline>
+            </visual-subtitle>
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: |-
+            <visual-title>
+              <inline font-size="20px">
+                <b>Resource count by account and Region</b>
+              </inline>
+            </visual-title>
+        Visibility: VISIBLE
+      VisualId: d418b82a-3985-4da1-9f55-860159c898ee
   - BarChartVisual:
       Actions: []
       ChartConfiguration:
@@ -18119,8 +16982,8 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 39.0
-                To: 59.0
+                From: 80.0
+                To: 100.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -18698,8 +17561,8 @@ Sheets:
           ScrollbarOptions:
             VisibleRange:
               PercentRange:
-                From: 46.0
-                To: 66.0
+                From: 56.0
+                To: 76.0
           TickLabelOptions:
             LabelOptions:
               FontConfiguration:
@@ -19241,7 +18104,7 @@ Sheets:
             Visibility: VISIBLE
             VisibleRange:
               PercentRange:
-                From: 79.8858574610245
+                From: 79.88585746102449
                 To: 100.0
           TickLabelOptions:
             LabelOptions:
@@ -19302,6 +18165,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.pkruleid.1.1757329624305
+                Label: Evaluations
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -19909,7 +18773,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.pkruleid.2.1760113995656
-                Label: Events
+                Label: Evaluations
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -20045,19 +18909,16 @@ Sheets:
         Status: ENABLED
         Trigger: DATA_POINT_CLICK
       ChartConfiguration:
-        BarsArrangement: CLUSTERED
-        CategoryAxis:
-          ScrollbarOptions:
-            VisibleRange:
-              PercentRange:
-                From: 89.58024944973424
-                To: 100.0
+        BarsArrangement: STACKED
         CategoryLabelOptions:
           SortIconVisibility: HIDDEN
           Visibility: HIDDEN
         DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Absolute: 12px
           Overlap: DISABLE_OVERLAP
-          Position: INSIDE
+          TotalsVisibility: VISIBLE
           Visibility: VISIBLE
         FieldWells:
           BarChartAggregatedFieldWells:
@@ -20067,7 +18928,12 @@ Sheets:
                   ColumnName: corerulename
                   DataSetIdentifier: config_event_rule_evaluation
                 FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.corerulename.0.1758105684877
-            Colors: []
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: normalizedconformancepackname
+                  DataSetIdentifier: config_event_rule_evaluation
+                FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.normalizedconformancepackname.2.1774283030734
             Values:
             - CategoricalMeasureField:
                 AggregationFunction: DISTINCT_COUNT
@@ -20075,6 +18941,11 @@ Sheets:
                   ColumnName: conformance-pack-or-standalone-rule
                   DataSetIdentifier: config_event_rule_evaluation
                 FieldId: 00fa86a7-85c3-4281-89ad-52bd37f0b1d4.1.1760380484452
+        Legend:
+          Height: 73px
+          Position: BOTTOM
+          Title:
+            CustomLabel: Conformance Pack
         Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
@@ -20096,12 +18967,15 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 00fa86a7-85c3-4281-89ad-52bd37f0b1d4.1.1760380484452
+                Label: Redundancy Level
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: a19867d1-5163-48b4-9a2e-5f5a33332ae3.normalizedconformancepackname.2.1774283030734
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
           TooltipVisibility: VISIBLE
         ValueAxis:
-          AxisOffset: 237px
           DataOptions:
             NumericAxisOptions:
               Scale:
@@ -20214,7 +19088,12 @@ Sheets:
             Height: 29
             TextWrap: WRAP
       Subtitle:
-        Visibility: HIDDEN
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every AWS Config\
+            \ rule should be evaluated only once in every account/Region. If a rule\
+            \ belongs to more than one conformance pack, you will see its redundancy\
+            \ data here.\_</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
       Title:
         Visibility: HIDDEN
       VisualId: 9e4ab420-2f7f-4393-b226-298a1b32d891
@@ -22281,9 +21160,18 @@ Sheets:
 - ContentType: INTERACTIVE
   FilterControls:
   - RelativeDateTime:
+      DisplayOptions:
+        DateTimeFormat: YYYY/MM/DD HH:mm:ss
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
       FilterControlId: 2db734d1-e651-471c-a3d1-b22794b125d3
       SourceFilterId: 01825f06-e851-4e45-b068-b927f7445be6
-      Title: Time window
+      Title: Date Range
   - RelativeDateTime:
       DisplayOptions:
         DateTimeFormat: YYYY/MM/DD HH:mm:ss
@@ -22296,6 +21184,19 @@ Sheets:
           Visibility: VISIBLE
       FilterControlId: 79e0d1aa-7ef4-43b4-94c2-cf69fe0db537
       SourceFilterId: b35763ca-93c1-4169-9738-6baec0e99209
+      Title: Date Range
+  - RelativeDateTime:
+      DisplayOptions:
+        DateTimeFormat: YYYY/MM/DD HH:mm:ss
+        InfoIconLabelOptions:
+          Visibility: HIDDEN
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: 34ad7051-8dbc-4b78-853a-75e3a106ac23
+      SourceFilterId: c1ab710a-3061-4fa7-9f00-3492dc7b6672
       Title: Date Range
   - Dropdown:
       DisplayOptions:
@@ -22355,84 +21256,102 @@ Sheets:
           ElementId: cf446e9f-0802-43a2-852a-3d4c52ca6809
           ElementType: TEXT_BOX
           RowIndex: 0
-          RowSpan: 6
+          RowSpan: 5
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 0948a1a6-0905-4841-be62-66f0edd3355d
           ElementType: TEXT_BOX
-          RowIndex: 6
-          RowSpan: 4
+          RowIndex: 5
+          RowSpan: 2
+        - ColumnIndex: 0
+          ColumnSpan: 15
+          ElementId: 83950359-7c91-4e55-b1ff-b4f7b3e9fd49
+          ElementType: TEXT_BOX
+          RowIndex: 7
+          RowSpan: 5
+        - ColumnIndex: 15
+          ColumnSpan: 15
+          ElementId: cce5926e-b1d1-4853-838d-5d1b25e5972c
+          ElementType: TEXT_BOX
+          RowIndex: 7
+          RowSpan: 5
+        - ColumnIndex: 30
+          ColumnSpan: 6
+          ElementId: 34ad7051-8dbc-4b78-853a-75e3a106ac23
+          ElementType: FILTER_CONTROL
+          RowIndex: 7
+          RowSpan: 5
         - ColumnIndex: 0
           ColumnSpan: 15
           ElementId: 042eabec-e1cc-45bb-a771-8ac8ea864c31
           ElementType: VISUAL
-          RowIndex: 10
+          RowIndex: 12
           RowSpan: 13
         - ColumnIndex: 15
           ColumnSpan: 21
           ElementId: b116e483-d384-4480-b3fa-15e4c26642c3
           ElementType: VISUAL
-          RowIndex: 10
+          RowIndex: 12
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 27
           ElementId: ede04840-0cf1-44e0-8c32-832f4d1249b8
           ElementType: TEXT_BOX
-          RowIndex: 23
+          RowIndex: 25
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: 79e0d1aa-7ef4-43b4-94c2-cf69fe0db537
           ElementType: FILTER_CONTROL
-          RowIndex: 23
+          RowIndex: 25
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: c2dc06fd-3ce1-4c88-b6be-2aab474825d5
           ElementType: VISUAL
-          RowIndex: 26
+          RowIndex: 31
           RowSpan: 9
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 1da36817-1898-477a-bfb8-93229158fccc
           ElementType: VISUAL
-          RowIndex: 35
+          RowIndex: 40
           RowSpan: 7
         - ColumnIndex: 0
           ColumnSpan: 8
           ElementId: 980118a0-9b17-4b24-9b90-e9e90b53ef12
           ElementType: TEXT_BOX
-          RowIndex: 42
+          RowIndex: 47
           RowSpan: 3
         - ColumnIndex: 8
           ColumnSpan: 6
           ElementId: 2db734d1-e651-471c-a3d1-b22794b125d3
           ElementType: FILTER_CONTROL
-          RowIndex: 42
+          RowIndex: 47
           RowSpan: 3
         - ColumnIndex: 14
           ColumnSpan: 5
           ElementId: f5f78ee3-d3ee-42fc-a7c7-a3f6b4811199
           ElementType: FILTER_CONTROL
-          RowIndex: 42
+          RowIndex: 47
           RowSpan: 3
         - ColumnIndex: 19
           ColumnSpan: 8
           ElementId: ea815318-9638-4314-a8fe-136ac119132a
           ElementType: FILTER_CONTROL
-          RowIndex: 42
+          RowIndex: 47
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: bbaa21f1-44e6-452e-8477-36a23d8dc0e3
           ElementType: FILTER_CONTROL
-          RowIndex: 42
+          RowIndex: 47
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: e1b9e4df-0bf3-4271-9e87-036a3fa79c02
           ElementType: VISUAL
-          RowIndex: 45
+          RowIndex: 50
           RowSpan: 12
   Name: Configuration Item Events
   ParameterControls:
@@ -22511,19 +21430,19 @@ Sheets:
           ColumnSpan: 3
           ElementId: 10446c9d-d531-4bd0-9765-5eac698634e5
           ElementType: PARAMETER_CONTROL
-          RowIndex: 1
+          RowIndex: 0
           RowSpan: 1
         - ColumnIndex: 3
           ColumnSpan: 3
           ElementId: 4b084770-6885-43e7-a8a9-ec5291686957
           ElementType: PARAMETER_CONTROL
-          RowIndex: 1
+          RowIndex: 0
           RowSpan: 1
         - ColumnIndex: 6
           ColumnSpan: 3
           ElementId: a13df8c2-b720-45a2-8950-12997c5b5bbf
           ElementType: PARAMETER_CONTROL
-          RowIndex: 1
+          RowIndex: 0
           RowSpan: 1
   SheetId: f325cc16-85db-4906-907c-aeef5a7eef7b
   TextBoxes:
@@ -22569,24 +21488,43 @@ Sheets:
         <inline color="#bdbdbd" font-size="14px">Use controls at the top to filter by account and region, use controls on the right to apply additional filters.</inline>
       </text-box>
     SheetTextBoxId: 980118a0-9b17-4b24-9b90-e9e90b53ef12
-  - Content: "<text-box>\n  <inline font-size=\"20px\">\n    <b>AWS Config coverage</b>\n\
-      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">\n   \
-      \ <b>Latest AWS Config data import\_</b>\n  </inline>\n  <inline color=\"#bdbdbd\"\
-      \ font-size=\"14px\">shows the latest data imported into the dashboard and can\
-      \ help confirm that you are receiving data from all accounts and AWS Regions.\
-      \ This is based AWS Config snapshot files, which are generated on a schedule\
+  - Content: |-
+      <text-box>
+        <br/>
+        <inline font-size="20px">
+          <b/>
+        </inline>
+        <inline font-size="20px">
+          <b>AWS Config coverage</b>
+        </inline>
+      </text-box>
+    SheetTextBoxId: 0948a1a6-0905-4841-be62-66f0edd3355d
+  - Content: "<text-box>\n  <inline font-size=\"16px\">\n    <b>Latest AWS Config\
+      \ data import</b>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"16px\"\
+      >\n    <b>\_</b>\n  </inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"14px\">\n    <b>S</b>\n  </inline>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"14px\">hows the latest data imported into the dashboard and can\
+      \ help confirm that you are receiving data from all accounts and AWS Regions.\_\
+      </inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\"\
+      >This is based AWS Config snapshot files, which are generated on a schedule\
       \ for each account and Region and contain the status of all resources, regardless\
       \ of configuration changes. The field\_</inline>\n  <inline color=\"#bdbdbd\"\
       \ font-size=\"14px\">\n    <b>Latest Data Import</b>\n  </inline>\n  <inline\
       \ color=\"#bdbdbd\" font-size=\"14px\">\_indicates the time when the Config\
-      \ snapshot file was generated. The dashboard is designed to import AWS Config\
-      \ data up to yesterday, older data may indicate problems with AWS Config delivery\
-      \ of files in that account-region.</inline>\n  <br/>\n  <br/>\n  <inline color=\"\
-      #bdbdbd\" font-size=\"14px\">\n    <b>Heat map of resource change events</b>\n\
-      \  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">\_shows the number\
-      \ of resource change configurations recorded by AWS Config in the last 15 days.\
-      \ This shows the accounts and AWS Regions that are most active.</inline>\n</text-box>"
-    SheetTextBoxId: 0948a1a6-0905-4841-be62-66f0edd3355d
+      \ snapshot file was last generated. The dashboard is designed to import AWS\
+      \ Config data up to yesterday, older data may indicate problems with AWS Config\
+      \ delivery of files in that account-region.</inline>\n</text-box>"
+    SheetTextBoxId: 83950359-7c91-4e55-b1ff-b4f7b3e9fd49
+  - Content: |-
+      <text-box>
+        <inline font-size="16px">
+          <b>Heat map of resource change events recorded by AWS Config</b>
+        </inline>
+        <br/>
+        <br/>
+        <inline color="#bdbdbd" font-size="14px">Shows the number of resource change configurations recorded by AWS Config in the date range specified on the right. This shows the accounts and AWS Regions that are most active.</inline>
+      </text-box>
+    SheetTextBoxId: cce5926e-b1d1-4853-838d-5d1b25e5972c
   Visuals:
   - TableVisual:
       Actions: []
@@ -22598,7 +21536,7 @@ Sheets:
             Width: 178px
           - CustomLabel: Region
             FieldId: ac0dc45a-e83a-4e22-bc71-0c93193190fa.region.1.1727256210739
-          - CustomLabel: Event Timestamp
+          - CustomLabel: Event Timestamp (UTC)
             FieldId: ac0dc45a-e83a-4e22-bc71-0c93193190fa.configitemcapturetime.2.1727257846408
           - CustomLabel: Event Type
             FieldId: ac0dc45a-e83a-4e22-bc71-0c93193190fa.configitemstatus.4.1727257906412
@@ -22684,14 +21622,13 @@ Sheets:
             Width: 208px
           - CustomLabel: Region
             FieldId: 54f76dcd-a791-4ded-8b10-d18e1e3590e4.region.2.1727265943717
-          - CustomLabel: Deletion Timestamp
+          - CustomLabel: Deletion Timestamp (UTC)
             FieldId: 54f76dcd-a791-4ded-8b10-d18e1e3590e4.configitemcapturetime.2.1727265985517
           - CustomLabel: Resource Type
             FieldId: 54f76dcd-a791-4ded-8b10-d18e1e3590e4.resourcetype.3.1727265992734
             Width: 287px
           - CustomLabel: Resurce ID
             FieldId: 54f76dcd-a791-4ded-8b10-d18e1e3590e4.resourceid.4.1727265996596
-            Width: 737px
         FieldWells:
           TableAggregatedFieldWells:
             GroupBy:
@@ -22834,6 +21771,7 @@ Sheets:
                 Visibility: VISIBLE
             - FieldTooltipItem:
                 FieldId: 081cbc29-bb46-4df0-b30c-a2d84de339d9.2.1750238185011
+                Label: Account
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
@@ -22961,7 +21899,7 @@ Sheets:
                 <b>Heat map of resource change events recorded by AWS Config (last 15 days)</b>
               </inline>
             </visual-title>
-        Visibility: VISIBLE
+        Visibility: HIDDEN
       VisualId: b116e483-d384-4480-b3fa-15e4c26642c3
   - TableVisual:
       Actions: []
@@ -22970,16 +21908,19 @@ Sheets:
           SelectedFieldOptions:
           - CustomLabel: Account
             FieldId: 915618fe-a442-4508-82be-8f754c249b35.4.1750238027854
+            Width: 149px
           - CustomLabel: Region
             FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.region.1.1741354549516
-          - CustomLabel: Latest Event
+            Width: 134px
+          - CustomLabel: Latest Data Import (UTC)
+            FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.latestpartitiondate.4.1774048073567
+            Width: 158px
+          - CustomLabel: Latest Event (UTC)
             FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.latestconfigitemcapturetime.2.1741354553061
-            Width: 175px
-          - CustomLabel: Latest Data Import
-            FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.latestpartitiondate.3.1741354553978
-            Width: 145px
+            Width: 172px
           - FieldId: 938282b1-aa43-4ce5-bcce-b347fe28b0c4.4.1741354629915
             Visibility: HIDDEN
+            Width: 175px
         FieldWells:
           TableAggregatedFieldWells:
             GroupBy:
@@ -22995,6 +21936,11 @@ Sheets:
                 FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.region.1.1741354549516
             - DateDimensionField:
                 Column:
+                  ColumnName: latestpartitiondate
+                  DataSetIdentifier: config_event_delivery
+                FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.latestpartitiondate.4.1774048073567
+            - DateDimensionField:
+                Column:
                   ColumnName: latestconfigitemcapturetime
                   DataSetIdentifier: config_event_delivery
                 DateGranularity: MINUTE
@@ -23003,14 +21949,9 @@ Sheets:
                   DateTimeFormat: MMM D, Y h:mm:ss A
                   NullValueFormatConfiguration:
                     NullString: 'null'
-            - DateDimensionField:
-                Column:
-                  ColumnName: latestpartitiondate
-                  DataSetIdentifier: config_event_delivery
-                FieldId: 6b7e7ccd-cddf-45ad-8faf-619b488ecac5.latestpartitiondate.3.1741354553978
             - NumericalDimensionField:
                 Column:
-                  ColumnName: config-file-delay
+                  ColumnName: config-snapshot-delay
                   DataSetIdentifier: config_event_delivery
                 FieldId: 938282b1-aa43-4ce5-bcce-b347fe28b0c4.4.1741354629915
             Values: []
@@ -23037,12 +21978,12 @@ Sheets:
             BackgroundColor:
               Solid:
                 Color: '#F7E65A'
-                Expression: '{config-file-delay} = -2'
+                Expression: '{config-snapshot-delay} = -2'
         - Row:
             BackgroundColor:
               Solid:
                 Color: '#DE3B00'
-                Expression: '{config-file-delay} <= -3'
+                Expression: '{config-snapshot-delay} <= -3'
       Subtitle:
         FormatText:
           RichText: |-
@@ -23058,7 +21999,7 @@ Sheets:
                 <b>Latest AWS Config data import</b>
               </inline>
             </visual-title>
-        Visibility: VISIBLE
+        Visibility: HIDDEN
       VisualId: 042eabec-e1cc-45bb-a771-8ac8ea864c31
 - ContentType: INTERACTIVE
   Layouts:
