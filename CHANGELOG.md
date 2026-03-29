@@ -4,7 +4,7 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 ## Added
 ### External features
 - Backfill feature to partition your existing AWS Config files on a newly installed dashboard.
-- Quick Suite chat agent
+- Amazon Quick chat agent
 - AWS Config conformance pack
 
 ### Dashbaord features

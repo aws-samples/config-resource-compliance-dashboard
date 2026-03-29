@@ -64,7 +64,7 @@ The backfill worker function is triggered by SQS. The payload to the function is
    ```
    select min(dt), datasource from cid_crcd_config group by datasource;
    ```
-1. (OPTIONAL) [Refresh](https://docs.aws.amazon.com/quicksuite/latest/userguide/refreshing-imported-data.html) your Quick Suite datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
+1. (OPTIONAL) [Refresh](https://docs.aws.amazon.com/quick/latest/userguide/refreshing-imported-data.html) your Quick Sight datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
 
 ## Important Notes
 
