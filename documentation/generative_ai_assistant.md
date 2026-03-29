@@ -1,15 +1,15 @@
-# AWS Config Dashboard and Amazon Quick Suite generative AI assistant
+# AWS Config Dashboard and Amazon Quick generative AI assistant
 
 ## Feature overview
-This setup combines your AWS Config dashboard with Amazon Quick Suite’s generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.  
+This setup combines your AWS Config dashboard with Amazon Quick’s generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.  
 
-You will need a Quick Suite user with Author Pro or Reader Pro permissions, see [Managing users in Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/managing-users.html) for setup instructions. Amazon Quick Suite generative AI features incur additional charges. Review Author Pro, Reader Pro and infrastructure fee [Amazon QuickSight](https://aws.amazon.com/quicksight/pricing/) pricing before proceeding.
+You will need an Amazon Quick user with Author Pro or Reader Pro permissions, see [Managing users in Amazon QuickSight](https://docs.aws.amazon.com/quicksight/latest/user/managing-users.html) for setup instructions. Amazon Quick generative AI features incur additional charges. Review Author Pro, Reader Pro and infrastructure fee [Amazon QuickSight](https://aws.amazon.com/quicksight/pricing/) pricing before proceeding.
 
 ## Deployment
 
 ### Step 1: Create a Space  
-1. Navigate to Quick Suite Spaces
-   1. Open Amazon Quick Suite console  
+1. Navigate to Quick Spaces
+   1. Open Amazon Quick console  
    1. Select "Spaces" from the navigation menu  
    1. Click "Create space"  
 1. Configure Space Settings  
@@ -29,7 +29,7 @@ You will need a Quick Suite user with Author Pro or Reader Pro permissions, see�
 
 ### Step 2: Create Chat Agent  
 1. Navigate to Chat Agents  
-   1. In the Quick Suite console, select "Chat Agents"  
+   1. In the Quick console, select "Chat Agents"  
    1. Click "Create Chat Agent"  
    1. Click "Skip" when the prompt box appears  
 1. Configure Basic Settings  
