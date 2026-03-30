@@ -231,8 +231,6 @@ DataSetIdentifierDeclarations:
   Identifier: config_compliance_resource
 - DataSetArn: arn:aws:quicksight:::dataset/78d5f479-44d4-4763-b901-0de3d48a0098
   Identifier: config_inventory_s3
-- DataSetArn: arn:aws:quicksight:::dataset/253f17eb-d489-4bdc-babc-f809d4dae318
-  Identifier: config_compliance_actual
 - DataSetArn: arn:aws:quicksight:::dataset/d45218d0-83c2-45af-9f5d-ce71be1e4bb2
   Identifier: config_compliance_conformance_pack
 - DataSetArn: arn:aws:quicksight:::dataset/e296cb2f-878a-4884-8813-21afeb26db8d
@@ -7089,7 +7087,7 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: conformancepackname
-          DataSetIdentifier: config_compliance_actual
+          DataSetIdentifier: config_compliance
       SourceParameterName: ComConformancePack
       Title: Conformance Pack
       Type: MULTI_SELECT
@@ -7108,7 +7106,7 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: rulename
-          DataSetIdentifier: config_compliance_actual
+          DataSetIdentifier: config_compliance
       SourceParameterName: ComConfigRule
       Title: AWS Config Rule
       Type: MULTI_SELECT
@@ -7127,7 +7125,7 @@ Sheets:
       SelectableValues:
         LinkToDataSetColumn:
           ColumnName: resourceid
-          DataSetIdentifier: config_compliance_actual
+          DataSetIdentifier: config_compliance
       SourceParameterName: ComResource
       Title: Resource
       Type: MULTI_SELECT
