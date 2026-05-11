@@ -1499,18 +1499,21 @@ Resources:
               writer = csv.writer(output)
 
               # Write header
-              writer.writerow(['rule_name', 'source_identifier', 'conformance_packs', 'standards', 'sync_timestamp'])
+              writer.writerow(['rule_name', 'source_identifier', 'conformance_pack', 'standard', 'sync_timestamp'])
 
-              # Write data
+              # Write data - one row per conformance pack association
               sync_timestamp = datetime.utcnow().isoformat()
               for rule in rules:
-                  writer.writerow([
-                      rule['rule_name'],
-                      rule['source_identifier'],
-                      '|'.join(rule['conformance_packs']),
-                      '|'.join(rule['standards']),
-                      sync_timestamp
-                  ])
+                  packs = rule['conformance_packs'] if rule['conformance_packs'] else ['']
+                  stds = rule['standards'] if rule['standards'] else ['']
+                  for i in range(max(len(packs), len(stds))):
+                      writer.writerow([
+                          rule['rule_name'],
+                          rule['source_identifier'],
+                          packs[i] if i < len(packs) else '',
+                          stds[i] if i < len(stds) else '',
+                          sync_timestamp
+                      ])
 
               # Upload to S3
               s3.put_object(
@@ -1664,12 +1667,12 @@ Resources:
             - Name: source_identifier
               Type: string
               Comment: "AWS managed rule source identifier (e.g., ACCESS_KEYS_ROTATED)"
-            - Name: conformance_packs
+            - Name: conformance_pack
               Type: string
-              Comment: "Pipe-delimited list of conformance packs containing this rule"
-            - Name: standards
+              Comment: "Conformance pack containing this rule"
+            - Name: standard
               Type: string
-              Comment: "Pipe-delimited list of compliance standards"
+              Comment: "Compliance standard associated with the conformance pack"
             - Name: sync_timestamp
               Type: string
               Comment: "Timestamp when this rule was synced from GitHub"

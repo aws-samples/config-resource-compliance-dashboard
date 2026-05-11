@@ -2242,8 +2242,8 @@ views:
           SELECT
             rule_name
           , source_identifier
-          , conformance_packs
-          , standards
+          , conformance_pack
+          , standard
           , sync_timestamp
           FROM "${athena_database_name}"."required_rules_reference"
         ),
@@ -2254,8 +2254,8 @@ views:
           , ar.pk_account_region
           , r.rule_name AS required_rule_name
           , r.source_identifier
-          , r.conformance_packs
-          , r.standards
+          , r.conformance_pack
+          , r.standard
           FROM active_account_regions ar
           CROSS JOIN required r
         ),
@@ -2273,8 +2273,8 @@ views:
           , arr.pk_account_region
           , arr.required_rule_name
           , arr.source_identifier
-          , arr.conformance_packs
-          , arr.standards
+          , arr.conformance_pack
+          , arr.standard
           , CASE WHEN e.core_rule_name IS NULL THEN 'MISSING' ELSE 'ENABLED' END AS rule_status
           , e.core_rule_name AS enabled_rule_name
           FROM account_required_rules arr
@@ -2289,11 +2289,11 @@ views:
       , pk_account_region
       , required_rule_name AS rule_name
       , source_identifier
-      , conformance_packs
-      , standards
+      , conformance_pack
+      , standard
       , rule_status
       , CAST(current_timestamp AS timestamp) AS analysis_timestamp
-      , concat(concat(concat(accountid, '-'), region), concat('-', required_rule_name)) AS pk_missing_rule
+      , concat(concat(concat(concat(concat(accountid, '-'), region), '-'), required_rule_name), concat('-', conformance_pack)) AS pk_missing_rule
       FROM missing_analysis
       WHERE rule_status = 'MISSING'
 
@@ -2311,7 +2311,7 @@ views:
           FROM "${athena_database_name}"."config_enabled_rules"
         ),
         required_count AS (
-          SELECT COUNT(*) AS total_required_rules
+          SELECT COUNT(DISTINCT rule_name) AS total_required_rules
           FROM "${athena_database_name}"."required_rules_reference"
         ),
         enabled_per_account AS (
