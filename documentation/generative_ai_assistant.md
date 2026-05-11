@@ -57,7 +57,7 @@ Response length: Comprehensive enough to cover all relevant data while remaining
 
 
 ### Step 4: Upload Reference Document
-1. In the "Reference document" section, click "Attach"
+1. In the "Reference document" section, click "Upload Files"
 1. Upload the file [crcd_chat_agent_reference.md](./crcd_chat_agent_reference.md) provided in this repository
 
 This document contains the agent's step-by-step methodology, response templates, constraints, and example interactions.
@@ -67,10 +67,7 @@ This document contains the agent's step-by-step methodology, response templates,
    1. Scroll to "Knowledge sources" section 
    1. Click "Link spaces" 
    1. Select your CRCD Dashboard Space 
-   1. Click "Add" or "Link" 
-1. Review and Launch 
-   1. Verify all configuration is correct 
-   1. Click "Launch Chat Agent"
+   1. Click "Link" 
 
 ### Step 6: Customization 
 1. Add this Welcome message:
@@ -83,6 +80,10 @@ This document contains the agent's step-by-step methodology, response templates,
    How many EC2 instances are running on us-east-1?
    ```
 
+### Step 7:
+1. Review and Launch 
+   1. Verify all configuration is correct 
+   1. Click "Launch Chat Agent"
 
 ## Prompt examples
 Use the chat agent to query dashboard data conversationally.
