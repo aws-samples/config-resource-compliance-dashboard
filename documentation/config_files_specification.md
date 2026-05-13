@@ -26,7 +26,7 @@ These options have different ways of structuring the prefixes of the AWS Config 
 Where:
 * `AWS-ORGANIZATION-ID` is the identifier of your AWS Organization.
 * `ACCOUNT-ID` is the 12-digit AWS Account number, e.g. 123412341234.
-* `REGION` identifies an AWS region, e.g. us-east-1.
+* `REGION` identifies an AWS Region, e.g. us-east-1.
 * `YYYY/MM/DD` represents a date, e.g. 2024/04/18.
 * `TIMESTAMP` is a full timestamp, e.g. 20240418T054711Z.
 * `RESOURCE-ID` identifies the resource affected by the ConfigHistory record, e.g. AWS::Lambda::Function.
