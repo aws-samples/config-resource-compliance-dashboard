@@ -1,5 +1,5 @@
 # AWS Config Dashboard - Additional Information
-.
+
 In this section you can find information about:
 - [Upgrading](./upgrade.md) the dashboard to a new version
 - Installing the [CRCD Generative AI assistant](./generative_ai_assistant.md)

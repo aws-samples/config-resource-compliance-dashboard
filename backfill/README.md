@@ -6,8 +6,8 @@ The backfill feature processes historical AWS Config records that already exist 
 
 The backfill process will generate partitions for these AWS Config records:
 1. All AWS Config history records for the previous 12 months.
-2. AWS Config snapshot records on all accounts an regions whose date is the last day of the month, for the previous 5 months.
-3. AWS Config snapshot records on all accounts and regions whose date is within the last 5 days.
+2. AWS Config snapshot records on all accounts an Regions whose date is the last day of the month, for the previous 5 months.
+3. AWS Config snapshot records on all accounts and Regions whose date is within the last 5 days.
 
 
 ## Architecture
@@ -22,14 +22,14 @@ The producer function scans your Dashboard bucket and finds all prefixes related
 
 The prefix structure of an AWS Config file is as follows (for an AWS Config Snapshot): `ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz`. For performance reasons, this function identifies all AWS Config prefixes down to `REGION`. These prefixes are sent to an SQS queue that will trigger the worker function to add them to the dashboard data.
 
-The backfill worker function is triggered by SQS. The payload to the function is an AWS Config prefix until the region, i.e. `ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/`. This function will create full AWS Config prefixes adding the `YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/)` part until a configurable time in the past. For each complete prefix, the function will check whether that prefix exists on the S3 Dashboard bucket, in which case the Athena partition will be created (if not already existing).
+The backfill worker function is triggered by SQS. The payload to the function is an AWS Config prefix until the Region, i.e. `ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/`. This function will create full AWS Config prefixes adding the `YYYY/MM/DD/(ConfigSnapshot/ConfigHistory/)` part until a configurable time in the past. For each complete prefix, the function will check whether that prefix exists on the S3 Dashboard bucket, in which case the Athena partition will be created (if not already existing).
 
 
 ## Prerequisites
 
 - CRCD Dashboard must already be deployed.
 - AWS Config historical data exists in your S3 bucket.
-- Deploy this template in the same AWS account and region as your CRCD resources.
+- Deploy this template in the same AWS account and Region as your CRCD resources.
 
 ## Deployment Instructions
 
@@ -53,7 +53,7 @@ The backfill worker function is triggered by SQS. The payload to the function is
 | **AWSOrganizationID** | _(empty)_ | Your AWS Organization ID. Leave empty for standalone accounts. |
 
 5. Run the CloudFormation template.
-6. Open the producer function and run it
+6. Open the Backfill Producer Lambda function and run it:
    - Open the Lambda Console and click on the function `crcd-config-backfill-producer`
    - Click on the **Test** tab.
    - Select **Create new event** under **Test event action**.

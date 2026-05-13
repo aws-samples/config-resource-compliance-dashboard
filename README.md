@@ -4,7 +4,7 @@
 
 [AWS Config](https://aws.amazon.com/config/) is a fully managed service that provides you with resource inventory, configuration history, and inventory tracking for security and governance. By actively recording every configuration change across your AWS resources, Config enables continuous compliance auditing, in-depth security analysis, and precise resource change tracking to help you maintain visibility and control over your environment.
 
-The Amazon Web Services (AWS) Config Resource Compliance Dashboard (CRCD) shows the inventory of your AWS resources, along with their compliance status, across multiple AWS accounts and regions by leveraging your AWS Config data.
+The Amazon Web Services (AWS) Config Resource Compliance Dashboard (CRCD) shows the inventory of your AWS resources, along with their compliance status, across multiple AWS accounts and Regions by leveraging your AWS Config data.
 
 ![CRCD](images/compliance-10.png "AWS Config Dashboard, Compliance")
 ![CRCD](images/compliance-11.png "AWS Config Dashboard, Compliance")
@@ -47,10 +47,11 @@ AWS Config costs can be difficult to attribute without the right visibility. The
 
 ![CRCD](images/ec2-inventory.png "AWS Config Dashboard, Configuration Items")
 
-Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda resources with filtering on account, Region and resource-specific fields (e.g. IP addresses for EC2). Option to filter resources by the custom tags that you use to categorize workloads, such as Application, Owner and Environment. The name of the tags will be provided by you during installation.
+Inventory of Amazon EC2, Amazon EBS, Amazon S3, Amazon Relational Database Service (RDS) and AWS Lambda. Visualize your managed EC2 instances and identify instances that are not managed by AWS Systems Manager (SSM). Filter resources by account, Region and resource-specific fields (e.g. IP addresses for EC2). Option to filter resources by the custom tags that you use to categorize workloads, such as Application, Owner and Environment. The name of the tags will be provided by you during installation.
+
 
 ##### Resource inventory and EC2 Availability Zone dashboards
-Graphs that report summarized insights about resource configuration data, including detailed information about EC2 and EBS. Evaluate your resilience to AZ-level events by checking the distribution of your EC2 instances across Availability Zones.
+Summarized insights about resource configuration data, including detailed information about EC2 and EBS. Evaluate your resilience to AZ-level events by checking the distribution of your EC2 instances across Availability Zones.
 
 #### Tag compliance
 Visualize the results of AWS Config Managed Rule [required-tags](https://docs.aws.amazon.com/config/latest/developerguide/required-tags.html) or one of the several [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`. You can deploy these rules to find resources in your accounts that were not launched with your desired tag configurations.
@@ -72,7 +73,7 @@ The **Config Usage Insights** tab provides the visibility needed to address thes
 These features work alongside the AWS Config Resource Compliance Dashboard (CRCD) solution.
 - Organizational taxonomy - Deploy the [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) to collect organization data. You will be able to add your organizational taxonomy to the dashboard during deployment.
 - [Backfill](./backfill/README.md) - Make your compliance history visible on the dashboard right after deployment.
-- [Generative AI assistant](./documentation/generative_ai_assistant.md) - Create a compliance chat agent that understands your environment and provides contextual insights by using Amazon Quick’s generative AI capabilities powered by your AWS Config dashboard. 
+- [Generative AI assistant](./documentation/generative_ai_assistant.md) - Deploy a compliance chat agent that understands your environment and provides contextual insights by using Amazon Quick’s generative AI capabilities powered by your AWS Config dashboard. 
 - [CRCD conformance pack](./conformance_pack/README.md) - Deploy a curated set of AWS Config rules that identify misconfigurations leveraged during the most common security incidents. Evaluate your threat-informed security posture on a dedicated section of the dashboard.
 
 
