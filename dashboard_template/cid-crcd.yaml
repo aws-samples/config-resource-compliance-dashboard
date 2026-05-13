@@ -4,6 +4,7 @@ dashboards:
     dependsOn:
       datasets:
       - config_compliance
+      - config_compliance_actual
       - config_compliance_conformance_pack
       - config_compliance_resource
       - config_event
@@ -125,6 +126,12 @@ datasets:
               - pkconformancepackid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: fc17b8d4-1613-4544-a16c-3c0a4238d6eb
@@ -401,6 +408,12 @@ datasets:
               - account_id
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 1decc8a3-7437-4a12-a8ec-348ed436b41e
@@ -420,6 +433,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_inventory:
     data:
       DataSetId: 6a209bbd-782d-48eb-810d-2ee770849663
@@ -500,6 +514,12 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631
@@ -523,6 +543,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_inventory_rds:
     data:
       DataSetId: e296cb2f-878a-4884-8813-21afeb26db8d
@@ -683,6 +704,12 @@ datasets:
               - backupretention
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 24dc16df-7afd-4c6f-9474-034e021989f2
@@ -698,6 +725,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_event_delivery:
     data:
       DataSetId: 89570728-8d10-4e62-bae2-9c9bb0a2a74b
@@ -771,6 +799,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_inventory_lambda:
     data:
       DataSetId: 35bdc507-f89f-4b0d-942b-0ce2a89e28ab
@@ -891,6 +920,12 @@ datasets:
               - configitemstatus
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf
@@ -910,6 +945,118 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
+  config_compliance_actual:
+    data:
+      DataSetId: bf0043e0-f073-4074-8fce-9115464ee3bc
+      Name: config_compliance_actual
+      PhysicalTableMap:
+        7bea1506-c6df-433b-83c5-75e3f69ed50c:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_compliance_actual
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: compliancesampledate
+              Type: DATETIME
+            - Name: configitemcapturetime
+              Type: DATETIME
+            - Name: configeventresourceid
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: compliancetype
+              Type: STRING
+            - Name: ruleid
+              Type: STRING
+            - Name: rulename
+              Type: STRING
+            - Name: normalizedrulename
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: conformancepackid
+              Type: STRING
+            - Name: conformancepackname
+              Type: STRING
+            - Name: normalizedconformancepackname
+              Type: STRING
+            - Name: pkresourceid
+              Type: STRING
+            - Name: pkruleid
+              Type: STRING
+        ae97691e-970b-4356-9328-13698f7586c7:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+      ImportMode: SPICE
+      LogicalTableMap:
+        6226a969-4133-4561-9e81-9728a8d64144:
+          Alias: Intermediate Table
+          DataTransforms:
+          - TagColumnOperation:
+              ColumnName: region
+              Tags:
+              - ColumnGeographicRole: STATE
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - compliancesampledate
+              - configitemcapturetime
+              - configeventresourceid
+              - resourcetype
+              - compliancetype
+              - ruleid
+              - rulename
+              - normalizedrulename
+              - resourceid
+              - conformancepackid
+              - conformancepackname
+              - normalizedconformancepackname
+              - pkresourceid
+              - pkruleid
+              - account_id
+              - payer_account_id
+              - account_name
+          Source:
+            JoinInstruction:
+              LeftOperand: 7646cbe4-2ac5-446f-ae86-9212b3c57662
+              RightOperand: b5465991-06b3-4ad1-b603-06202abb8fc4
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        7646cbe4-2ac5-446f-ae86-9212b3c57662:
+          Alias: config_compliance_actual
+          Source:
+            PhysicalTableId: 7bea1506-c6df-433b-83c5-75e3f69ed50c
+        b5465991-06b3-4ad1-b603-06202abb8fc4:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ae97691e-970b-4356-9328-13698f7586c7
+    dependsOn:
+      views:
+      - config_compliance_actual
+      - config_inventory_account
+      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
+
   config_event:
     data:
       DataSetId: b6acd8c6-96c9-4073-901a-df399fd9ce68
@@ -982,6 +1129,12 @@ datasets:
               - payer_account_id
               - account_name
               - total_changes_by_resource
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 02611018-14d1-4077-a518-b9e438b0fa0d
@@ -1079,6 +1232,12 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 64552c6c-a332-4c76-bf4a-f89fd2d0e154
@@ -1094,6 +1253,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_event_rule_evaluation:
     data:
       DataSetId: 5c060ba7-4f02-4b10-8f55-a8672eb6eab0
@@ -1198,6 +1358,12 @@ datasets:
               - account_id
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: a19867d1-5163-48b4-9a2e-5f5a33332ae3
@@ -1312,11 +1478,7 @@ datasets:
           Alias: config_inventory_account
           Source:
             PhysicalTableId: e61a222f-c965-48ea-a0c5-1cd8374b9d29
-        6af82678-b6e5-4bef-b251-290e2cef2eec:
-          Alias: config_inventory_ec2
-          Source:
-            PhysicalTableId: 1f9edcad-3f4e-4f5d-9907-b33b769d0bd0
-        f3b61106-9575-4b17-b780-673b70397597:
+        5b24ca0e-31fc-4596-8483-6765f22f8835:
           Alias: Intermediate Table
           DataTransforms:
           - CreateColumnsOperation:
@@ -1324,8 +1486,8 @@ datasets:
               - ColumnName: SSMAssociationStatus
                 ColumnId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec
                 Expression: |-
-                  ifelse(isNull(ssmstatus), 'Not associated',
-                  ssmstatus = 'OK', 'Associated',
+                  ifelse(isNull(ssmstatus), 'Not managed',
+                  ssmstatus = 'OK', 'Managed',
                   ssmstatus = 'ResourceDeleted', 'Deleted',
                   concat('Other: ', ssmstatus)
                   )
@@ -1377,6 +1539,10 @@ datasets:
               RightOperand: 18801cc2-6530-401f-8213-5b252a5196a1
               Type: LEFT
               OnClause: '{accountid} = {account_id}'
+        6af82678-b6e5-4bef-b251-290e2cef2eec:
+          Alias: config_inventory_ec2
+          Source:
+            PhysicalTableId: 1f9edcad-3f4e-4f5d-9907-b33b769d0bd0
     dependsOn:
       views:
       - config_inventory_ec2
@@ -1386,6 +1552,7 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
+
   config_compliance:
     data:
       DataSetId: 8a84b77a-b162-4df9-bc86-5367e7c0ad06
@@ -1480,6 +1647,12 @@ datasets:
               - pkruleid
               - payer_account_id
               - account_name
+              - ou_tag_owner
+              - ou_tag_costcenter
+              - ou_tag_environment
+              - ou_tag_environment2
+              - organization_unit
+              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf
@@ -1524,7 +1697,6 @@ schedules:
           SizeUnit: DAY
 
 crawlers: {}
-
 views:
   config_compliance_conformance_pack:
     dependsOn: {}
@@ -1577,6 +1749,7 @@ views:
       SELECT *
       FROM
         "cid_crcd_database"."config_sys_account_data"
+
   config_inventory_ebs:
     dependsOn: {}
     data: |-
@@ -1930,7 +2103,62 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
-  
+  config_compliance_actual:
+    dependsOn: {}
+    data: |-
+      CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_actual AS
+      WITH
+        conformance_packs AS (
+         SELECT
+           ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
+         , ARBITRARY("configurationItem"."resourceName") "ConformancePackName"
+         , "json_extract_scalar"(rule, '$.configRuleName') "ConformancePackRuleName"
+         FROM
+           ((cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)))
+         GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
+      )
+      , resource_compliance AS (
+         SELECT
+           "accountId" "AccountId"
+         , "region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+         , MAX_BY("json_extract_scalar"(rule, '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         , "json_extract_scalar"(rule, '$.configRuleId') "RuleId"
+         , ARBITRARY("json_extract_scalar"(rule, '$.configRuleName')) "RuleName"
+         , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+         FROM
+           ((cid_crcd_config
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+      )
+      SELECT
+        rc.AccountId
+      , rc.Region
+      , rc.ComplianceSampleDate
+      , rc.ConfigItemCaptureTime
+      , rc.ConfigEventResourceId
+      , rc.ResourceType
+      , rc.ComplianceType
+      , rc.RuleId
+      , rc.RuleName
+      , (CASE WHEN REGEXP_LIKE("RuleName", 'AWSControlTower') THEN "RuleName" WHEN REGEXP_LIKE("RuleName", 'securityhub') THEN REGEXP_REPLACE("RuleName", '-[^-]*$', '') WHEN (cp.ConformancePackId IS NULL) THEN "RuleName" ELSE REGEXP_REPLACE("RuleName", '-[^-]*$', '') END) "NormalizedRuleName"
+      , rc.ResourceId
+      , cp.ConformancePackId
+      , cp.ConformancePackName
+      , (CASE WHEN (NOT REGEXP_LIKE("ConformancePackName", 'OrgConformsPack')) THEN "ConformancePackName" ELSE REGEXP_REPLACE("ConformancePackName", '-[^-]*$', '') END) "NormalizedConformancePackName"
+      , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.ResourceId) "PKResourceId"
+      , concat(concat(concat(concat(rc.AccountId, '-'), rc.Region), '-'), rc.RuleId) "PKRuleId"
+      FROM
+        (resource_compliance rc
+      LEFT JOIN conformance_packs cp ON (cp.ConformancePackRuleName = rc.RuleName))
   config_event:
     dependsOn: {}
     data: |-
