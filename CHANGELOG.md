@@ -11,16 +11,16 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 - New data source for account metadata: AWS Organization Data Collection Module of [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html). This allows the data pipeline of the dashboard to dynamically extract metadata from your AWS Organization to be displayed on the dashboard.
 - Support for CID taxonomy. Use your AWS Organization metadata as filters in every tab of the dashboard.
 - [Threat-Informed Security Compliance](./conformance_pack/README.md) to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. 
+- **Compliance**: added visuals that display the compliance score for each conformance pack.
 - **Resource Inventory**: added visuals to show EC2 instances managed by AWS Systems Manager (SSM).
-
-## Changed
-- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
-- **Compliance**: new visuals display the compliance score for each conformance pack.
-- **Tag Compliance**: added support for the several AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
-- **Resource Inventory**: click on an EC2 instance on the EC2 inventory table to see its attached EBS volumes on the EBS volume inventory table.
 - **Config Usage Insights** Added a diagram displaying the resource count by account and Region.
 - **Configuration Item Events**: added a date filter to the heat map of resource change events recorded by AWS Config. Improved documentation of the visuals at the top.
 
+## Changed
+- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
+
+- **Tag Compliance**: added support for the several AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
+- **Resource Inventory**: click on an EC2 instance on the EC2 inventory table to see its attached EBS volumes on the EBS volume inventory table.
 
 ## Fixed
 - Dashboard data was empty the first day of the month.
