@@ -500,7 +500,7 @@ Resources:
           ATHENA_QUERY_RESULTS_BUCKET_NAME: !Ref AthenaQueryResultBucketName
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
           CRCD_TABLE_NAME: !Ref AthenaTableName
-          # Reommended values for the lookback period of Config records
+          # Recommended values for the lookback period of Config records
           CONFIG_HISTORY_TIME_LIMIT_MONTHS: 12
           CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS: 6
           # Adding variables to enable/disable partitioning of ConfigSnapshot and ConfigHistory records
