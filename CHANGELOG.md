@@ -18,6 +18,7 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 - **Compliance**: new visuals display the compliance score for each conformance pack.
 - **Tag Compliance**: added support for the several AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
 - **Resource Inventory**: click on an EC2 instance on the EC2 inventory table to see its attached EBS volumes on the EBS volume inventory table.
+- **Config Usage Insights** Added a diagram displaying the resource count by account and Region.
 - **Configuration Item Events**: added a date filter to the heat map of resource change events recorded by AWS Config. Improved documentation of the visuals at the top.
 
 
