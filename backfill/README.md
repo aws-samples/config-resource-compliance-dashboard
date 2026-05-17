@@ -35,7 +35,10 @@ The backfill worker function is triggered by SQS. The payload to the function is
 
 1. Log into the AWS Management Console for your Dashboard account.
 1. Ensure you are in the same Region where you deployed the AWS Config dashboard resources.
-1. Click this [deploy link](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-backfill-resources.yaml&stackName=config-dashboard-backfill) to open the stack template in your CloudFormation Console. This stack will create the dashboard backfilling resources.
+
+1. Click the Launch Stack button below to open the stack [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-backfill-resources.yaml&stackName=config-dashboard-backfill) in your CloudFormation console. 
+
+[![Launch Stack button](../images/LaunchStack.svg 'Deploy CRCD Backfilling')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-backfill-resources.yaml&stackName=config-dashboard-backfill)
 
 4. Configure the following parameters:
 

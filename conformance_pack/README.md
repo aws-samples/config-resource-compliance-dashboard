@@ -60,7 +60,7 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 ## Step 1
 1. Log into the AWS Management Console for your account or delegated admin for AWS CloudFormation and AWS Config of your organization.
 1. Select a Region that will be the base Region for your deployment and where you will deploy the IAM-related rules of your Conformance Pack.
-1. Click the Launch Stack button below to open the stack [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-conformance-pack-resources) in your CloudFormation console. 
+1. Click the Launch Stack button below to open the stack [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack) in your CloudFormation console. 
 
 [![Launch Stack button](../images/LaunchStack.svg 'Deploy CRCD Threat-Informed Security Compliance')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack)
 
