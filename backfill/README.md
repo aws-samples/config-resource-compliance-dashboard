@@ -4,11 +4,12 @@
 
 The backfill feature processes historical AWS Config records that already exist in your Dashboard bucket and creates the necessary Athena/Glue partitions. This is essential to show your historical compliance on the dashboard when you have existing AWS Config records at the time the dashboard was first deployed.
 
-The backfill process will generate partitions for these AWS Config records:
+By default, the backfill process will generate partitions for these AWS Config records:
 1. All AWS Config history records for the previous 12 months.
 2. AWS Config snapshot records on all accounts an Regions whose date is the last day of the month, for the previous 5 months.
 3. AWS Config snapshot records on all accounts and Regions whose date is within the last 5 days.
 
+You can change these settings and configure a loopback period that suits your needs. See the optional step in the procedure below.
 
 ## Architecture
 The solution is installed on the same account and Region where the dashboard resources are deployed. The backfill process uses a two-stage approach:
@@ -56,7 +57,15 @@ The backfill worker function is triggered by SQS. The payload to the function is
 | **AWSOrganizationID** | _(empty)_ | Your AWS Organization ID. Leave empty for standalone accounts. |
 
 5. Run the CloudFormation template.
-6. Open the Backfill Producer Lambda function and run it:
+
+6. **(OPTIONAL)** Follow these steps to change the lookback period of backfill:
+   - Open the Lambda Console and click on the function `crcd-config-backfill-worker`
+   - Click on the **Configuration** tab.
+   - Click on **Environment variables**.
+   - Environment variable `CONFIG_HISTORY_TIME_LIMIT_MONTHS` defines how many months in the past AWS Config history records will be loaded. The default value is `12`.
+   - Environment variable `CONFIG_SNAPSHOT_TIME_LIMIT_MONTHS` defines how many months in the past AWS Config snapshot records will be loaded. The default value is `6`.
+
+7. Open the Backfill Producer Lambda function and run it:
    - Open the Lambda Console and click on the function `crcd-config-backfill-producer`
    - Click on the **Test** tab.
    - Select **Create new event** under **Test event action**.
@@ -67,12 +76,13 @@ The backfill worker function is triggered by SQS. The payload to the function is
    ```
    select min(dt), datasource from cid_crcd_config group by datasource;
    ```
-1. (OPTIONAL) [Refresh](https://docs.aws.amazon.com/quick/latest/userguide/refreshing-imported-data.html) your Quick Sight datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
+1. **(OPTIONAL)** [Refresh](https://docs.aws.amazon.com/quick/latest/userguide/refreshing-imported-data.html) your Quick Sight datasets to see historical data on the dashboard. The datasets will refresh within 24 hours anyway.
 
 ## Important Notes
 
 - This is a one-time operation for processing historical data.
 - The process may take several hours depending on the amount of historical data.
 - You can run the backfill process several times, the worker function will skip creating a partition if it already exists.
+- If you increase the lookback period, the process may hit Lambda timeout and fail. We recommend running the process first at its default settings and then gradually increase the lookback window.
 - Resources can be deleted after successful backfill completion.
 - Ensure sufficient Lambda execution time and SQS message retention for large datasets.
