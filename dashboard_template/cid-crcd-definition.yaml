@@ -10379,7 +10379,7 @@ Sheets:
       \ tracker</b>\n  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
       14px\">Use controls at the top to apply filters. Click on a bar on\_</inline>\n\
       \  <inline color=\"#bdbdbd\" font-size=\"14px\">\n    <b>AWS Config rule compliance</b>\n\
-      \  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">\_to filer by rule\
+      \  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">\_to filter by rule\
       \ name.</inline>\n  <br/>\n  <inline color=\"#bdbdbd\">Shows normalized AWS\
       \ Config rule names. For example, 'my-rule-[random-text]' is displayed as 'my-rule'.</inline>\n\
       </text-box>"
@@ -12412,7 +12412,7 @@ Sheets:
       DisplayOptions:
         InfoIconLabelOptions:
           InfoIconText: Indicates whether the instance is associated with SSM or if
-            the association was deleted to stopped
+            the association was deleted or stopped
           Visibility: HIDDEN
         SelectAllOptions:
           Visibility: VISIBLE
@@ -15919,9 +15919,9 @@ Sheets:
       16px\">Analyze AWS Config rules and resources that most contribute to AWS Config\
       \ cost.\_</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
       16px\">AWS Config cost is driven by the number of rule evaluations and configuration\
-      \ item changes being recorded. AWS Config cost are complex and calculating them\
+      \ item changes being recorded. AWS Config costs are complex and calculating them\
       \ precisely is outside the scope of this dashboard. This section reports the\
-      \ number of configuration items changes that are recorded and the number of\
+      \ number of configuration item changes that are recorded and the number of\
       \ AWS Config rule evaluations over time. You can track AWS Config cost per operation\
       \ on the AWS Config section under the Monitoring &amp; Observability tab of\
       \ the\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"\
@@ -21506,7 +21506,7 @@ Sheets:
       \ font-size=\"14px\">hows the latest data imported into the dashboard and can\
       \ help confirm that you are receiving data from all accounts and AWS Regions.\_\
       </inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\"\
-      >This is based AWS Config snapshot files, which are generated on a schedule\
+      >This is based on AWS Config snapshot files, which are generated on a schedule\
       \ for each account and Region and contain the status of all resources, regardless\
       \ of configuration changes. The field\_</inline>\n  <inline color=\"#bdbdbd\"\
       \ font-size=\"14px\">\n    <b>Latest Data Import</b>\n  </inline>\n  <inline\
@@ -22075,7 +22075,7 @@ Sheets:
       #2f8ee7\" font-size=\"18px\">\n      <a href=\"mailto:cloud-intelligence-dashboards@amazon.com\"\
       \ target=\"_self\">cloud-intelligence-dashboards@amazon.com</a>\n    </inline>\n\
       \  </block>\n  <br/>\n  <block align=\"right\">\n    <inline color=\"#bdbdbd\"\
-      \ font-size=\"18px\">Powered by: Amazon QuickSight, Amazon Athena, Amazon S3,\
+      \ font-size=\"18px\">Powered by: Amazon Quick Sight, Amazon Athena, Amazon S3,\
       \ AWS Lambda, AWS Config\_</inline>\n  </block>\n</text-box>"
     SheetTextBoxId: 8349bfc9-8d07-4101-a47d-434036237bbb
   Visuals: []
