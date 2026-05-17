@@ -4,7 +4,7 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 ## Added
 ### External features
 - [Backfill](./backfill/README.md) feature to show your historical AWS Config records after deployment.
-- [Amazon Quick chat agent](./documentation/generative_ai_assistant.md). This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.
+- [Amazon Quick chat agent](./chat_agent/README.md). This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.
 - AWS Config Resource Compliance Dashboard [Threat-Informed Conformance Pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard.
 
 ### Dashboard features

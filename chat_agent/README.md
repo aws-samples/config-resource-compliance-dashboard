@@ -1,4 +1,4 @@
-# AWS Config Dashboard and Amazon Quick generative AI assistant
+# AWS Config Dashboard and Amazon Quick chat agent
 
 ## Feature overview
 This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights. 
