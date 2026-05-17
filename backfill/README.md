@@ -9,7 +9,7 @@ By default, the backfill process will generate partitions for these AWS Config r
 2. AWS Config snapshot records on all accounts an Regions whose date is the last day of the month, for the previous 5 months.
 3. AWS Config snapshot records on all accounts and Regions whose date is within the last 5 days.
 
-You can change these settings and configure a loopback period that suits your needs. See the optional step in the procedure below.
+You can change these settings and configure a lookback period that suits your needs. See the optional step in the procedure below.
 
 ## Architecture
 The solution is installed on the same account and Region where the dashboard resources are deployed. The backfill process uses a two-stage approach:
