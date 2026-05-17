@@ -2,19 +2,20 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 
 # [4.1.0] - 2026-05-18
 ## Added
-### External features
-- [Backfill](./backfill/README.md) feature to show your historical AWS Config records after deployment.
-- [Amazon Quick chat agent](./chat_agent/README.md). This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.
-- AWS Config Resource Compliance Dashboard [Threat-Informed Conformance Pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard.
 
 ### Dashboard features
 - New data source for account metadata: AWS Organization Data Collection Module of [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html). This allows the data pipeline of the dashboard to dynamically extract metadata from your AWS Organization to be displayed on the dashboard.
 - Support for CID taxonomy. Use your AWS Organization metadata as filters in every tab of the dashboard.
-- [Threat-Informed Security Compliance](./conformance_pack/README.md) to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. 
+- **Threat-Informed Security Compliance**: new dashboard tab to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. 
 - **Compliance**: added visuals that display the compliance score for each conformance pack.
 - **Resource Inventory**: added visuals to show EC2 instances managed by AWS Systems Manager (SSM).
 - **Config Usage Insights** Added a diagram displaying the resource count by account and Region.
 - **Configuration Item Events**: added a date filter to the heat map of resource change events recorded by AWS Config. Improved documentation of the visuals at the top.
+
+### External features
+- [Backfill](./backfill/README.md) feature to show your historical AWS Config records after deployment.
+- [Amazon Quick chat agent](./chat_agent/README.md). This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.
+- AWS Config Resource Compliance Dashboard [Threat-Informed Conformance Pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard.
 
 ## Changed
 - [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
