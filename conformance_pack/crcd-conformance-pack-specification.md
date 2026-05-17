@@ -73,7 +73,7 @@ All rules follow the format: `crcd-<lv1>-<lv2>-<rule-name>`
 | crcd-ia-ra-vpc-sg-port-restriction-check | Checks if security groups allow unrestricted inbound ports | STANDARD | [VPC_SG_PORT_RESTRICTION_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html) | Initial Access / Resource Access Protection | AWS::EC2::SecurityGroup |
 
 ## Rule Details
-For STANDARD rules, all parameters are supported and will not be repated in this file. Rule parameters are specified for custom rules.
+For STANDARD rules, all parameters are supported and will not be repeated in this file. Rule parameters are specified for custom rules.
 
 ### Initial Access rules
 

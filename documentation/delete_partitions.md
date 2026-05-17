@@ -49,7 +49,7 @@ If you want to retrieve all partitions for an account, run this AWS CLI command 
 ### Remove partitions belonging to an account
 1. Save the **Deletion CLI script** below to a local file called `crcd_delete_account_partitions.sh`.
 1. Edit the file's **Configuration** section to specify the AWS account number whose partitions must be deleted, and the Region where the AWS Glue table is located.
-1. Open the AWS CloudShell on the AWS account and Region where you deployed the dashboard resouces.
+1. Open the AWS CloudShell on the AWS account and Region where you deployed the dashboard resources.
 1. Upload `crcd_delete_account_partitions.sh` to CloudShell.
 1. Make the script file executable:
    ```

@@ -16128,7 +16128,7 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-subtitle>
-              <inline color="#bdbdbd">Consider how many resouces are in each account when looking at the data in this dashboard. Focus on accounts with resource change or rule evaluation volumes that are disproportionate to their resource count.</inline>
+              <inline color="#bdbdbd">Consider how many resources are in each account when looking at the data in this dashboard. Focus on accounts with resource change or rule evaluation volumes that are disproportionate to their resource count.</inline>
             </visual-subtitle>
         Visibility: VISIBLE
       Title:
