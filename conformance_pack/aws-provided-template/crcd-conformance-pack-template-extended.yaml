@@ -1,0 +1,325 @@
+################################################################################
+# Operational Best Practices for AWS Security Incident Response (Extended)
+#
+# This conformance pack contains AWS Config rules recommended by AWS Security
+# Incident Response security engineers. These rules identify preventable,
+# common misconfigurations that are known to create vulnerabilities exploited
+# in attacks against AWS environments.
+#
+# This is the extended version that includes custom Lambda-based rules for
+# IAM protection. It requires prerequisite Lambda functions to be deployed
+# before this conformance pack can be used. See the prerequisites template.
+#
+# Rules are classified according to the Threat Technique Catalog for AWS
+# (based on MITRE ATT&CK®) and organized by threat category:
+#   - Initial Access: S3 Protection
+#   - Initial Access: EC2 Security (IMDSv2)
+#   - Initial Access: Resource Access Protection (Security Groups)
+#   - Initial Access: IAM Protection (custom rules)
+#
+# References:
+#   - Threat Technique Catalog for AWS:
+#     https://aws-samples.github.io/threat-technique-catalog-for-aws/
+#   - AWS Security Incident Response:
+#     https://aws.amazon.com/security-incident-response/
+#   - AWS Config Conformance Packs:
+#     https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html
+################################################################################
+
+Parameters:
+  S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets:
+    Type: String
+    Default: ''
+
+  S3AccessPointPublicAccessBlocksExcludedAccessPoints:
+    Type: String
+    Default: ''
+
+  S3AccountLevelPublicAccessIgnorePublicAcls:
+    Type: String
+    Default: 'true'
+
+  S3AccountLevelPublicAccessBlockPublicPolicy:
+    Type: String
+    Default: 'true'
+
+  S3AccountLevelPublicAccessBlockPublicAcls:
+    Type: String
+    Default: 'true'
+
+  S3AccountLevelPublicAccessRestrictPublicBuckets:
+    Type: String
+    Default: 'true'
+
+  VPCSecurityGroupPortRestrictionRestrictedPorts:
+    Type: String
+    Default: '22,3389'
+
+  VPCSecurityGroupPortRestrictionProtocolType:
+    Type: String
+    Default: 'ALL'
+
+  VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups:
+    Type: String
+    Default: 'true'
+
+  VPCSecurityGroupPortRestrictionIpType:
+    Type: String
+    Default: 'ALL'
+
+  RootNotUsedRegularlyLambdaArn:
+    Type: String
+    Description: "ARN of the Lambda function for the root-not-used-regularly custom rule. Deploy the prerequisites template first."
+
+  UserAccessKeyCheckLambdaArn:
+    Type: String
+    Description: "ARN of the Lambda function for the user-access-key-check custom rule. Deploy the prerequisites template first."
+
+  RootUsageThresholdDays:
+    Type: String
+    Default: '5'
+
+Resources:
+
+  # ============================================================================
+  # Initial Access - S3 Protection
+  # ============================================================================
+
+  S3BucketPublicReadProhibited:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-bucket-public-read-prohibited
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::S3::Bucket
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ_PROHIBITED
+    Type: AWS::Config::ConfigRule
+
+  S3BucketPublicWriteProhibited:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-bucket-public-write-prohibited
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::S3::Bucket
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_WRITE_PROHIBITED
+    Type: AWS::Config::ConfigRule
+
+  S3AccessPointInVpcOnly:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-access-point-in-vpc-only
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::S3::AccessPoint
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_ACCESS_POINT_IN_VPC_ONLY
+    Type: AWS::Config::ConfigRule
+
+  S3AccessPointPublicAccessBlocks:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-access-point-public-access-blocks
+      InputParameters:
+        excludedAccessPoints:
+          Fn::If:
+          - HasExcludedAccessPoints
+          - Ref: S3AccessPointPublicAccessBlocksExcludedAccessPoints
+          - Ref: AWS::NoValue
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::S3::AccessPoint
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS
+    Type: AWS::Config::ConfigRule
+
+  S3AccountLevelPublicAccessBlocksPeriodic:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-account-level-public-access-blocks-periodic
+      InputParameters:
+        IgnorePublicAcls:
+          Ref: S3AccountLevelPublicAccessIgnorePublicAcls
+        BlockPublicPolicy:
+          Ref: S3AccountLevelPublicAccessBlockPublicPolicy
+        BlockPublicAcls:
+          Ref: S3AccountLevelPublicAccessBlockPublicAcls
+        RestrictPublicBuckets:
+          Ref: S3AccountLevelPublicAccessRestrictPublicBuckets
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC
+      MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+  S3BucketLevelPublicAccessProhibited:
+    Properties:
+      ConfigRuleName: crcd-ia-s3-s3-bucket-level-public-access-prohibited
+      InputParameters:
+        excludedPublicBuckets:
+          Fn::If:
+          - HasExcludedPublicBuckets
+          - Ref: S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets
+          - Ref: AWS::NoValue
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::S3::Bucket
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED
+    Type: AWS::Config::ConfigRule
+
+  # ============================================================================
+  # Initial Access - EC2 Security (IMDSv2)
+  # ============================================================================
+
+  AutoscalingLaunchconfigRequiresImdsv2:
+    Properties:
+      ConfigRuleName: crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::AutoScaling::LaunchConfiguration
+      Source:
+        Owner: AWS
+        SourceIdentifier: AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2
+    Type: AWS::Config::ConfigRule
+
+  Ec2Imdsv2Check:
+    Properties:
+      ConfigRuleName: crcd-ia-ec2-ec2-imdsv2-check
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::EC2::Instance
+      Source:
+        Owner: AWS
+        SourceIdentifier: EC2_IMDSV2_CHECK
+    Type: AWS::Config::ConfigRule
+
+  Ec2LaunchTemplateImdsv2Check:
+    Properties:
+      ConfigRuleName: crcd-ia-ec2-ec2-launch-template-imdsv2-check
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::EC2::LaunchTemplate
+      Source:
+        Owner: AWS
+        SourceIdentifier: EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK
+    Type: AWS::Config::ConfigRule
+
+  # ============================================================================
+  # Initial Access - Resource Access Protection (Security Groups)
+  # ============================================================================
+
+  VPCSecurityGroupPortRestrictionCheck:
+    Properties:
+      ConfigRuleName: crcd-ia-ra-vpc-sg-port-restriction-check
+      InputParameters:
+        restrictPorts:
+          Fn::If:
+          - HasRestrictedPorts
+          - Ref: VPCSecurityGroupPortRestrictionRestrictedPorts
+          - Ref: AWS::NoValue
+        protocolType:
+          Ref: VPCSecurityGroupPortRestrictionProtocolType
+        excludeExternalSecurityGroups:
+          Ref: VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups
+        ipType:
+          Ref: VPCSecurityGroupPortRestrictionIpType
+      Scope:
+        ComplianceResourceTypes:
+          - AWS::EC2::SecurityGroup
+      Source:
+        Owner: AWS
+        SourceIdentifier: VPC_SG_PORT_RESTRICTION_CHECK
+    Type: AWS::Config::ConfigRule
+
+  # ============================================================================
+  # Initial Access - IAM Protection (managed rules)
+  # ============================================================================
+
+  RootAccountMfaEnabled:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-root-account-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+      MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+  IamRootAccessKeyCheck:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-iam-root-access-key-check
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
+      MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+  IamUserMfaEnabled:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-iam-user-mfa-enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_USER_MFA_ENABLED
+      MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+  MfaEnabledForIamConsoleAccess:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-mfa-enabled-for-iam-console-access
+      Source:
+        Owner: AWS
+        SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
+      MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+  # ============================================================================
+  # Initial Access - IAM Protection (custom Lambda rules)
+  # ============================================================================
+
+  IamRootNotUsedRegularly:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-iam-root-not-used-regularly
+      Source:
+        Owner: CUSTOM_LAMBDA
+        SourceIdentifier:
+          Ref: RootNotUsedRegularlyLambdaArn
+        SourceDetails:
+          - EventSource: aws.config
+            MessageType: ScheduledNotification
+            MaximumExecutionFrequency: TwentyFour_Hours
+      InputParameters:
+        RootUsageThresholdDays:
+          Ref: RootUsageThresholdDays
+    Type: AWS::Config::ConfigRule
+
+  IamUserAccessKeyCheck:
+    Properties:
+      ConfigRuleName: crcd-ia-iam-iam-user-access-key-check
+      Source:
+        Owner: CUSTOM_LAMBDA
+        SourceIdentifier:
+          Ref: UserAccessKeyCheckLambdaArn
+        SourceDetails:
+          - EventSource: aws.config
+            MessageType: ScheduledNotification
+            MaximumExecutionFrequency: TwentyFour_Hours
+    Type: AWS::Config::ConfigRule
+
+Conditions:
+  HasExcludedPublicBuckets:
+    Fn::Not:
+    - Fn::Equals:
+      - ''
+      - Ref: S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets
+  HasExcludedAccessPoints:
+    Fn::Not:
+    - Fn::Equals:
+      - ''
+      - Ref: S3AccessPointPublicAccessBlocksExcludedAccessPoints
+  HasRestrictedPorts:
+    Fn::Not:
+    - Fn::Equals:
+      - ''
+      - Ref: VPCSecurityGroupPortRestrictionRestrictedPorts
