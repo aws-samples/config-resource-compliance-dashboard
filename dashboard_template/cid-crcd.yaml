@@ -22,7 +22,7 @@ dashboards:
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    version: v4.1.0
+    version: v5.0.0
     # CUSTOMIZATION - make sure it references cid-crcd-definition.yaml  
     file: ./cid-crcd-definition.yaml
 

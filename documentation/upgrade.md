@@ -2,7 +2,7 @@
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
 
-## Upgrade to v4.1.0
+## Upgrade to v5.0.0
 You have to destroy the resources of the current versions and redeploy.
 This version supports organizational taxonomy, it is highly recommended to deploy [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) before reinstalling. You will be able to add your organizational taxonomy to the dashboard during deployment. Even without this change, this version has updates on an IAM Role used by Quick Sight that cannot be updated by a CloudFormation change set.
 

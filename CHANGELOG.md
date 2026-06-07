@@ -1,6 +1,6 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
-# [4.1.0] - 2026-05-18
+# [5.0.0] - 2026-06-30
 ## Added
 
 ### Dashboard features
