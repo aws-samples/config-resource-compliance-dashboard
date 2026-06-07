@@ -16,6 +16,7 @@ The solution is installed on the same account and Region where the dashboard res
 1. **Producer Lambda Function**: Scans the Dashboard bucket to identify AWS Config prefixes.
 2. **Worker Lambda Function**: Creates Athena/Glue partitions for the identified prefixes.
 3. **SQS Queue**: Coordinates the workflow between producer and worker functions.
+4. **Dead Letter Queue (DLQ)**: Messages that fail processing after 3 attempts are moved to `crcd-backfill-sqs-dlq` for investigation, preventing infinite retry loops.
 
 ![CRCD](../images/architecture-backfill.png "AWS Config Dashboard Backfill architecture")
 
@@ -86,3 +87,31 @@ The backfill worker function is triggered by SQS. The payload to the function is
 - If you increase the lookback period, the process may hit Lambda timeout and fail. We recommend running the process first at its default settings and then gradually increase the lookback window.
 - Resources can be deleted after successful backfill completion.
 - Ensure sufficient Lambda execution time and SQS message retention for large datasets.
+
+## Troubleshooting
+
+If the backfill process encounters errors, messages that fail after 3 delivery attempts are moved to the Dead Letter Queue (`crcd-backfill-sqs-dlq`). To investigate:
+
+1. Open the SQS Console and navigate to the `crcd-backfill-sqs-dlq` queue.
+2. Check the **Messages available** metric to see if any messages landed in the DLQ.
+3. Use **Poll for messages** to inspect the failed payloads and identify which prefixes failed.
+4. Check CloudWatch logs for the worker Lambda function (`crcd-config-backfill-worker`) for error details.
+5. After fixing the root cause, you can redrive the messages from the DLQ back to the main queue using the **Start DLQ redrive** feature in the SQS Console.
+
+### Setting up a CloudWatch Alarm for the DLQ
+
+You can create a CloudWatch alarm to get notified when messages land in the DLQ:
+
+1. Open the CloudWatch Console and navigate to **Alarms** > **Create alarm**.
+2. Click **Select metric** and navigate to **SQS** > **Queue Metrics**.
+3. Select the `ApproximateNumberOfMessagesVisible` metric for the `crcd-backfill-sqs-dlq` queue.
+4. Configure the alarm condition:
+   - Threshold type: **Static**
+   - Condition: **Greater than or equal to 1**
+   - Period: **1 minute**
+5. Configure the notification action:
+   - Select or create an SNS topic to receive the alarm notification.
+   - Add your email address as a subscriber to the topic.
+6. Name the alarm (e.g., `crcd-backfill-dlq-alarm`) and create it.
+
+This alarm will trigger whenever one or more messages are sitting in the DLQ, alerting you to investigate failed backfill operations.
