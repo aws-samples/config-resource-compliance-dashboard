@@ -163,6 +163,23 @@ Rules:
 
 Resources:
 
+  # SQS Dead Letter Queue
+  # Messages that fail processing after maxReceiveCount attempts are moved here for investigation
+  SQSBackfillingDLQ:
+  # checkov:skip=CKV_AWS_27: We set SqsManagedSseEnabled: true
+    Type: AWS::SQS::Queue
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      QueueName: crcd-backfill-sqs-dlq
+      MessageRetentionPeriod: 1209600 # 14 days
+      SqsManagedSseEnabled: true
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W48
+            reason: "KMS encryption specified in SqsManagedSseEnabled = true"
+
   # SQS Queue
   # When Lambda receives a batch, the messages stay in the queue but are hidden for the length of the queue's visibility timeout. 
   # If your function successfully processes all messages in the batch, Lambda deletes the messages from the queue. 
@@ -180,6 +197,9 @@ Resources:
       MessageRetentionPeriod: 345600 # 4 days
       SqsManagedSseEnabled: true
       DelaySeconds: 60 # some Log Archive buckets may cointain many files, we give the worker Lambda some more time to process them
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SQSBackfillingDLQ.Arn
+        maxReceiveCount: 3
     Metadata:
       cfn_nag:
         rules_to_suppress:
@@ -1071,3 +1091,7 @@ Outputs:
   SQSBackfillQueueArn:
     Description: "ARN of the backfill SQS Queue"
     Value: !GetAtt SQSBackfillingQueue.Arn
+
+  SQSBackfillDLQArn:
+    Description: "ARN of the backfill Dead Letter Queue"
+    Value: !GetAtt SQSBackfillingDLQ.Arn
