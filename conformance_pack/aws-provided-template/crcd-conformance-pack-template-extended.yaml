@@ -37,19 +37,19 @@ Parameters:
 
   S3AccountLevelPublicAccessIgnorePublicAcls:
     Type: String
-    Default: 'true'
+    Default: 'True'
 
   S3AccountLevelPublicAccessBlockPublicPolicy:
     Type: String
-    Default: 'true'
+    Default: 'True'
 
   S3AccountLevelPublicAccessBlockPublicAcls:
     Type: String
-    Default: 'true'
+    Default: 'True'
 
   S3AccountLevelPublicAccessRestrictPublicBuckets:
     Type: String
-    Default: 'true'
+    Default: 'True'
 
   VPCSecurityGroupPortRestrictionRestrictedPorts:
     Type: String
@@ -61,7 +61,7 @@ Parameters:
 
   VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups:
     Type: String
-    Default: 'true'
+    Default: 'True'
 
   VPCSecurityGroupPortRestrictionIpType:
     Type: String

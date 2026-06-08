@@ -4,7 +4,7 @@
 
 This conformance pack contains a focused set of AWS Config rules recommended by [AWS Security Incident Response](https://aws.amazon.com/security-incident-response/) security engineers. These rules target the most common misconfigurations that security engineers observe causing real security incidents in customer environments.
 
-Unlike larger conformance packs that may contain 50+ rules mapped to a compliance framework, this pack is intentionally small and focused. It is designed for customers who are new to AWS Config and security monitoring and want to start with the highest-impact checks without the cost and complexity of deploying dozens of rules. Each rule in this pack addresses a specific misconfiguration that is known to be actively exploited by threat actors.
+Unlike larger conformance packs that may contain 50+ rules mapped to a compliance framework, this pack is intentionally small and focused. It is designed for customers who are new to AWS Config and security monitoring and want to start with the highest-impact checks without the cost and complexity of deploying dozens of rules. Additionally, any customer can deploy this conformance pack to perform fundamental security posture checks on their AWS environment, regardless of their experience level. Each rule in this pack addresses a specific misconfiguration that is known to be actively exploited by threat actors.
 
 The rules are classified according to the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/), which is based on [MITRE ATT&CK®](https://attack.mitre.org/). The catalog identifies and categorizes threat actor behaviors observed by AWS.
 
@@ -21,8 +21,7 @@ The rules are classified according to the [Threat Technique Catalog for AWS](htt
 
 ## Prerequisites
 
-- **AWS Config** must be enabled in the account and Region where you deploy this conformance pack.
-- No additional prerequisite resources are required for the base template.
+- **AWS Config** must be enabled in all accounts and Regions where you deploy this conformance pack. This template supports both single-account deployment (`put-conformance-pack`) and organization-wide deployment (`put-organization-conformance-pack`).
 - **Extended version only**: Deploy the prerequisites CloudFormation template (`crcd-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Extended Version](#extended-version) below.
 
 
