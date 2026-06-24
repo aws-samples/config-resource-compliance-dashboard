@@ -22,7 +22,30 @@ The rules are classified according to the [Threat Technique Catalog for AWS](htt
 ## Prerequisites
 
 - **AWS Config** must be enabled in all accounts and Regions where you deploy this conformance pack. This template supports both single-account deployment (`put-conformance-pack`) and organization-wide deployment (`put-organization-conformance-pack`).
+- **AWS Config recorder** must record the resource types evaluated by the rules in this pack. The base template requires: `AWS::S3::Bucket`, `AWS::S3::AccessPoint`, `AWS::EC2::Instance`, `AWS::EC2::SecurityGroup`, `AWS::EC2::LaunchTemplate`, `AWS::AutoScaling::LaunchConfiguration`. The extended template additionally requires `AWS::IAM::User` to be recorded (in at least one Region) for the IAM MFA rules (`IAM_USER_MFA_ENABLED`, `MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS`) to produce per-user compliance results.
 - **Extended version only**: Deploy the prerequisites CloudFormation template (`crcd-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Extended Version](#extended-version) below.
+
+
+## Deployment (Base Version)
+
+### Single Account Deployment
+
+```
+aws configservice put-conformance-pack \
+  --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
+  --template-body file://crcd-conformance-pack-template.yaml \
+  --region <REGION>
+```
+
+### Organization-Wide Deployment
+
+```
+aws configservice put-organization-conformance-pack \
+  --organization-conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
+  --template-body file://crcd-conformance-pack-template.yaml
+```
+
+Alternatively, the base template can be deployed directly from the AWS Config console by selecting it from the conformance pack dropdown.
 
 
 ## Input Parameters
@@ -142,6 +165,8 @@ In addition to the base parameters, the extended version requires:
 
 ### Deployment Steps (Extended Version)
 
+#### Single Account Deployment
+
 1. Deploy the prerequisites template:
    ```
    aws cloudformation deploy \
@@ -161,6 +186,35 @@ In addition to the base parameters, the extended version requires:
    ```
    aws configservice put-conformance-pack \
      --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
+     --template-body file://crcd-conformance-pack-template-extended.yaml \
+     --conformance-pack-input-parameters \
+       ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_2> \
+       ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_2>
+   ```
+
+#### Organization-Wide Deployment
+
+1. Deploy the prerequisites template in the delegated administrator or management account:
+   ```
+   aws cloudformation deploy \
+     --template-file crcd-conformance-pack-prerequisites.yaml \
+     --stack-name crcd-conformance-pack-prerequisites \
+     --capabilities CAPABILITY_NAMED_IAM
+   ```
+
+   For organization-wide deployment, the prerequisite Lambda functions must also be deployed in each member account. Use CloudFormation StackSets to deploy the prerequisites across the organization.
+
+2. Get the Lambda ARNs from the stack outputs:
+   ```
+   aws cloudformation describe-stacks \
+     --stack-name crcd-conformance-pack-prerequisites \
+     --query 'Stacks[0].Outputs'
+   ```
+
+3. Deploy the extended conformance pack across the organization:
+   ```
+   aws configservice put-organization-conformance-pack \
+     --organization-conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
      --template-body file://crcd-conformance-pack-template-extended.yaml \
      --conformance-pack-input-parameters \
        ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_2> \
@@ -218,3 +272,40 @@ Both evaluations will appear in AWS Config. The conformance pack rules are immut
 - [AWS Config Managed Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html)
 - [AWS Config Conformance Packs](https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html)
 - [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html)
+
+
+## Multi-Region Deployment
+
+Since IAM resources are global, the custom Lambda-based IAM rules only need to run in a single region. For multi-region coverage, combine the extended template in one region with the base template in all other regions.
+
+### Strategy
+
+| Region | Template | What it covers |
+|--------|----------|----------------|
+| Primary region (e.g., us-east-1) | Extended template | S3, EC2, Security Groups + IAM custom rules (root usage, access keys, MFA) |
+| All other regions | Base template | S3, EC2, Security Groups |
+
+### Steps
+
+1. **Choose a primary region** for your IAM rules (any region where AWS Config is enabled).
+
+2. **Deploy the extended template in the primary region** 
+Open CloudShell or the CLI in your main region and follow the Extended Version steps above for the single account deployment.
+
+3. **Deploy the base template in all other regions:**
+Make sure your default region is not on the list below.
+
+   ```
+   REGIONS="us-east-1 us-east-2 us-west-2 eu-central-1 eu-north-1 ap-southeast-1 ap-northeast-1"
+
+   for REGION in $REGIONS; do
+     echo "Deploying base conformance pack in $REGION..."
+     aws configservice put-conformance-pack \
+       --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
+       --template-body file://crcd-conformance-pack-template.yaml \
+       --region $REGION
+   done
+   ```
+
+This gives you full coverage: regional resource checks (S3, EC2, security groups) in every region, plus the global IAM checks running once in your primary region.
+
