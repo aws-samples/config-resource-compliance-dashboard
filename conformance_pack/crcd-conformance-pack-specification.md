@@ -1,5 +1,8 @@
 # Conformance Pack Specification
 
+_**Please note:** The AWS Config conformance pack that will bundle these rules into a single deployable unit is under development. However, the dashboard's Threat-Informed Security Compliance tab already tracks compliance for the standard AWS Config managed rules listed below — whether you deploy them individually, through another conformance pack, or through any other mechanism. These rules are recommended by AWS Security Incident Response security engineers regardless of how they are deployed._
+
+
 This document describes the AWS Config rules included in the AWS Config Resource Compliance Dashboard (CRCD) Conformance Pack, built in collaboration with Security Incident Response security engineers. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
 
 ## Naming Convention

@@ -9,7 +9,8 @@ This feature of the AWS Config Dashboard was developed in collaboration with AWS
 
 ## CRCD Threat-Informed Conformance Pack 
 
-_**Please note:** The AWS Config conformance pack containing all the recommended rules is under development. The dashboard displays compliance with the standard AWS Config rules that will be included in the conformance pack._
+_**Please note:** The AWS Config conformance pack that bundles all recommended rules into a single deployable unit is under development. However, the dashboard's Threat-Informed Security Compliance tab is fully functional today — it displays compliance status for the standard AWS Config managed rules recommended by AWS Security Incident Response security engineers. You can deploy these rules individually in your environment and the dashboard will report on them regardless of whether they are deployed through other conformance packs or as standalone rules._
+
 
 The AWS Config Resource Compliance Dashboard Threat-Informed Conformance Pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
 
