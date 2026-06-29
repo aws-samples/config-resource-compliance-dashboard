@@ -74,7 +74,6 @@ These features work alongside the AWS Config Resource Compliance Dashboard (CRCD
 - Organizational taxonomy - Deploy the [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) to collect organization data. You will be able to add your organizational taxonomy to the dashboard during deployment.
 - [Backfill](./backfill/README.md) - Make your compliance history visible on the dashboard right after deployment.
 - [Amazon Quick chat agent](./chat_agent/README.md) - Deploy a compliance chat agent that understands your environment and provides contextual insights by using Amazon Quick’s generative AI capabilities powered by your AWS Config dashboard. 
-- [AWS Config Resource Compliance Dashboard Threat-Informed Conformance Pack](./conformance_pack/README.md) - Deploy a curated set of AWS Config rules that identify misconfigurations leveraged during the most common security incidents. Evaluate your threat-informed security posture on a dedicated section of the dashboard.
 
 
 ## Architecture
