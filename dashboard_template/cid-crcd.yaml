@@ -103,6 +103,8 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
+            - Name: organization_unit
+              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         2e64f87f-c98c-4f1c-8738-d9f7ffd5f0a8:
@@ -140,12 +142,7 @@ datasets:
               - pkruleid
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: e2cf6055-3898-43bf-9f1e-e4a58bb63ebf
@@ -329,6 +326,8 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
+            - Name: organization_unit
+              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         b1dc94eb-7e87-4886-bf78-fac2bd9faee9:
@@ -356,12 +355,7 @@ datasets:
               - pkconformancepackid
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: fc17b8d4-1613-4544-a16c-3c0a4238d6eb
@@ -403,6 +397,8 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
+              Type: STRING
+            - Name: organization_unit
               Type: STRING
         52353df5-38cb-4ea7-a3fe-d00bb9a9d7d0:
           RelationalTable:
@@ -462,12 +458,7 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 64552c6c-a332-4c76-bf4a-f89fd2d0e154
@@ -523,9 +514,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
             - Name: account_name
+              Type: STRING
+            - Name: organization_unit
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -718,9 +709,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: organization_unit
-              Type: STRING
             - Name: account_name
+              Type: STRING
+            - Name: organization_unit
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -799,6 +790,8 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
+            - Name: organization_unit
+              Type: STRING
         4c48eceb-766e-4f61-a77f-3aabc65a4e64:
           RelationalTable:
             DataSourceArn: ${athena_datasource_arn}
@@ -861,12 +854,7 @@ datasets:
               - pkresourceid
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ba381cbb-ad93-4fd3-b49b-ad46a4dfd631
@@ -1310,6 +1298,8 @@ datasets:
               Type: STRING
             - Name: account_name
               Type: STRING
+            - Name: organization_unit
+              Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
         10e5bbbd-d5b4-4e08-af70-875df9cefe82:
@@ -1353,12 +1343,7 @@ datasets:
               - configitemstatus
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf
@@ -1396,6 +1381,8 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
+              Type: STRING
+            - Name: organization_unit
               Type: STRING
         eddabfc0-67c7-4ccf-91d4-237802c462f1:
           RelationalTable:
@@ -1539,12 +1526,7 @@ datasets:
               - backupretention
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 24dc16df-7afd-4c6f-9474-034e021989f2
@@ -1578,6 +1560,8 @@ datasets:
             - Name: payer_account_id
               Type: STRING
             - Name: account_name
+              Type: STRING
+            - Name: organization_unit
               Type: STRING
         f9fe062d-acce-4e23-a6fa-26655a09d2cd:
           RelationalTable:
@@ -1649,12 +1633,7 @@ datasets:
               - account_id
               - payer_account_id
               - account_name
-              - ou_tag_owner
-              - ou_tag_costcenter
-              - ou_tag_environment
-              - ou_tag_environment2
               - organization_unit
-              - ou_tag_application
           Source:
             JoinInstruction:
               LeftOperand: 1decc8a3-7437-4a12-a8ec-348ed436b41e
