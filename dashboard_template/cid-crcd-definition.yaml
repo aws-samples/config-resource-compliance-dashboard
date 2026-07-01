@@ -29,6 +29,20 @@ CalculatedFields:
            contains(rulename, 'requiredtags', CASE_INSENSITIVE), 'Required tags',
            contains(rulename, 'requiredtag', CASE_INSENSITIVE), 'Required tags',
            contains(rulename, 'tagged', CASE_INSENSITIVE), 'Required tags',
+           contains(rulename, 'root-account-mfa-enabled')
+                OR contains(rulename, 'iam-root-access-key-check')
+                OR contains(rulename, 'iam-user-mfa-enabled')
+                OR contains(rulename, 'mfa-enabled-for-iam-console-access')
+                OR contains(rulename, 'ec2-launch-template-imdsv2-check')
+                OR contains(rulename, 'ec2-imdsv2-check')
+                OR contains(rulename, 'autoscaling-launchconfig-requires-imdsv2')
+                OR contains(rulename, 's3-bucket-level-public-access-prohibited')
+                OR contains(rulename, 's3-account-level-public-access-blocks-periodic')
+                OR contains(rulename, 's3-access-point-public-access-blocks')
+                OR contains(rulename, 's3-access-point-in-vpc-only')
+                OR contains(rulename, 's3-bucket-public-write-prohibited')
+                OR contains(rulename, 's3-bucket-public-read-prohibited')
+                OR contains(rulename, 'vpc-sg-port-restriction-check') , 'Threat-Informed Security Posture',
            'Other')
   Name: crcd-classification-lv1
 - DataSetIdentifier: config_compliance
@@ -248,7 +262,6 @@ FilterGroups:
   - CategoryFilter:
       Column:
         ColumnName: MissingColumnId_7b453008-ef2a-45ef-9bf2-c182e6f64462
-        DataSetIdentifier: MissingDataSetId_MissingDataSetId_MissingDataSetId_MissingDataSetId_MissingDataSetId_MissingDataSetId_MissingDataSetId_b0753145-b335-4f58-b75a-146fd25df75f
       Configuration:
         CustomFilterConfiguration:
           CategoryValue: required-tags
@@ -19162,150 +19175,150 @@ Sheets:
           ElementId: cc8f7d12-af17-4b50-8e7d-acee650f0f84
           ElementType: TEXT_BOX
           RowIndex: 0
-          RowSpan: 9
+          RowSpan: 8
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 0491e046-59f7-4f50-a276-239901f0a3aa
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 8
           RowSpan: 6
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: 7e094ca8-ebde-47e4-bc3d-6667bba91d8e
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 8
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: dd693d5e-1d00-4529-a7e7-38b88867404b
           ElementType: VISUAL
-          RowIndex: 9
+          RowIndex: 8
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: 0ddc0904-09eb-476c-a30f-4b5daa332c91
           ElementType: VISUAL
-          RowIndex: 12
+          RowIndex: 11
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: 7f2c743f-d597-4412-868e-d1ad314af56f
           ElementType: VISUAL
-          RowIndex: 12
+          RowIndex: 11
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 95cd0a9d-088a-46c3-ba21-86081a5eb6c3
           ElementType: VISUAL
-          RowIndex: 15
+          RowIndex: 14
           RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 8e6a468b-6a56-4612-961b-c9ef98d20e88
           ElementType: VISUAL
-          RowIndex: 25
+          RowIndex: 24
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 9e55e46f-4df0-46a6-91dc-7a11426edd27
           ElementType: VISUAL
-          RowIndex: 25
+          RowIndex: 24
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 208570c7-4606-4e04-b815-e59c60854cae
           ElementType: VISUAL
-          RowIndex: 37
+          RowIndex: 36
           RowSpan: 13
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: e568bbe5-47d9-4a83-8c71-1f0800365e74
           ElementType: VISUAL
-          RowIndex: 37
+          RowIndex: 36
           RowSpan: 13
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 6f347e7f-94e8-4727-8fad-d6d12ac2ebce
           ElementType: TEXT_BOX
-          RowIndex: 50
+          RowIndex: 49
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 6a522bd9-6793-441f-b83b-37dfe115b314
           ElementType: VISUAL
-          RowIndex: 53
+          RowIndex: 52
           RowSpan: 6
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: c8f5038d-d4ec-4a4d-9899-3f0868c71bb9
           ElementType: VISUAL
-          RowIndex: 53
+          RowIndex: 52
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: dba4a50b-c1ba-48ef-87b2-d3a057e6e64e
           ElementType: VISUAL
-          RowIndex: 53
+          RowIndex: 52
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 9
           ElementId: 86029c03-a546-418f-b1b7-a5713c4a01d1
           ElementType: VISUAL
-          RowIndex: 56
+          RowIndex: 55
           RowSpan: 3
         - ColumnIndex: 27
           ColumnSpan: 9
           ElementId: bde5deaf-2854-40a6-ae34-42fd7e56e91c
           ElementType: VISUAL
-          RowIndex: 56
+          RowIndex: 55
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: eac5aae6-c73f-46e8-9f1a-e136116cec67
           ElementType: VISUAL
-          RowIndex: 59
+          RowIndex: 58
           RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 0bf736bd-7793-4eb4-8afc-e1a7c94f4e9f
           ElementType: VISUAL
-          RowIndex: 69
+          RowIndex: 68
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
           ElementId: 00f5208a-4a9a-44c1-b6c5-569b7d55410d
           ElementType: VISUAL
-          RowIndex: 69
+          RowIndex: 68
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: e3f24e62-51da-46db-86f3-b30bc5dc1424
           ElementType: TEXT_BOX
-          RowIndex: 81
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 18
           ColumnSpan: 7
           ElementId: 9402f91b-1f88-46d6-9ddc-6a9bb2de9e0e
           ElementType: FILTER_CONTROL
-          RowIndex: 81
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 25
           ColumnSpan: 5
           ElementId: 73886154-efd7-4adb-aec6-0c077827a8f9
           ElementType: FILTER_CONTROL
-          RowIndex: 81
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 30
           ColumnSpan: 6
           ElementId: 50a63cb8-7cf4-4262-8cb5-9d2db0a6caea
           ElementType: FILTER_CONTROL
-          RowIndex: 81
+          RowIndex: 80
           RowSpan: 3
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: a5fc7b03-f8fc-45cf-8c8a-7682718ed488
           ElementType: VISUAL
-          RowIndex: 84
+          RowIndex: 83
           RowSpan: 12
   Name: Threat-Informed Security Compliance
   ParameterControls:
@@ -19382,44 +19395,34 @@ Sheets:
       \ a customer, they will help triage security findings and assist during potential\
       \ active security events in the customer's AWS environment. They provide security\
       \ recommendations and best practices to help prevent future security incidents.</inline>\n\
-      \  <br/>\n  <br/>\n  <inline font-size=\"24px\">\n    <b>AWS Config Resource\
-      \ Compliance Dashboard Conformance Pack</b>\n  </inline>\n  <br/>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"16px\">This dashboard provides fundamental security\
-      \ posture checks that customers can perform on their AWS environment. To fully\
-      \ take advantage of the feature, we recommend the\_</inline>\n  <inline color=\"\
-      #bdbdbd\" font-size=\"16px\">\n    <b>AWS Config Resource Compliance Dashboard\
-      \ (CRCD)\_</b>\n  </inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\"\
-      >\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/tree/main/conformance_pack\"\
-      \ target=\"_blank\">conformance pack</a>\n  </inline>\n  <inline color=\"#bdbdbd\"\
-      \ font-size=\"16px\">, a comprehensive compliance monitoring solution that deploys\
-      \ the\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"\
-      https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/conformance_pack/crcd-conformance-pack-specification.md\"\
-      \ target=\"_blank\">standard and custom</a>\n  </inline>\n  <inline color=\"\
-      #bdbdbd\" font-size=\"16px\">\_AWS Config rules recommended by AWS Security\
-      \ Incident Response Service security engineers, based on their multi-year experience\
-      \ supporting AWS customers during active security incidents. The dashboard\_\
-      </inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/conformance_pack/crcd-conformance-pack-specification.md#naming-convention\"\
-      \ target=\"_blank\">classifies</a>\n  </inline>\n  <inline color=\"#2f8ee7\"\
-      \ font-size=\"16px\">\_</inline>\n  <inline color=\"#bdbdbd\" font-size=\"16px\"\
-      >AWS Config rules according to the tactics and techniques presented in the\_\
-      </inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/\"\
+      \  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">This dashboard\
+      \ provides fundamental security posture checks that customers can perform on\
+      \ their AWS environment. The dashboard displays compliance status for a\_</inline>\n\
+      \  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/conformance_pack/crcd-conformance-pack-specification.md\"\
+      \ target=\"_blank\">curated set of AWS Config rules</a>\n  </inline>\n  <inline\
+      \ color=\"#bdbdbd\" font-size=\"16px\">\_recommended by AWS Security Incident\
+      \ Response Service security engineers, based on their multi-year experience\
+      \ supporting AWS customers during active security incidents. The dashboard classifies\
+      \ these rules according to the tactics and techniques presented in the\_</inline>\n\
+      \  <inline color=\"#2f8ee7\" font-size=\"16px\">\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/\"\
       \ target=\"_blank\">Threat Technique Catalog for AWS</a>\n  </inline>\n  <inline\
       \ color=\"#bdbdbd\" font-size=\"16px\">. The catalog is based on MITRE ATT&amp;CK\xAE\
       \ and is used to identify and categorize threat actor behaviors observed by\
-      \ AWS.\_</inline>\n  <inline font-size=\"16px\">\n    <b>Disclaimer:\_</b>\n\
-      \  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">This feature is\
-      \ designed to reduce common security risks, not eliminate them entirely. Remediating\
-      \ identified misconfigurations does not guarantee protection from all security\
-      \ incidents. Customers are encouraged to adopt a defense-in-depth approach as\
-      \ part of their overall security posture.</inline>\n  <br/>\n  <br/>\n  <inline\
-      \ color=\"#bdbdbd\" font-size=\"15px\">The visuals in this dashboard consider\
-      \ only the AWS Config rules belonging to the AWS Config Resource Compliance\
-      \ Dashboard\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"15px\">\n  \
-      \  <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/conformance_pack/crcd-conformance-pack-specification.md\"\
-      \ target=\"_blank\">conformance pack</a>\n  </inline>\n  <inline color=\"#bdbdbd\"\
-      \ font-size=\"15px\">. If you do not install the conformance pack, the dashboard\
-      \ will still display compliance information of the recommended standard AWS\
-      \ Config rules that you may have already deployed.</inline>\n</text-box>"
+      \ AWS.</inline>\n  <br/>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      16px\">The visuals in this tab will automatically display compliance data for\
+      \ any of the\_</inline>\n  <inline color=\"#2f8ee7\" font-size=\"16px\">\n \
+      \   <a href=\"https://github.com/aws-samples/config-resource-compliance-dashboard/blob/main/conformance_pack/crcd-conformance-pack-specification.md\"\
+      \ target=\"_blank\">recommended rules</a>\n  </inline>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"16px\">\_that you have deployed in your environment \u2014 no\
+      \ additional setup is required beyond deploying the rules themselves. A conformance\
+      \ pack that bundles all recommended rules into a single deployable unit is under\
+      \ development.</inline>\n  <br/>\n  <br/>\n  <inline font-size=\"16px\">\n \
+      \   <b>Disclaimer:\_</b>\n  </inline>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      16px\">This feature is designed to reduce common security risks, not eliminate\
+      \ them entirely. Remediating identified misconfigurations does not guarantee\
+      \ protection from all security incidents. Customers are encouraged to adopt\
+      \ a defense-in-depth approach as part of their overall security posture.</inline>\n\
+      </text-box>"
     SheetTextBoxId: cc8f7d12-af17-4b50-8e7d-acee650f0f84
   - Content: "<text-box>\n  <inline font-size=\"32px\">Initial Access</inline>\n \
       \ <br/>\n  <br/>\n  <inline color=\"#2f8ee7\">\n    <a href=\"https://aws-samples.github.io/threat-technique-catalog-for-aws/Tactics/TA0001.html\"\
@@ -19483,9 +19486,9 @@ Sheets:
             Colors:
             - CategoricalDimensionField:
                 Column:
-                  ColumnName: compliancetype
+                  ColumnName: crcd-classification-lv1
                   DataSetIdentifier: config_compliance
-                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
+                FieldId: 62857f76-2b39-47ec-8a12-bf3c9c2031b0.2.1782851585932
             Values:
             - CategoricalMeasureField:
                 AggregationFunction: DISTINCT_COUNT
@@ -19517,18 +19520,15 @@ Sheets:
                 FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancesampledate.0.1727935153133
                 Visibility: VISIBLE
             - FieldTooltipItem:
-                FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
-                Label: Compliance Type
-                Visibility: VISIBLE
-            - FieldTooltipItem:
                 FieldId: b2240c50-59a3-4b50-9baa-2f95c03f86b1.pkruleid.2.1740754153983
                 Label: Rules
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: 62857f76-2b39-47ec-8a12-bf3c9c2031b0.2.1782851585932
                 Visibility: VISIBLE
             TooltipTitleType: PRIMARY_VALUE
           SelectedTooltipType: DETAILED
           TooltipVisibility: VISIBLE
-        ValueAxis:
-          AxisOffset: 41px
         ValueLabelOptions:
           AxisLabelOptions:
           - ApplyTo:
@@ -19537,16 +19537,6 @@ Sheets:
                 DataSetIdentifier: config_compliance
               FieldId: b2240c50-59a3-4b50-9baa-2f95c03f86b1.pkruleid.2.1740754153983
             CustomLabel: Number of rules
-        VisualPalette:
-          ColorMap:
-          - Color: '#B32728'
-            Element:
-              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
-              FieldValue: NON_COMPLIANT
-          - Color: '#0E6C0E'
-            Element:
-              FieldId: 3c77b0ee-12a6-464e-a31e-a9c817cadfc4.compliancetype.2.1727935184229
-              FieldValue: COMPLIANT
       ColumnHierarchies:
       - DateTimeHierarchy:
           DrillDownFilters: []

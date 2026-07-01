@@ -16,7 +16,7 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
-
+    
     # CUSTOMIZATION - descriptive name of the dashboard
     name: "AWS Config Resource Compliance Dashboard (CRCD)"
     dashboardId: cid-crcd
@@ -1770,7 +1770,7 @@ views:
       SELECT *
       FROM
         "cid_crcd_database"."config_sys_account_data"
-  
+
   config_compliance_actual:
     dependsOn: {}
     data: |-
