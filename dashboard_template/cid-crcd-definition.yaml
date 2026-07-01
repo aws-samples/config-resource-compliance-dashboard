@@ -257,24 +257,6 @@ DataSetIdentifierDeclarations:
   Identifier: config_event_rule_evaluation
 FilterGroups:
 - CrossDataset: SINGLE_DATASET
-  FilterGroupId: 964fb723-1720-4e74-8b72-cc40c6386e0b
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: MissingColumnId_7b453008-ef2a-45ef-9bf2-c182e6f64462
-      Configuration:
-        CustomFilterConfiguration:
-          CategoryValue: required-tags
-          MatchOperator: STARTS_WITH
-          NullOption: NON_NULLS_ONLY
-      FilterId: 1bfa2086-c75a-45e7-bebf-d639c0ec98a7
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: ALL_VISUALS
-        SheetId: a2a48523-2289-461b-9d18-60f14392da15
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
   FilterGroupId: efbda0dd-47df-4d51-8272-d2bc75597e29
   Filters:
   - CategoryFilter:
@@ -2037,27 +2019,6 @@ FilterGroups:
         SheetId: b2f3f971-fb63-47d7-8b79-d36fed1327c6
         VisualIds:
         - 0dfe35a5-73e5-4c82-b719-f72ba019cd54
-  Status: ENABLED
-- CrossDataset: SINGLE_DATASET
-  FilterGroupId: 06dec59f-a293-4b7f-96e2-f45c2d5e5fc3
-  Filters:
-  - CategoryFilter:
-      Column:
-        ColumnName: resourcetype
-        DataSetIdentifier: config_event
-      Configuration:
-        CustomFilterConfiguration:
-          MatchOperator: EQUALS
-          NullOption: NON_NULLS_ONLY
-          ParameterName: MissingParameter9c005ff9fd274b479faf219b0d434d55
-      FilterId: c6d4614b-dc7d-467d-9393-06f340f76ef8
-  ScopeConfiguration:
-    SelectedSheets:
-      SheetVisualScopingConfigurations:
-      - Scope: SELECTED_VISUALS
-        SheetId: eccc50c7-830a-47b3-807e-1db7d7620a1d
-        VisualIds:
-        - 4cff47d7-9a0a-42cb-a34e-cb32a469f6a0
   Status: ENABLED
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: 11bffca6-8c72-4906-bc04-3893e45cd27f
