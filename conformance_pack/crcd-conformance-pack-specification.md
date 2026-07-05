@@ -8,7 +8,7 @@ All rules follow the format: `sire-<lv1>-<lv2>-<rule-name>`
 
 | Component | Description | Examples |
 |-----------|-------------|----------|
-| `sire-` | Fixed prefix for the conformance pack rules | - |
+| `sire-` | Fixed prefix for the conformance pack rules, stands for "Security Incident Response Engineering" | - |
 | `lv1` | Level 1 classification (attack tactic) | `ia`, `p`, `pe` |
 | `lv2` | Level 2 classification (protection domain) | `s3`, `iam`, `ec2` |
 | `rule-name` | Descriptive rule name in kebab-case | `root-account-mfa-enabled` |

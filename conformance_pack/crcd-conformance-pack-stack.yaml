@@ -722,7 +722,7 @@ Resources:
 
 
   # ============================================================================
-  # ConformancePack for CRCD Config rules
+  # ConformancePack for SIRE Config rules
   #
   # This stackset runs in all specified regions of current account to deploy 
   # 1. [Organization deployment mode] an organization conformance pack which then will deploy in the same region on all accounts
@@ -850,7 +850,7 @@ Resources:
 
       TemplateBody: |
         AWSTemplateFormatVersion: '2010-09-09'
-        Description: 'CRCD Conformance Pack - deployed via StackSet'
+        Description: 'SIRE Conformance Pack - deployed via StackSet'
 
         Parameters:
           ConformancePackName:
