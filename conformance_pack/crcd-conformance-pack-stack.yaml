@@ -115,7 +115,8 @@ Parameters:
 
   ConformancePackName:
     Type: String
-    Default: Security-Best-Practices-for-Security-Incident-Response-Engineering-Team-Fundamental
+    # Default: Security-Best-Practices-for-Security-Incident-Response-Engineering-Team-Fundamental
+    Default: Security-Best-Practices-for-Incident-Response-Fundamental
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
