@@ -7,14 +7,12 @@ This feature of the AWS Config Dashboard was developed in collaboration with AWS
 **Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
 
-## CRCD Threat-Informed Conformance Pack 
-The AWS Config Resource Compliance Dashboard Threat-Informed Conformance Pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
+## Conformance Pack: Security Best Practices for Security Incident Response Engineering Team 
+The _Security Best Practices for Security Incident Response Engineering Team_ conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
 
-![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Known Threat Exposures tab")
+![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Threat-Informed Security Compliance tab")
 
 The **Threat-Informed Security Compliance** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
-
-
 
 
 ### Features
@@ -40,8 +38,9 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
 
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
-- **CRCD-Threat-Informed-Security-Compliance** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
-- **CRCD-Threat-Informed-Security-Compliance-IAM** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
+
+- **Security Best Practices for Security Incident Response Engineering Team (Fundamental)** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
+- **Security Best Practices for Security Incident Response Engineering Team (Fundamental) Extended** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
 
 The conformance packs support all parameters exposed by standard AWS Config rules and manages automatically regional availability of rules - i.e. you can deploy the conformance pack in all Regions where AWS Config is enabled, and if a rule is not available in a Region, it will be automatically skipped.
 
@@ -59,10 +58,10 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 
 ## Step 1
 1. Log into the AWS Management Console for your account or delegated admin for AWS CloudFormation and AWS Config of your organization.
-1. Select a Region that will be the base Region for your deployment and where you will deploy the IAM-related rules of your Conformance Pack.
+1. Select a Region that will be the base Region for your deployment and where you will deploy the extended version of your conformance pack.
 1. Click the Launch Stack button below to open the stack [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack) in your CloudFormation console. 
 
-[![Launch Stack button](../images/LaunchStack.svg 'Deploy CRCD Threat-Informed Security Compliance')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack)
+[![Launch Stack button](../images/LaunchStack.svg 'Deploy Security Best Practices for Security Incident Response Engineering Team conformance pack')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack)
 
 4. Specify the following parameters:
    - `Deployment mode` Choose deployment mode: `AWS Organizations` for organization-wide deployment (all accounts and Regions), or `Standalone` for single-account, multi-region deployment.
