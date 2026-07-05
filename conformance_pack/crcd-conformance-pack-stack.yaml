@@ -232,7 +232,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      BucketName: !Sub 'crcd-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub 'sire-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -302,8 +302,8 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: 'crcd-conf-pack-support-uploader'
-      Description: "CRCD Dashboard Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
+      FunctionName: 'sire-conf-pack-support-uploader'
+      Description: "CRCD Dashboard - Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
       Runtime: python3.12
       Timeout: 120
       MemorySize: 128
