@@ -1,4 +1,4 @@
-# Operational Best Practices for AWS Security Incident Response
+# Security Best Practices for Security Incident Response Engineering Team (Fundamental)
 
 ## Purpose
 
@@ -23,29 +23,112 @@ The rules are classified according to the [Threat Technique Catalog for AWS](htt
 
 - **AWS Config** must be enabled in all accounts and Regions where you deploy this conformance pack. This template supports both single-account deployment (`put-conformance-pack`) and organization-wide deployment (`put-organization-conformance-pack`).
 - **AWS Config recorder** must record the resource types evaluated by the rules in this pack. The base template requires: `AWS::S3::Bucket`, `AWS::S3::AccessPoint`, `AWS::EC2::Instance`, `AWS::EC2::SecurityGroup`, `AWS::EC2::LaunchTemplate`, `AWS::AutoScaling::LaunchConfiguration`. The extended template additionally requires `AWS::IAM::User` to be recorded (in at least one Region) for the IAM MFA rules (`IAM_USER_MFA_ENABLED`, `MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS`) to produce per-user compliance results.
-- **Extended version only**: Deploy the prerequisites CloudFormation template (`crcd-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Extended Version](#extended-version) below.
+- **Extended version only**: Deploy the prerequisites CloudFormation template (`sire-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Extended Version](#extended-version) below.
 
 
-## Deployment (Base Version)
+## Rules
 
-### Single Account Deployment
 
-```
-aws configservice put-conformance-pack \
-  --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
-  --template-body file://crcd-conformance-pack-template.yaml \
-  --region <REGION>
-```
+### Naming Convention
 
-### Organization-Wide Deployment
+All rules follow the format: `sire-<lv1>-<lv2>-<rule-name>`
 
-```
-aws configservice put-organization-conformance-pack \
-  --organization-conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
-  --template-body file://crcd-conformance-pack-template.yaml
-```
+| Component | Description | Examples |
+|-----------|-------------|----------|
+| `sire-` | Fixed prefix for the conformance pack rules, stands for "Security Incident Response Engineering" | - |
+| `lv1` | Level 1 classification (attack tactic) | `ia`, `p`, `pe` |
+| `lv2` | Level 2 classification (protection domain) | `s3`, `iam`, `ec2` |
+| `rule-name` | Descriptive rule name in kebab-case | `root-account-mfa-enabled` |
 
-Alternatively, the base template can be deployed directly from the AWS Config console by selecting it from the conformance pack dropdown.
+#### Level 1 Classification (Attack Tactics)
+
+This version of the conformance pack is called Fundamental because it covers Initial Access classification only.
+
+| Abbreviation | Name | Description |
+|--------------|------|-------------|
+| `ia` | Initial Access | Techniques used to gain initial access to AWS environments |
+| `ex` | Execution | Techniques that result in adversary-controlled code running on AWS resources |
+| `p` | Persistence | Techniques used to maintain access to AWS environments |
+| `pe` | Privilege Escalation | Techniques used to gain higher-level permissions in AWS |
+| `da` | Defense Evasion | Techniques used to avoid detection in AWS environments |
+| `ca` | Credential Access | Techniques used to steal AWS credentials |
+| `d` | Discovery | Techniques used to gain knowledge about AWS environments |
+| `lm` | Lateral Movement | Techniques used to enter and control remote AWS accounts and services |
+| `c` | Collection | Techniques used to gather data from AWS resources |
+| `e` | Exfiltration | Techniques used to steal data from AWS environments |
+| `i` | Impact | Techniques used to disrupt availability or compromise integrity |
+| `rd` | Resource Development | Techniques used to develop new resources for AWS targeting |
+
+#### Level 2 Classification (Protection Domains)
+
+| Abbreviation | Name | Description |
+|--------------|------|-------------|
+| `s3` | S3 Protection | Security controls for Amazon S3 buckets and objects |
+| `iam` | IAM Protection | Identity and Access Management security controls |
+| `ec2` | EC2 Protection | Elastic Compute Cloud security controls |
+| `ra` | Resource Access Protection | Security controls for VPC firewalls |
+| `vpc` | VPC Security | Virtual Private Cloud network security controls |
+| `kms` | KMS Encryption | Key Management Service encryption controls |
+| `rds` | RDS Security | Relational Database Service security controls |
+| `lambda` | Lambda Security | AWS Lambda function security controls |
+| `va` | Valid Accounts | Account access and authentication controls |
+| `api` | API Security | API Gateway and API access controls |
+| `ct` | CloudTrail Logging | CloudTrail audit logging controls |
+| `cfg` | Config Monitoring | AWS Config monitoring and compliance controls |
+| `ebs` | EBS Security | Elastic Block Store security controls |
+| `sm` | Secrets Management | Secrets Manager and credential protection controls |
+
+
+
+
+### Rules: Initial Access — S3 Protection
+
+These rules detect S3 misconfigurations that could allow unauthorized access to data.
+
+| Rule Name | AWS Config Managed Rule | Description |
+|-----------|------------------------|-------------|
+| `sire-ia-s3-s3-bucket-public-read-prohibited` | [S3_BUCKET_PUBLIC_READ_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-read-prohibited.html) | Checks that S3 buckets do not allow public read access. Public read access can expose sensitive data to the internet. |
+| `sire-ia-s3-s3-bucket-public-write-prohibited` | [S3_BUCKET_PUBLIC_WRITE_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-write-prohibited.html) | Checks that S3 buckets do not allow public write access. Public write access can allow attackers to modify or plant malicious content. |
+| `sire-ia-s3-s3-access-point-in-vpc-only` | [S3_ACCESS_POINT_IN_VPC_ONLY](https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-in-vpc-only.html) | Checks whether S3 access points are configured to only allow access from within a VPC, preventing internet-based access. |
+| `sire-ia-s3-s3-access-point-public-access-blocks` | [S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS](https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-public-access-blocks.html) | Checks whether S3 access points have public access block settings enabled. |
+| `sire-ia-s3-s3-account-level-public-access-blocks-periodic` | [S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC](https://docs.aws.amazon.com/config/latest/developerguide/s3-account-level-public-access-blocks-periodic.html) | Periodically checks whether S3 account-level public access block settings remain enabled. Account-level blocks provide a safety net against bucket-level misconfigurations. |
+| `sire-ia-s3-s3-bucket-level-public-access-prohibited` | [S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-level-public-access-prohibited.html) | Checks whether individual S3 buckets have public access blocked at the bucket level. |
+
+### Rules: Initial Access — EC2 Security
+
+These rules detect EC2 instances vulnerable to Server-Side Request Forgery (SSRF) attacks through the Instance Metadata Service.
+
+| Rule Name | AWS Config Managed Rule | Description |
+|-----------|------------------------|-------------|
+| `sire-ia-ec2-autoscaling-launchconfig-requires-imdsv2` | [AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2](https://docs.aws.amazon.com/config/latest/developerguide/autoscaling-launchconfig-requires-imdsv2.html) | Checks whether Auto Scaling launch configurations require IMDSv2. IMDSv1 is vulnerable to SSRF attacks that can steal instance credentials. |
+| `sire-ia-ec2-ec2-imdsv2-check` | [EC2_IMDSV2_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/ec2-imdsv2-check.html) | Checks whether running EC2 instances are configured to require IMDSv2. |
+| `sire-ia-ec2-ec2-launch-template-imdsv2-check` | [EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/ec2-launch-template-imdsv2-check.html) | Checks whether EC2 launch templates are configured to require IMDSv2 for new instances. |
+
+### Rules: Initial Access — Resource Access Protection
+
+These rules detect overly permissive network configurations that could allow unauthorized network access.
+
+| Rule Name | AWS Config Managed Rule | Description |
+|-----------|------------------------|-------------|
+| `sire-ia-ra-vpc-sg-port-restriction-check` | [VPC_SG_PORT_RESTRICTION_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html) | Checks whether security groups allow unrestricted inbound traffic on specified ports. Open SSH (22) and RDP (3389) ports are commonly exploited for unauthorized access. |
+
+
+### Rules: Extended Version (Initial Access — IAM Protection)
+The extended version includes all rules from the base template and adds IAM protection rules that detect identity-based misconfigurations commonly exploited for initial access.
+
+| Rule Name | AWS Config Managed Rule | Description |
+|-----------|------------------------|-------------|
+| `sire-ia-iam-root-account-mfa-enabled` | [ROOT_ACCOUNT_MFA_ENABLED](https://docs.aws.amazon.com/config/latest/developerguide/root-account-mfa-enabled.html) | Checks if the root user has MFA enabled for console sign-in. A root account without MFA is a critical exposure. |
+| `sire-ia-iam-iam-root-access-key-check` | [IAM_ROOT_ACCESS_KEY_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/iam-root-access-key-check.html) | Checks whether root user access keys exist. Root access keys provide unrestricted access and should be deleted. |
+| `sire-ia-iam-iam-user-mfa-enabled` | [IAM_USER_MFA_ENABLED](https://docs.aws.amazon.com/config/latest/developerguide/iam-user-mfa-enabled.html) | Checks if IAM users have MFA enabled. Users without MFA are vulnerable to credential theft. |
+| `sire-ia-iam-mfa-enabled-for-iam-console-access` | [MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS](https://docs.aws.amazon.com/config/latest/developerguide/mfa-enabled-for-iam-console-access.html) | Checks if MFA is enabled for all IAM users with console passwords. |
+
+### Rules: Extended Version Custom Lambda Rules (Initial Access — IAM Protection)
+
+| Rule Name | Description |
+|-----------|-------------|
+| `sire-ia-iam-iam-root-not-used-regularly` | Checks whether the root user has been used within a configurable threshold (default: 5 days). Root usage is a strong indicator of either compromise or poor operational practice. |
+| `sire-ia-iam-iam-user-access-key-check` | Checks whether IAM users have active access keys. Access keys are long-lived credentials that are high-value targets for attackers. |
 
 
 ## Input Parameters
@@ -72,87 +155,6 @@ All parameters are optional. Default values are provided for a security-first po
 | `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups` | `true` | Whether to exclude external security groups from evaluation. |
 | `VPCSecurityGroupPortRestrictionIpType` | `ALL` | IP version to evaluate. Valid values: `IPv4`, `IPv6`, `ALL`. |
 
-
-## Rules
-
-### Initial Access — S3 Protection
-
-These rules detect S3 misconfigurations that could allow unauthorized access to data.
-
-| Rule Name | AWS Config Managed Rule | Description |
-|-----------|------------------------|-------------|
-| `crcd-ia-s3-s3-bucket-public-read-prohibited` | [S3_BUCKET_PUBLIC_READ_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-read-prohibited.html) | Checks that S3 buckets do not allow public read access. Public read access can expose sensitive data to the internet. |
-| `crcd-ia-s3-s3-bucket-public-write-prohibited` | [S3_BUCKET_PUBLIC_WRITE_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-public-write-prohibited.html) | Checks that S3 buckets do not allow public write access. Public write access can allow attackers to modify or plant malicious content. |
-| `crcd-ia-s3-s3-access-point-in-vpc-only` | [S3_ACCESS_POINT_IN_VPC_ONLY](https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-in-vpc-only.html) | Checks whether S3 access points are configured to only allow access from within a VPC, preventing internet-based access. |
-| `crcd-ia-s3-s3-access-point-public-access-blocks` | [S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS](https://docs.aws.amazon.com/config/latest/developerguide/s3-access-point-public-access-blocks.html) | Checks whether S3 access points have public access block settings enabled. |
-| `crcd-ia-s3-s3-account-level-public-access-blocks-periodic` | [S3_ACCOUNT_LEVEL_PUBLIC_ACCESS_BLOCKS_PERIODIC](https://docs.aws.amazon.com/config/latest/developerguide/s3-account-level-public-access-blocks-periodic.html) | Periodically checks whether S3 account-level public access block settings remain enabled. Account-level blocks provide a safety net against bucket-level misconfigurations. |
-| `crcd-ia-s3-s3-bucket-level-public-access-prohibited` | [S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-level-public-access-prohibited.html) | Checks whether individual S3 buckets have public access blocked at the bucket level. |
-
-### Initial Access — EC2 Security (IMDSv2)
-
-These rules detect EC2 instances vulnerable to Server-Side Request Forgery (SSRF) attacks through the Instance Metadata Service.
-
-| Rule Name | AWS Config Managed Rule | Description |
-|-----------|------------------------|-------------|
-| `crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2` | [AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2](https://docs.aws.amazon.com/config/latest/developerguide/autoscaling-launchconfig-requires-imdsv2.html) | Checks whether Auto Scaling launch configurations require IMDSv2. IMDSv1 is vulnerable to SSRF attacks that can steal instance credentials. |
-| `crcd-ia-ec2-ec2-imdsv2-check` | [EC2_IMDSV2_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/ec2-imdsv2-check.html) | Checks whether running EC2 instances are configured to require IMDSv2. |
-| `crcd-ia-ec2-ec2-launch-template-imdsv2-check` | [EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/ec2-launch-template-imdsv2-check.html) | Checks whether EC2 launch templates are configured to require IMDSv2 for new instances. |
-
-### Initial Access — Resource Access Protection
-
-These rules detect overly permissive network configurations that could allow unauthorized network access.
-
-| Rule Name | AWS Config Managed Rule | Description |
-|-----------|------------------------|-------------|
-| `crcd-ia-ra-vpc-sg-port-restriction-check` | [VPC_SG_PORT_RESTRICTION_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html) | Checks whether security groups allow unrestricted inbound traffic on specified ports. Open SSH (22) and RDP (3389) ports are commonly exploited for unauthorized access. |
-
-
-## Remediation Guidance
-
-If a resource is evaluated as NON_COMPLIANT, follow the remediation steps below:
-
-| Category | Remediation |
-|----------|-------------|
-| **S3 public access** | Enable S3 Block Public Access at the account and/or bucket level. Review and remove any bucket policies or ACLs that grant public access. |
-| **S3 access points** | Configure access points to use VPC-only network origin. Enable public access blocks on all access points. |
-| **EC2 IMDSv2** | Update instance metadata options to set `HttpTokens` to `required`. Update launch configurations and launch templates to enforce IMDSv2. |
-| **Security group ports** | Remove inbound rules that allow unrestricted access (0.0.0.0/0 or ::/0) on ports 22 and 3389. Restrict access to known IP ranges or use AWS Systems Manager Session Manager as an alternative to SSH/RDP. |
-
-
-## Regional Availability
-
-Some AWS Config managed rules are not available in all AWS Regions. Before deploying this conformance pack, verify that the rules are supported in your target Region by consulting the [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html) page.
-
-Rules with known regional limitations:
-- `AUTOSCALING_LAUNCHCONFIG_REQUIRES_IMDSV2` — Not available in ap-southeast-5, ap-southeast-7, mx-central-1, ap-east-1, ca-west-1.
-- `S3_ACCESS_POINT_IN_VPC_ONLY` — Not available in ap-southeast-5, ap-southeast-7, mx-central-1, ap-east-1, ca-west-1.
-- `S3_ACCESS_POINT_PUBLIC_ACCESS_BLOCKS` — Not available in ap-southeast-5, ap-southeast-7, mx-central-1, ap-east-1, ca-west-1.
-- `EC2_LAUNCH_TEMPLATE_IMDSV2_CHECK` — Not available in ap-southeast-5, ap-southeast-7, mx-central-1, ap-east-1, ca-west-1, me-central-1, ap-south-2, ap-southeast-4, il-central-1, eu-south-2, eu-central-2.
-- `VPC_SG_PORT_RESTRICTION_CHECK` — Not available in ap-southeast-5, ap-southeast-7, mx-central-1, ap-east-1, ca-west-1, cn-north-1.
-
-If you deploy this conformance pack in a Region where a rule is not available, the deployment will fail. Remove unsupported rules from the template before deploying in those Regions.
-
-
-## Extended Version
-
-The extended version adds IAM protection rules that detect identity-based misconfigurations commonly exploited for initial access. It includes all rules from the base template plus:
-
-### Additional Managed Rules (Initial Access — IAM Protection)
-
-| Rule Name | AWS Config Managed Rule | Description |
-|-----------|------------------------|-------------|
-| `crcd-ia-iam-root-account-mfa-enabled` | [ROOT_ACCOUNT_MFA_ENABLED](https://docs.aws.amazon.com/config/latest/developerguide/root-account-mfa-enabled.html) | Checks if the root user has MFA enabled for console sign-in. A root account without MFA is a critical exposure. |
-| `crcd-ia-iam-iam-root-access-key-check` | [IAM_ROOT_ACCESS_KEY_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/iam-root-access-key-check.html) | Checks whether root user access keys exist. Root access keys provide unrestricted access and should be deleted. |
-| `crcd-ia-iam-iam-user-mfa-enabled` | [IAM_USER_MFA_ENABLED](https://docs.aws.amazon.com/config/latest/developerguide/iam-user-mfa-enabled.html) | Checks if IAM users have MFA enabled. Users without MFA are vulnerable to credential theft. |
-| `crcd-ia-iam-mfa-enabled-for-iam-console-access` | [MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS](https://docs.aws.amazon.com/config/latest/developerguide/mfa-enabled-for-iam-console-access.html) | Checks if MFA is enabled for all IAM users with console passwords. |
-
-### Custom Lambda Rules (Initial Access — IAM Protection)
-
-| Rule Name | Description |
-|-----------|-------------|
-| `crcd-ia-iam-iam-root-not-used-regularly` | Checks whether the root user has been used within a configurable threshold (default: 5 days). Root usage is a strong indicator of either compromise or poor operational practice. |
-| `crcd-ia-iam-iam-user-access-key-check` | Checks whether IAM users have active access keys. Access keys are long-lived credentials that are high-value targets for attackers. |
-
 ### Extended Version Parameters
 
 In addition to the base parameters, the extended version requires:
@@ -163,85 +165,154 @@ In addition to the base parameters, the extended version requires:
 | `UserAccessKeyCheckLambdaArn` | Yes | ARN of the Lambda function for the access key check. Obtained from the prerequisites template output. |
 | `RootUsageThresholdDays` | No (default: `5`) | Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT. |
 
-### Deployment Steps (Extended Version)
 
-#### Single Account Deployment
+## Regional Availability
 
-1. Deploy the prerequisites template:
-   ```
-   aws cloudformation deploy \
-     --template-file crcd-conformance-pack-prerequisites.yaml \
-     --stack-name crcd-conformance-pack-prerequisites \
-     --capabilities CAPABILITY_NAMED_IAM
-   ```
+Some AWS Config managed rules are not available in all AWS Regions. Before deploying this conformance pack, verify that the rules are supported in your target Region by consulting the [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html) page.
 
-2. Get the Lambda ARNs from the stack outputs:
-   ```
-   aws cloudformation describe-stacks \
-     --stack-name crcd-conformance-pack-prerequisites \
-     --query 'Stacks[0].Outputs'
-   ```
+If you deploy this conformance pack in a Region where a rule is not available, the deployment will fail. Remove unsupported rules from the template before deploying in those Regions.
 
-3. Deploy the extended conformance pack using the ARNs from step 2:
-   ```
-   aws configservice put-conformance-pack \
-     --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
-     --template-body file://crcd-conformance-pack-template-extended.yaml \
-     --conformance-pack-input-parameters \
-       ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_2> \
-       ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_2>
-   ```
 
-#### Organization-Wide Deployment
+## Deployment
 
-1. Deploy the prerequisites template in the delegated administrator or management account:
-   ```
-   aws cloudformation deploy \
-     --template-file crcd-conformance-pack-prerequisites.yaml \
-     --stack-name crcd-conformance-pack-prerequisites \
-     --capabilities CAPABILITY_NAMED_IAM
-   ```
+This conformance pack is provided as two templates: a base template and an extended template. The recommended deployment strategy for multi-region environments is to deploy the **extended template in a single primary region** and the **base template in all other regions**. This is because IAM resources are global — deploying the custom Lambda rules and IAM managed rules in every region would produce redundant evaluations at unnecessary cost. Regional resources (S3 buckets, EC2 instances, security groups) are checked by the base template in each region where they exist.
 
-   For organization-wide deployment, the prerequisite Lambda functions must also be deployed in each member account. Use CloudFormation StackSets to deploy the prerequisites across the organization.
+### Single Account Deployment
 
-2. Get the Lambda ARNs from the stack outputs:
-   ```
-   aws cloudformation describe-stacks \
-     --stack-name crcd-conformance-pack-prerequisites \
-     --query 'Stacks[0].Outputs'
-   ```
+#### Step 1: Deploy prerequisites in the primary region
 
-3. Deploy the extended conformance pack across the organization:
-   ```
-   aws configservice put-organization-conformance-pack \
-     --organization-conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
-     --template-body file://crcd-conformance-pack-template-extended.yaml \
-     --conformance-pack-input-parameters \
-       ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_2> \
-       ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_2>
-   ```
+Deploy the prerequisites CloudFormation template to create the Lambda functions and IAM roles needed by the extended template:
 
-### Extended Version Remediation
+```
+aws cloudformation deploy \
+  --template-file sire-conformance-pack-prerequisites.yaml \
+  --stack-name sire-conformance-pack-prerequisites \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region <PRIMARY_REGION>
+```
 
-| Category | Remediation |
-|----------|-------------|
-| **Root MFA** | Enable MFA on the root user via the IAM console under Security Credentials. Use a hardware MFA device for maximum protection. |
-| **Root access keys** | Delete root user access keys immediately. Use IAM roles or IAM Identity Center for programmatic access instead. |
-| **User MFA** | Enable MFA for all IAM users, especially those with console access. Consider enforcing MFA via IAM policies. |
-| **Root usage** | Investigate any recent root account activity. Root should only be used for tasks that specifically require it (e.g., closing the account, changing support plans). |
-| **User access keys** | Delete active access keys from IAM users. Migrate workloads to IAM roles. For human users, use IAM Identity Center with temporary credentials. |
+Get the Lambda ARNs from the stack outputs:
+
+```
+aws cloudformation describe-stacks \
+  --stack-name sire-conformance-pack-prerequisites \
+  --query 'Stacks[0].Outputs' \
+  --region <PRIMARY_REGION>
+```
+
+#### Step 2: Deploy the extended template in the primary region
+
+Deploy the extended conformance pack (all rules including IAM + custom Lambda) in the primary region:
+
+```
+aws configservice put-conformance-pack \
+  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+  --template-body file://sire-conformance-pack-template-extended.yaml \
+  --conformance-pack-input-parameters \
+    ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
+    ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
+  --region <PRIMARY_REGION>
+```
+
+#### Step 3: Deploy the base template in all other regions
+
+Deploy the base conformance pack (managed rules only, no Lambda prerequisites) in every other region where AWS Config is enabled:
+
+```
+REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
+
+for REGION in $REGIONS; do
+  echo "Deploying base conformance pack in $REGION..."
+  aws configservice put-conformance-pack \
+    --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+    --template-body file://sire-conformance-pack-template.yaml \
+    --region $REGION
+done
+```
+
+Alternatively, the base template can be deployed from the AWS Config console by selecting it from the conformance pack dropdown in each region.
+
+
+### Organization-Wide Deployment
+
+#### Step 1: Deploy prerequisites in the primary region (all accounts)
+
+Deploy the prerequisites CloudFormation template using StackSets to create the Lambda functions and IAM roles in every member account, but only in the primary region:
+
+```
+aws cloudformation deploy \
+  --template-file sire-conformance-pack-prerequisites.yaml \
+  --stack-name sire-conformance-pack-prerequisites \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --region <PRIMARY_REGION>
+```
+
+Use CloudFormation StackSets to deploy the prerequisites across all member accounts in the primary region.
+
+#### Step 2: Deploy the extended template in the primary region (all accounts)
+
+Deploy the extended conformance pack across the organization in the primary region only:
+
+```
+aws configservice put-organization-conformance-pack \
+  --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+  --template-body file://sire-conformance-pack-template-extended.yaml \
+  --conformance-pack-input-parameters \
+    ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
+    ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1>
+```
+
+Note: Organization conformance packs deploy to all accounts but you control the region by running the command from the primary region.
+
+#### Step 3: Deploy the base template in all other regions (all accounts)
+
+Deploy the base conformance pack across the organization in every other region where AWS Config is enabled:
+
+```
+REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
+
+for REGION in $REGIONS; do
+  echo "Deploying base conformance pack in $REGION..."
+  aws configservice put-organization-conformance-pack \
+    --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+    --template-body file://sire-conformance-pack-template.yaml \
+    --region $REGION
+done
+```
+
+### Base-Only Deployment (Fallback)
+
+If you only want the base managed rules without the IAM custom Lambda rules, you can deploy the base template in all regions without prerequisites:
+
+```
+aws configservice put-conformance-pack \
+  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+  --template-body file://sire-conformance-pack-template.yaml \
+  --region <REGION>
+```
+
+The base template can also be deployed from the AWS Config console by selecting it from the conformance pack dropdown.
 
 
 ## FAQ
 
 **Q: What is the difference between the base and extended versions?**
 
-The base template (`crcd-conformance-pack-template.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The extended template (`crcd-conformance-pack-template-extended.yaml`) adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
+The base template (`sire-conformance-pack-template.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The extended template (`sire-conformance-pack-template-extended.yaml`) adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
 
 | Version | File | Rules | Prerequisites | Console Dropdown |
 |---------|------|-------|---------------|-----------------|
-| Base | `crcd-conformance-pack-template.yaml` | 10 managed rules | None | Yes |
-| Extended | `crcd-conformance-pack-template-extended.yaml` | 14 managed + 2 custom rules | Lambda functions via `crcd-conformance-pack-prerequisites.yaml` | No (download only) |
+| Base | `sire-conformance-pack-template.yaml` | 10 managed rules | None | Yes |
+| Extended | `sire-conformance-pack-template-extended.yaml` | 14 managed + 2 custom rules | Lambda functions via `sire-conformance-pack-prerequisites.yaml` | No (download only) |
+
+The recommended multi-region deployment uses both templates together: deploy the extended template in a single primary region (for full IAM coverage including custom Lambda rules), and the base template in all other regions (for regional resource checks). This avoids running IAM evaluations redundantly in every region, since IAM resources are global.
+
+| Region | Template | What it covers |
+|--------|----------|----------------|
+| Primary (e.g., us-east-1) | Extended | S3, EC2, Security Groups + IAM managed rules + custom Lambda rules |
+| All other regions | Base | S3, EC2, Security Groups |
+
+In a multi-account setup (AWS Organizations), this recommendation applies to every account: deploy the extended template in one primary region per account, and the base template in all other regions of that account.
 
 **Q: How is this pack different from other published conformance packs?**
 
@@ -251,9 +322,9 @@ Other conformance packs are organized by compliance framework (NIST, PCI, CIS) o
 
 If you already have a comprehensive conformance pack (e.g., CIS, NIST), the rules in this pack are likely already covered. This pack is most valuable for customers who have no conformance packs deployed and want a low-cost starting point with the highest security impact.
 
-**Q: Why do rule names have the `crcd-` prefix?**
+**Q: Why do rule names have the `sire-` prefix?**
 
-The rule naming convention (`crcd-ia-{category}-{rule}`) encodes the threat tactic and category, enabling automated classification and visualization on security dashboards. The prefix `crcd` stands for Config Resource Compliance Dashboard. `ia` refers to the MITRE ATT&CK tactic "Initial Access."
+The rule naming convention (`sire-ia-{category}-{rule}`) encodes the threat tactic and category, enabling automated classification and visualization on security dashboards. The prefix `sire` stands for **S**ecurity **I**ncident **R**esponse **E**ngineering. `ia` refers to the MITRE ATT&CK tactic "Initial Access."
 
 **Q: Can I deploy this pack alongside other conformance packs?**
 
@@ -272,40 +343,3 @@ Both evaluations will appear in AWS Config. The conformance pack rules are immut
 - [AWS Config Managed Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html)
 - [AWS Config Conformance Packs](https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html)
 - [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html)
-
-
-## Multi-Region Deployment
-
-Since IAM resources are global, the custom Lambda-based IAM rules only need to run in a single region. For multi-region coverage, combine the extended template in one region with the base template in all other regions.
-
-### Strategy
-
-| Region | Template | What it covers |
-|--------|----------|----------------|
-| Primary region (e.g., us-east-1) | Extended template | S3, EC2, Security Groups + IAM custom rules (root usage, access keys, MFA) |
-| All other regions | Base template | S3, EC2, Security Groups |
-
-### Steps
-
-1. **Choose a primary region** for your IAM rules (any region where AWS Config is enabled).
-
-2. **Deploy the extended template in the primary region** 
-Open CloudShell or the CLI in your main region and follow the Extended Version steps above for the single account deployment.
-
-3. **Deploy the base template in all other regions:**
-Make sure your default region is not on the list below.
-
-   ```
-   REGIONS="us-east-1 us-east-2 us-west-2 eu-central-1 eu-north-1 ap-southeast-1 ap-northeast-1"
-
-   for REGION in $REGIONS; do
-     echo "Deploying base conformance pack in $REGION..."
-     aws configservice put-conformance-pack \
-       --conformance-pack-name Operational-Best-Practices-for-AWS-Security-Incident-Response \
-       --template-body file://crcd-conformance-pack-template.yaml \
-       --region $REGION
-   done
-   ```
-
-This gives you full coverage: regional resource checks (S3, EC2, security groups) in every region, plus the global IAM checks running once in your primary region.
-

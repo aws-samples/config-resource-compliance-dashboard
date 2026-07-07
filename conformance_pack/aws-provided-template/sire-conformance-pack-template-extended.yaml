@@ -87,7 +87,7 @@ Resources:
 
   S3BucketPublicReadProhibited:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-public-read-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-public-read-prohibited
       Scope:
         ComplianceResourceTypes:
           - AWS::S3::Bucket
@@ -98,7 +98,7 @@ Resources:
 
   S3BucketPublicWriteProhibited:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-public-write-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-public-write-prohibited
       Scope:
         ComplianceResourceTypes:
           - AWS::S3::Bucket
@@ -109,7 +109,7 @@ Resources:
 
   S3AccessPointInVpcOnly:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-access-point-in-vpc-only
+      ConfigRuleName: sire-ia-s3-s3-access-point-in-vpc-only
       Scope:
         ComplianceResourceTypes:
           - AWS::S3::AccessPoint
@@ -120,7 +120,7 @@ Resources:
 
   S3AccessPointPublicAccessBlocks:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-access-point-public-access-blocks
+      ConfigRuleName: sire-ia-s3-s3-access-point-public-access-blocks
       InputParameters:
         excludedAccessPoints:
           Fn::If:
@@ -137,7 +137,7 @@ Resources:
 
   S3AccountLevelPublicAccessBlocksPeriodic:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-account-level-public-access-blocks-periodic
+      ConfigRuleName: sire-ia-s3-s3-account-level-public-access-blocks-periodic
       InputParameters:
         IgnorePublicAcls:
           Ref: S3AccountLevelPublicAccessIgnorePublicAcls
@@ -155,7 +155,7 @@ Resources:
 
   S3BucketLevelPublicAccessProhibited:
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-level-public-access-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-level-public-access-prohibited
       InputParameters:
         excludedPublicBuckets:
           Fn::If:
@@ -176,7 +176,7 @@ Resources:
 
   AutoscalingLaunchconfigRequiresImdsv2:
     Properties:
-      ConfigRuleName: crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+      ConfigRuleName: sire-ia-ec2-autoscaling-launchconfig-requires-imdsv2
       Scope:
         ComplianceResourceTypes:
           - AWS::AutoScaling::LaunchConfiguration
@@ -187,7 +187,7 @@ Resources:
 
   Ec2Imdsv2Check:
     Properties:
-      ConfigRuleName: crcd-ia-ec2-ec2-imdsv2-check
+      ConfigRuleName: sire-ia-ec2-ec2-imdsv2-check
       Scope:
         ComplianceResourceTypes:
           - AWS::EC2::Instance
@@ -198,7 +198,7 @@ Resources:
 
   Ec2LaunchTemplateImdsv2Check:
     Properties:
-      ConfigRuleName: crcd-ia-ec2-ec2-launch-template-imdsv2-check
+      ConfigRuleName: sire-ia-ec2-ec2-launch-template-imdsv2-check
       Scope:
         ComplianceResourceTypes:
           - AWS::EC2::LaunchTemplate
@@ -213,7 +213,7 @@ Resources:
 
   VPCSecurityGroupPortRestrictionCheck:
     Properties:
-      ConfigRuleName: crcd-ia-ra-vpc-sg-port-restriction-check
+      ConfigRuleName: sire-ia-ra-vpc-sg-port-restriction-check
       InputParameters:
         restrictPorts:
           Fn::If:
@@ -240,7 +240,7 @@ Resources:
 
   RootAccountMfaEnabled:
     Properties:
-      ConfigRuleName: crcd-ia-iam-root-account-mfa-enabled
+      ConfigRuleName: sire-ia-iam-root-account-mfa-enabled
       Source:
         Owner: AWS
         SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
@@ -249,7 +249,7 @@ Resources:
 
   IamRootAccessKeyCheck:
     Properties:
-      ConfigRuleName: crcd-ia-iam-iam-root-access-key-check
+      ConfigRuleName: sire-ia-iam-iam-root-access-key-check
       Source:
         Owner: AWS
         SourceIdentifier: IAM_ROOT_ACCESS_KEY_CHECK
@@ -258,7 +258,7 @@ Resources:
 
   IamUserMfaEnabled:
     Properties:
-      ConfigRuleName: crcd-ia-iam-iam-user-mfa-enabled
+      ConfigRuleName: sire-ia-iam-iam-user-mfa-enabled
       Source:
         Owner: AWS
         SourceIdentifier: IAM_USER_MFA_ENABLED
@@ -267,7 +267,7 @@ Resources:
 
   MfaEnabledForIamConsoleAccess:
     Properties:
-      ConfigRuleName: crcd-ia-iam-mfa-enabled-for-iam-console-access
+      ConfigRuleName: sire-ia-iam-mfa-enabled-for-iam-console-access
       Source:
         Owner: AWS
         SourceIdentifier: MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS
@@ -280,7 +280,7 @@ Resources:
 
   IamRootNotUsedRegularly:
     Properties:
-      ConfigRuleName: crcd-ia-iam-iam-root-not-used-regularly
+      ConfigRuleName: sire-ia-iam-iam-root-not-used-regularly
       Source:
         Owner: CUSTOM_LAMBDA
         SourceIdentifier:
@@ -296,7 +296,7 @@ Resources:
 
   IamUserAccessKeyCheck:
     Properties:
-      ConfigRuleName: crcd-ia-iam-iam-user-access-key-check
+      ConfigRuleName: sire-ia-iam-iam-user-access-key-check
       Source:
         Owner: CUSTOM_LAMBDA
         SourceIdentifier:

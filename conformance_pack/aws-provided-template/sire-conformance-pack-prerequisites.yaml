@@ -56,15 +56,15 @@ Resources:
   RootNotUsedRegularlyLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '/aws/lambda/crcd-root-not-used-regularly'
+      LogGroupName: '/aws/lambda/sire-root-not-used-regularly'
       RetentionInDays: 30
 
   RootNotUsedRegularlyLambda:
     Type: AWS::Lambda::Function
     DependsOn: RootNotUsedRegularlyLogGroup
     Properties:
-      FunctionName: 'crcd-root-not-used-regularly'
-      Description: "CRCD custom Config rule - Checks whether the root user is not used regularly"
+      FunctionName: 'sire-root-not-used-regularly'
+      Description: "Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - Root account not used regularly"
       Runtime: python3.12
       Handler: index.lambda_handler
       Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
@@ -77,7 +77,8 @@ Resources:
       Code:
         ZipFile: |
           """
-          CRCD Custom Config Rule: Root Account Not Used Regularly
+          Security Best Practices for Security Incident Response Engineering Team
+          Custom Config Rule: Root Account Not Used Regularly
 
           Checks whether the root user is not used regularly by examining the
           IAM Credential Report for root user activity.
@@ -274,15 +275,15 @@ Resources:
   UserAccessKeyCheckLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: '/aws/lambda/crcd-user-access-key-check'
+      LogGroupName: '/aws/lambda/sire-user-access-key-check'
       RetentionInDays: 30
 
   UserAccessKeyCheckLambda:
     Type: AWS::Lambda::Function
     DependsOn: UserAccessKeyCheckLogGroup
     Properties:
-      FunctionName: 'crcd-user-access-key-check'
-      Description: "CRCD custom Config rule - Checks whether IAM users have active access keys"
+      FunctionName: 'sire-user-access-key-check'
+      Description: "Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - IAM users access key check"
       Runtime: python3.12
       Handler: index.lambda_handler
       Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
@@ -295,7 +296,8 @@ Resources:
       Code:
         ZipFile: |
           """
-          CRCD Custom Config Rule: IAM User Access Key Check
+          Security Best Practices for Security Incident Response Engineering Team
+          Custom Config Rule: IAM User Access Key Check
 
           Checks whether IAM users have active access keys. It is strongly
           recommended to not create access keys as they provide unrestricted

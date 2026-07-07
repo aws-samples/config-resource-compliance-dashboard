@@ -81,7 +81,7 @@ Resources:
   S3BucketPublicReadProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-public-read-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-public-read-prohibited
       Description: "Checks that S3 buckets do not allow public read access."
       Source:
         Owner: AWS
@@ -93,7 +93,7 @@ Resources:
   S3BucketPublicWriteProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-public-write-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-public-write-prohibited
       Description: "Checks that S3 buckets do not allow public write access."
       Source:
         Owner: AWS
@@ -105,7 +105,7 @@ Resources:
   S3AccessPointInVpcOnly:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-access-point-in-vpc-only
+      ConfigRuleName: sire-ia-s3-s3-access-point-in-vpc-only
       Description: "Checks whether Amazon S3 access points are configured to only allow access from within a VPC."
       Source:
         Owner: AWS
@@ -117,7 +117,7 @@ Resources:
   S3AccessPointPublicAccessBlocks:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-access-point-public-access-blocks
+      ConfigRuleName: sire-ia-s3-s3-access-point-public-access-blocks
       Description: "Checks whether Amazon S3 access points have public access block settings enabled."
       Source:
         Owner: AWS
@@ -135,7 +135,7 @@ Resources:
   S3AccountLevelPublicAccessBlocksPeriodic:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-account-level-public-access-blocks-periodic
+      ConfigRuleName: sire-ia-s3-s3-account-level-public-access-blocks-periodic
       Description: "Periodically checks whether Amazon S3 account-level public access block settings remain enabled."
       Source:
         Owner: AWS
@@ -154,7 +154,7 @@ Resources:
   S3BucketLevelPublicAccessProhibited:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-s3-s3-bucket-level-public-access-prohibited
+      ConfigRuleName: sire-ia-s3-s3-bucket-level-public-access-prohibited
       Description: "Checks if S3 buckets are publicly accessible at the bucket level."
       Source:
         Owner: AWS
@@ -176,7 +176,7 @@ Resources:
   AutoscalingLaunchconfigRequiresImdsv2:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-ec2-autoscaling-launchconfig-requires-imdsv2
+      ConfigRuleName: sire-ia-ec2-autoscaling-launchconfig-requires-imdsv2
       Description: "Checks whether EC2 Auto Scaling groups have launch configurations that require IMDSv2."
       Source:
         Owner: AWS
@@ -188,7 +188,7 @@ Resources:
   Ec2Imdsv2Check:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-ec2-ec2-imdsv2-check
+      ConfigRuleName: sire-ia-ec2-ec2-imdsv2-check
       Description: "Checks whether EC2 instances are configured to require IMDSv2."
       Source:
         Owner: AWS
@@ -200,7 +200,7 @@ Resources:
   Ec2LaunchTemplateImdsv2Check:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-ec2-ec2-launch-template-imdsv2-check
+      ConfigRuleName: sire-ia-ec2-ec2-launch-template-imdsv2-check
       Description: "Checks whether EC2 launch templates are configured to require IMDSv2."
       Source:
         Owner: AWS
@@ -216,7 +216,7 @@ Resources:
   VPCSecurityGroupPortRestrictionCheck:
     Type: AWS::Config::ConfigRule
     Properties:
-      ConfigRuleName: crcd-ia-ra-vpc-sg-port-restriction-check
+      ConfigRuleName: sire-ia-ra-vpc-sg-port-restriction-check
       Description: "Checks whether security groups allow unrestricted inbound traffic on specified ports."
       Source:
         Owner: AWS
