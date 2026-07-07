@@ -22,7 +22,7 @@ Resources:
   RootNotUsedRegularlyLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: 'CRCDConfPackRuleRootNotUsedRegularly'
+      RoleName: 'SIREConfPackRuleRootNotUsedRegularly'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -241,7 +241,7 @@ Resources:
   UserAccessKeyCheckLambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: 'CRCDConfPackRuleUserAccessKeyCheck'
+      RoleName: 'SIREConfPackRuleUserAccessKeyCheck'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:

@@ -2,7 +2,7 @@
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
+Description: 'CRCD Dashboard - Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -264,6 +264,7 @@ Resources:
           - S3_BUCKET_LOGGING_ENABLED
           - S3_BUCKET_VERSIONING_ENABLED
   
+  # This is CRCD only
   CrcdConformancePackUploaderLambdaRole:
     Type: AWS::IAM::Role
     DeletionPolicy: "Delete"
@@ -296,6 +297,7 @@ Resources:
                   - !Sub '${CrcdConfPackTemplateBucket.Arn}/*'
                   - !GetAtt CrcdConfPackTemplateBucket.Arn
   
+  # This is CRCD only
   TemplateUploaderLambda:
   # checkov:skip=CKV_AWS_115: This lambda is called once at deployment time. No need for reserved concurrency.
   # checkov:skip=CKV_AWS_116: No DQL needed.
@@ -781,7 +783,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       StackSetName: !Sub '${ConformancePackName}-org-stackset'
-      Description: Deploys CRCD conformance pack rules
+      Description: Deploys SIRE conformance pack rules
       PermissionModel: SELF_MANAGED # Runs on this account only
       AdministrationRoleARN: 
         !GetAtt StackSetAdministrationRole.Arn
@@ -1089,7 +1091,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'CRCDConfPackRuleRootNotUsedRegularly'
+              RoleName: 'SIREConfPackRuleRootNotUsedRegularly'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1130,7 +1132,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'CRCDConfPackRuleUserAccessKeyCheck'
+              RoleName: 'SIREConfPackRuleUserAccessKeyCheck'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1316,13 +1318,13 @@ Resources:
                               raise ValueError("Missing required field: configRuleId")
                   
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug('CRCD-ConfPack: Received invoking event: ' + json.dumps(invoking_event))
+                          logger.debug('SIRE-ConfPack: Received invoking event: ' + json.dumps(invoking_event))
                   
                           AWS_CONFIG_CLIENT = get_client('config', event)
                   
                           # This rule supports only periodic evaluation
                           if invoking_event['messageType'] != 'ScheduledNotification':
-                              logger.logError('CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
+                              logger.logError('SIRE-ConfPack: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
                               raise ValueError("Invalid message type: " + str(invoking_event['messageType']))
                   
                           # Extract Config rule parameters
@@ -1660,7 +1662,7 @@ Resources:
                       compliance_type = None
                   
                       global AWS_CONFIG_CLIENT
-                      logger.info(f"CRCD-ConfPack: Received event: {json.dumps(event)}")
+                      logger.info(f"SIRE-ConfPack: Received event: {json.dumps(event)}")
                   
                       try:
                           check_defined(event, 'event')
@@ -1669,7 +1671,7 @@ Resources:
                               raise ValueError("Missing required field: configRuleId")
                           
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug(f"CRCD-ConfPack: Received invoking event: {json.dumps(invoking_event)}")
+                          logger.debug(f"SIRE-ConfPack: Received invoking event: {json.dumps(invoking_event)}")
                   
                           rule_parameters = {}
                           if 'ruleParameters' in event:
@@ -1681,7 +1683,7 @@ Resources:
                           if invoking_event['messageType'] == 'ScheduledNotification':
                               evaluate_periodic_compliance(rule_parameters, event)
                           else:
-                              logger.error(f"CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
+                              logger.error(f"SIRE-ConfPack: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
                               raise ValueError(f"Invalid message type: {invoking_event['messageType']}")
                   
                       except ClientError as e:
@@ -1774,10 +1776,10 @@ Resources:
                               for user in page['Users']:
                                   user_name = user['UserName']
                                   user_id = user['UserId']
-                                  logger.info(f"CRCD-ConfPack: periodic compliance, checking IAM user {user_name} (id {user_id})")
+                                  logger.info(f"SIRE-ConfPack: periodic compliance, checking IAM user {user_name} (id {user_id})")
                                   compliance_type, annotation = evaluate_user_compliance(user_name, iam_client)
                   
-                                  logger.info(f"CRCD-ConfPack: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
+                                  logger.info(f"SIRE-ConfPack: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
                   
                                   evaluations.append({
                                       'ComplianceResourceType': 'AWS::IAM::User',
@@ -1787,7 +1789,7 @@ Resources:
                                       'OrderingTimestamp': datetime.utcnow()
                                   })
                       except Exception as e:
-                          logger.error(f'CRCD-ConfPack: Error during periodic evaluation: {str(e)}')
+                          logger.error(f'SIRE-ConfPack: Error during periodic evaluation: {str(e)}')
                       
                       if evaluations:
                           AWS_CONFIG_CLIENT.put_evaluations(
@@ -1797,7 +1799,7 @@ Resources:
                   
                   def evaluate_user_compliance(user_name, iam_client):
                       """Evaluate a single IAM user's compliance"""
-                      logger.info(f"CRCD-ConfPack: checking IAM user {user_name}")
+                      logger.info(f"SIRE-ConfPack: checking IAM user {user_name}")
                       
                       try:
                           response = iam_client.list_access_keys(UserName=user_name)
@@ -1805,7 +1807,7 @@ Resources:
                           
                           # Check for active access keys only
                           active_keys = [key for key in access_keys if key['Status'] == 'Active']
-                          logger.info(f"CRCD-ConfPack: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
+                          logger.info(f"SIRE-ConfPack: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
                   
                           compliance_type = 'INSUFFICIENT_DATA'
                           if active_keys:
@@ -1823,7 +1825,7 @@ Resources:
                           return compliance_type, annotation
                   
                       except Exception as exc:
-                          logger.error(f"CRCD-ConfPack: Error evaluating IAM user {user_name}: {exc}")
+                          logger.error(f"SIRE-ConfPack: Error evaluating IAM user {user_name}: {exc}")
                           return 'INSUFFICIENT_DATA', f"Error evaluating IAM user {user_name}: {exc}"
                   
                   
