@@ -1769,7 +1769,7 @@ views:
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_account AS
       SELECT *
       FROM
-        "cid_crcd_database"."config_sys_account_data"
+        "${athena_database_name}"."config_sys_account_data"
   
   config_compliance_actual:
     dependsOn: {}
