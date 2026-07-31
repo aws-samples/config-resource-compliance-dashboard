@@ -9,3 +9,6 @@ terraform.tfstate
 terraform.tfstate.backup
 .scannerwork/
 temp/
+
+# created by cid-cmd when deploying the dashboard
+cid.log

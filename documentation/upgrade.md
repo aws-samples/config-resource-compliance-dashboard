@@ -2,6 +2,32 @@
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
 
+## Upgrade to v5.1.0
+
+### Upgrade to v5.1.0 from v5.0.0
+This version only adds dashboard content: 3 new tabs, 5 new Athena views and 5 new datasets. There are no changes to the data pipeline, to CloudFormation resources, or to any existing view or dataset, so you do not need to destroy and redeploy.
+
+1. Open AWS CloudShell on the account and Region where you deployed the dashboard.
+1. Execute the following command:
+
+```
+ cid-cmd update \
+   --recursive \
+   --resources 'https://raw.githubusercontent.com/aws-samples/config-resource-compliance-dashboard/refs/heads/main/dashboard_template/cid-crcd.yaml' \
+   --dashboard-id 'cid-crcd' \
+   --athena-database 'cid_crcd_database' \
+   --athena-workgroup 'crcd-dashboard'
+```
+
+3. The `cid-cmd` tool will detect the update from `v5.0.0` to `v5.1.0` and create the 5 new Athena views and the 5 new datasets. Existing views are unchanged, so no view override prompts are expected.
+1. When prompted for the timezone for scheduled dataset refresh, select the time zone for your Region (it is already preselected).
+1. The tool will update the dashboard definition and terminate.
+
+The 3 AI tabs will be empty until AWS Config records AI resources in your accounts and the next dataset refresh completes. The tabs rely on AWS Config managed rules for AI workloads, whose availability varies by AWS Region.
+
+### Upgrade to v5.1.0 from earlier versions
+Follow the instructions to upgrade to v5.0.0 first.
+
 ## Upgrade to v5.0.0
 You have to destroy the resources of the current versions and redeploy.
 This version supports organizational taxonomy, it is highly recommended to deploy [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) before reinstalling. You will be able to add your organizational taxonomy to the dashboard during deployment. Even without this change, this version has updates on an IAM Role used by Quick Sight that cannot be updated by a CloudFormation change set.
