@@ -1,5 +1,39 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [5.0.0] - 2026-06-30
+## Added
+
+### Dashboard features
+- New data source for account metadata: AWS Organization Data Collection Module of [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html). This allows the data pipeline of the dashboard to dynamically extract metadata from your AWS Organization to be displayed on the dashboard.
+- Support for CID taxonomy. Use your AWS Organization metadata as filters in every tab of the dashboard.
+- **Threat-Informed Security Compliance**: new dashboard tab to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. 
+- **Compliance**: added visuals that display the compliance score for each conformance pack.
+- **Resource Inventory**: added visuals to show EC2 instances managed by AWS Systems Manager (SSM).
+- **Config Usage Insights** Added a diagram displaying the resource count by account and Region.
+- **Configuration Item Events**: added a date filter to the heat map of resource change events recorded by AWS Config. Improved documentation of the visuals at the top.
+
+### External features
+- [Backfill](./backfill/README.md) feature to show your historical AWS Config records after deployment.
+- [Amazon Quick chat agent](./chat_agent/README.md). This setup combines your AWS Config dashboard with Amazon Quick's generative AI capabilities to create a compliance chat agent that understands your environment and provides contextual insights.
+
+
+## Changed
+- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
+
+- **Tag Compliance**: added support for the several AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
+- **Resource Inventory**: click on an EC2 instance on the EC2 inventory table to see its attached EBS volumes on the EBS volume inventory table.
+
+## Fixed
+- Dashboard data was empty the first day of the month.
+- **Configuration Item Events**: improved accuracy of data.
+- **Resource Inventory**: resource counters consider all filters applied to the resource type.
+
+# [4.0.2] - 2026-01-20
+- Bugfix release for view `config_compliance`. 
+
+## Fixed
+- View `config_compliance` was using a lowercase field and thus not assigning AWS Config rules to their conformance pack. 
+
 # [4.0.1] - 2025-11-10
 Bugfix release: adopting a case sensitive Athena table for the dashboard. 
 The case insensitive table of v4.0.0 does not work if you apply the same tag, but with different capitalization to a resource, e.g. `Environment` and `environment`. In that case, any query to the Athena table will fail and no data will be displayed on the dashboard.
@@ -37,7 +71,7 @@ The case insensitive table of v4.0.0 does not work if you apply the same tag, bu
 This is a technical update to allow the CRCD Dashboard to be easier to install together with other CID Dashboards.
 
 ## Added
-- The CloudFormation template exports the Amazon QuickSight policy to access the CRCD resources. This will be used by the `cid-cmd` tool to manage permissions during the dashboard deployment in case other CID dasboards exist.
+- The CloudFormation template exports the Amazon QuickSight policy to access the CRCD resources. This will be used by the `cid-cmd` tool to manage permissions during the dashboard deployment in case other CID dashboards exist.
 
 ## Changed
 - Clarified that `required-tags` is a case-sensitive filter
@@ -59,7 +93,7 @@ This is a technical update to allow the CRCD Dashboard to be easier to install t
 - **Compliance** tab, visuals that compare trends of current month vs. the previous one are now color-formatted appropriately. E.g. trends of non compliant resources going up is bad, hence the dashboard will use red in case of positive number here. 
 - **Tag Compliance** tab: fixed a typo on the description at the top.
 - **Configuration Item Events** correctly captures all resource events in up to the previous six months.
-- **Configuration Item Events** tab, **All AWS Config Events** table filtered by account ID and region selectors at the top
+- **Configuration Item Events** tab, **All AWS Config Events** table filtered by account ID and Region selectors at the top
 - Redesigned all the Athena views for accuracy and performance.
 
 
@@ -86,7 +120,7 @@ Upgrading to v3.0.0 from an older version? Read [this](./documentation/upgrade.m
 - Updated installation instructions.
 - Clarified that the dashboard supports both AWS Config history and snapshot files.
 - Partitioning strategy of AWS Config data now considers both AWS Config snapshot and history files.
-- By default, partitionig is done on AWS Config snapshot files.
+- By default, partitioning is done on AWS Config snapshot files.
 
 ## Fixed
 - Resources that were deleted or not recently changed are accurately considered.

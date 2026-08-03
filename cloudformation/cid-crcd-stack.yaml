@@ -1,26 +1,34 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "Deployment of AWS Config Resource Compliance Dashboard (CRCD)"
 
-# Data pipeline installs dashboard resources until an Athena table. Athena views and QuickSight resources are not installed by this template
+# Data pipeline installs dashboard resources until an Athena table. Athena views and Quick Sight resources are not installed by this template
 #
 # The following use cases are supported
-# 1. deployment on Log Archive account (all in one account)
+# 1. deployment on AWS Config account (all in one account)
 #    In this case the AWS Config bucket is the source of logs, the Lambda is triggered from this bucket directly
 #
 # 2. deployment on Dashboard account 
-#    AWS Config logs are delivered to the Log Archive account, then replicated to the Dashboard account where all the resources related to the dashboard are deployed
+#    AWS Config logs are delivered to the AWS Config account, then replicated to the Dashboard account where all the resources related to the dashboard are deployed
 #
 #    2.1 - always start by running this template on the Dashboard account
 #    Create the S3 bucket for the copy of the logs
-#    Add permissions to the bucket to allow replication from the Log Archive Account
+#    Add permissions to the bucket to allow replication from the AWS Config account
 #    Trigger the lambda function from the bucket created in the Dashboard account
-#    If the Log Archive bucket is encrypted with a KMS key, then the Dashboard bucket will also be encrypted
+#    If the AWS Config Logs bucket is encrypted with a KMS key, then the Dashboard bucket will also be encrypted
 #
 #    2.2
-#    Run the Log Archive account to setup replication to the bucket created on 2.1
+#    Run on the AWS Config account to setup replication to the bucket created on 2.1
 #
 # 3. Deployment on a single account
 #    This is exactly the same as use case 1
+
+# Notice: Log Archive account/bucket in earlier versions of CRCD are now called AWS Config account and AWS Config Logs bucket
+# AWS Config account = the account where AWS Config logs are collected. This may differ from the delegated admin of AWS config
+# AWS Config Logs bucket = the S3 bucket where AWS Config files are stored. This is a resource of the AWS Config account.
+# Until Control Tower v3.3 the Log Archive bucket/account received all logs, notably CloudTrail longs and Config
+# Control Tower v4.0 will send the Config logs to a separate account/bucket. The account is likely hte AWS Config delegated admin, 
+# which is called the Audit account on the AWS Security Reference Architecture. This makes it confusing for customers and CRCD will not 
+# refer anymore to Log Archive. 
 
 # The template requires these parameters, which must always be provided by users:
 # A: LogArchiveAccountId  X: LogArchiveBucketName
@@ -53,6 +61,13 @@ Metadata:
           - ConfigureS3Replication
       -
         Label:
+          default: "Account names and organizational tags"
+        Parameters:
+          - ConfirmCIDOrganizationModuleInstalled
+          - CIDDataCollectionBucketName
+          
+      -
+        Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - AthenaWorkgroupName
@@ -62,8 +77,25 @@ Metadata:
           - LambdaPartitioningFunctionName
           - GlueDataCatalogName
           - CrossAccountReplicationRole
+          - AccountNamesOrganizationDataDatabaseName
+          - AccountNamesOrganizationDataTableName
+          - AccountNamesAccountMapDatabaseName
+          - AccountNamesAccountMapTableName
 
     ParameterLabels:
+      AccountNamesAccountMapDatabaseName:
+        default: "AWS Data Exports (CUR) database"
+      AccountNamesAccountMapTableName:
+        default: "Account map table"
+      AccountNamesOrganizationDataDatabaseName:
+        default: "Organization data database"
+      AccountNamesOrganizationDataTableName:
+        default: "Organization data table"
+      CIDDataCollectionBucketName:
+        default: "CID data collection bucket"
+      ConfirmCIDOrganizationModuleInstalled:
+        default: "Is the AWS Organization Data Collection Module of CID Data Collection installed?"
+
       AthenaWorkgroupName:
         default: "Athena workgroup"
       AthenaDatabaseName:
@@ -73,17 +105,17 @@ Metadata:
       AthenaTableName:
         default: "Athena table for AWS Config data"
       LogArchiveBucketName:
-        default: "Log Archive bucket"
+        default: "AWS Config Logs bucket"
       GlueDataCatalogName:
         default: "Existing Glue Data Catalog"
       LambdaPartitioningFunctionName:
         default: "AWS Lambda function that partitions AWS Config files"
       LogArchiveAccountId: 
-        default: "Log Archive account ID"
+        default: "AWS Config account ID"
       DashboardBucketName:
         default: "Dashboard bucket"
       LogArchiveBucketKmsKeyArn:
-        default: "ARN of the KMS key that encrypts the Log Archive bucket"
+        default: "ARN of the KMS key that encrypts the AWS Config Logs bucket"
       DashboardBucketKmsKeyArn:
         default: "ARN of the KMS key that encrypts the Dashboard bucket"
       DashboardAccountId:
@@ -91,7 +123,7 @@ Metadata:
       ConfigureS3EventNotificationToLambda:
         default: "Configure S3 event notification to trigger the Lambda Partitioner function on every new AWS Config file" 
       ConfigureS3Replication:
-        default: "Configure cross-account replication of AWS Config files from Log Archive to Dashboard account"
+        default: "Configure cross-account replication of AWS Config files from AWS Config account to Dashboard account"
       CrossAccountReplicationRole:
         default: "Name of the role used in cross-account replication of AWS Config files"
 
@@ -102,43 +134,43 @@ Parameters:
     Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)."
     MinLength: 1
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-    ConstraintDescription: "Log Archive bucket name is missing or does not satisfy the Amazon S3 naming convention."
+    ConstraintDescription: "AWS Config Logs bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   LogArchiveAccountId:
     Type: String
-    Description: "The number of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)."
+    Description: "The ID of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
-    ConstraintDescription: "Log Archive account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
+    ConstraintDescription: "AWS Config account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
   # 1 quicksight role gets permission to use the key for decryption
   # 2.1 the KMS key is needed so that the dashboard bucket will be created KMS encrypted
   # 2.2 is needed so that replication role gets permissions to use the key
-  # permissions are to Quicksight in case of installation in log archive bucket (step 1)
+  # permissions are to Quick Sight in case of installation in AWS Config Logs bucket (step 1)
   # permissions are to the replication role otherwise, and here there is no need to do that manually
   LogArchiveBucketKmsKeyArn:
     Type: "String"
-    Description: "If you encrypt the Log Archive bucket with a KMS key, copy the key's ARN here. If you deploy the dashboard on the Log Archive account, QuickSight will get permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually. If you deploy the dashboard on a dedicated Dashboard account, you must provide the key's ARN in both steps."
+    Description: "If you encrypt the AWS Config Logs bucket with a KMS key, copy the key's ARN here. If you deploy the dashboard on the AWS Config account, Quick Sight will get permissions to use the key for decrypt operations. Leave empty if the bucket is not encrypted with KMS, or if you want to grant key permissions manually. If you deploy the dashboard on a dedicated Dashboard account, you must provide the key's ARN in both steps."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   DashboardAccountId:
     Type: "String"
-    Description: "The number of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the Log Archive account ID if you want to deploy the dashboard in the same account where AWS Config files are collected. To deploy the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
+    Description: "The ID of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the AWS Config account ID if you want to deploy the dashboard in the same account where AWS Config files are collected. To deploy the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
     ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
 
   DashboardBucketName:
     Type: "String"
-    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you deploy the dashboard on the Log Archive account, insert the name of the Log Archive bucket again. If you deploy the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created with the name you specify here (Required)."
+    Description: "Name of the Amazon S3 bucket that is used as source of data for the dashboard. If you deploy the dashboard on the AWS Config account, insert the name of the AWS Config Logs bucket again. If you deploy the dashboard on a dedicated Dashboard account, the Dashboard bucket will be created with the name you specify here (Required)."
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     MinLength: 1
     ConstraintDescription: "Dashboard bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   DashboardBucketKmsKeyArn:
     Type: "String"
-    Description: "This parameter is used only in the second step of the Dashboard account deployment. In this case, insert the ARN of the KMS key created in the first step (it's DashboardBucketKmsKeyArn on the CloudFormation Outputs). If you deploy the dashboard on the Log Archive account, or if you are at the first step of the Dashboard account deployment, this parameter is ignored."
+    Description: "This parameter is used only in the second step of the Dashboard account deployment. In this case, insert the ARN of the KMS key created in the first step (it's DashboardBucketKmsKeyArn on the CloudFormation Outputs). If you deploy the dashboard on the AWS Config account, or if you are at the first step of the Dashboard account deployment, this parameter is ignored."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
@@ -150,10 +182,10 @@ Parameters:
 
   ConfigureS3Replication:
     Type: "String"
-    Description: "Select 'yes' to configure object replication between the Log Archive bucket and the Dashboard bucket. Select 'no' if you already have an S3 replication configurations on the Log Archive bucket. In this case, you must configure this manually."
+    Description: "Select 'yes' to configure object replication between the AWS Config Logs bucket and the Dashboard bucket. Select 'no' if you already have an S3 replication configurations on the AWS Config Logs bucket. In this case, you must configure this manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
-  
+
   AthenaDatabaseName:
     Type: "String"
     Default: "cid_crcd_database"
@@ -210,19 +242,59 @@ Parameters:
     Default: "crcd-s3replication-role-for-config-files" 
     MinLength: 1
     ConstraintDescription: "Required: Name of the role used in cross-account replication of AWS Config files."
-    Description: "Name of the S3 service role used in the AWS Config files replication from the Log Archive bucket to the Data Collection bucket (Required)."
+    Description: "Name of the S3 service role used in the AWS Config files replication from the AWS Config Logs bucket to the Dashboard bucket (Required)."
 
+  # Account names
+  AccountNamesAccountMapDatabaseName:
+    Type: "String"
+    Default: "cid_cur"
+    Description: "Name of the Amazon Athena database containing CUR metadata. Keep the default value if you have not installed other CID dashboards or if you haven't changed it at deployment (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Data Exports (CUR) database"
+    
+  AccountNamesAccountMapTableName:
+    Type: "String"
+    Default: "account_map"
+    Description: "Name of the Amazon Athena table of the database above that lists account names. Keep the default value if you have not installed other CID dashboards or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Data Exports (CUR) account map table"
+
+  AccountNamesOrganizationDataDatabaseName:
+    Type: "String"
+    Default: "optimization_data"
+    Description: "Name of the Amazon Athena database containing CID Data Collection metadata. Keep the default value if you have not installed the CID Data Collection module or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: CID Data Collection database"
+
+  AccountNamesOrganizationDataTableName:
+    Type: "String"
+    Default: "organization_data"
+    Description: "Name of the Amazon Athena table of the database above containing AWS Organization metadata such as account ID, account name, organization parent and organization tags (AWS Organization Data Collection Module must be installed to collect this). Keep the default value if you have not installed the CID data collection module or if you haven't changed it when deploying (Required)."
+    MinLength: 1
+    ConstraintDescription: "Required: CID Data Collection account map table"
+
+  CIDDataCollectionBucketName:
+    Type: "String"
+    Default: ""
+    Description: "Name of the destination bucket for the CID Data Collection module. By default, the value 'cid-data-' concatenated with the Data Collection account number, e.g. cid-data-1234567890."
+
+  ConfirmCIDOrganizationModuleInstalled:
+    Type: "String"
+    Description: "Select 'yes' to confirm the AWS Organization Data Collection Module of CID Data Collection is installed. This is the recommended way to extend the dashboard with account names and organization metadata. Select 'no' otherwise. More info: https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html"
+    AllowedValues: ['<select>', 'yes', 'no']
+    Default: "<select>" # This value is used below, careful if you change it
+  
 
 Conditions:
-  # used only in case 2.2, when setting up replication on the log archive bucket
+  # used only in case 2.2, when setting up replication on the AWS Config Logs bucket
   IsDashboardBucketKms: !Not [ !Equals [ !Ref DashboardBucketKmsKeyArn, "" ] ]
 
-  # Additional resources need to be created if the Log Archive bucket is encrypted with KMS
+  # Additional resources need to be created if the AWS Config Logs bucket is encrypted with KMS
   IsLogArchiveBucketKms: !Not [ !Equals [ !Ref LogArchiveBucketKmsKeyArn, "" ] ]
 
   IsLogArchiveAccountDeployment:
     # use case 1
-    # Full deployment on the Log Archive account
+    # Full deployment on the AWS Config account
     Fn::And:
       - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
       - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
@@ -244,14 +316,13 @@ Conditions:
   
   IsDashboardAccountDeploymentKms:
     # use case 2.1 with KMS encrypted buckets
-    # TODO add IsDashboardBucketKms? but then it would not cover 2.1
     Fn::And:
       - !Condition IsDashboardAccountDeployment
       - !Condition IsLogArchiveBucketKms
 
   IsS3ReplicationOnly:
     # use case 2.2
-    # in the Log Archive installation there is a second cloudformation run where we configure only the S3 object replication
+    # in the AWS Config account installation there is a second cloudformation run where we configure only the S3 object replication
     Fn::And:
       - !Not [!Condition IsLogArchiveAccountDeployment]
       - !Not [!Condition IsDashboardAccountDeployment]
@@ -267,7 +338,7 @@ Conditions:
       - !Condition IsS3ReplicationOnly
 
   IsConfigureS3EventNotificationToLambda:
-    # some customers that install on the Log Archive account may already have S3 notifications
+    # some customers that install on the AWS Config account may already have S3 notifications
     # we must not override that - and users will have to do that manually later
     # case 1: user must select yes from the parameters
     # case 2.1: this is always true, since we create our own bucket in the dashboard account
@@ -297,6 +368,11 @@ Conditions:
       - !Condition IsS3ReplicationOnly
       - !Equals [!Ref ConfigureS3Replication, 'yes']
 
+  IsCIDOrganizationModuleInstalled:
+    Fn::And:
+      - !Condition IsCreateDashboardResources
+      - !Equals [!Ref ConfirmCIDOrganizationModuleInstalled, 'yes']
+
 Rules:
   MandatoryLogArchiveAccountId:
     Assertions:
@@ -304,7 +380,7 @@ Rules:
         - !Equals
           - !Ref LogArchiveAccountId
           - ''
-        AssertDescription: "Log Archive account ID is required"
+        AssertDescription: "AWS Config account ID is required"
 
   MandatoryLogArchiveBucketName:
     Assertions:
@@ -312,7 +388,7 @@ Rules:
          - !Equals
           - !Ref LogArchiveBucketName
           - ''
-        AssertDescription: "Log Archive bucket name is required"
+        AssertDescription: "AWS Config Logs bucket name is required"
 
   MandatoryDashboardAccountId:
     Assertions:
@@ -329,7 +405,6 @@ Rules:
           - !Ref DashboardBucketName
           - ''
         AssertDescription: "Dashboard bucket name is required"
-
 
   MandatoryAthenaDatabase:
     Assertions:
@@ -402,7 +477,7 @@ Rules:
         - !Equals
           - !Ref ConfigureS3EventNotificationToLambda
           - '<select>'
-        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda Partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Log Archive bucket and want to configure this manually."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the Lambda Partitioner function when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the AWS Config Logs bucket and want to configure this manually."
 
   ValidateConfigureS3Replication:
     # Replication must be selected on use case 2.2
@@ -418,7 +493,7 @@ Rules:
         - !Equals
           - !Ref ConfigureS3Replication
           - '<select>'
-        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the Log Archive bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the Log Archive bucket and want to configure this manually."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure S3 replication of AWS Config files from the AWS Config Logs bucket to the Dashboard bucket. Select 'no' if you already have S3 object replication configured on the AWS Config Logs bucket and want to configure this manually."
 
   # Kms key ARN validation
   ValidateDashboardBucketKmsKeyArn:
@@ -438,8 +513,40 @@ Rules:
         - !Equals
           - !Ref LogArchiveBucketKmsKeyArn
           - ''
-        AssertDescription: "REQUIRED PARAMETER - cannot replicate objects between buckets with different types of encryption. ARN of the KMS key that encrypts the Log Archive bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
+        AssertDescription: "REQUIRED PARAMETER - cannot replicate objects between buckets with different types of encryption. ARN of the KMS key that encrypts the AWS Config Logs bucket must be provided together with the ARN of the KMS key that encrypts the Dashboard bucket."
 
+  ValidateConfirmCIDOrganizationModuleInstalled:
+    # ConfirmCIDOrganizationModuleInstalled is required only when installing the actual dashboard resources, i.e. IsCreateDashboardResources
+    # The field is not considered in other use cases
+    RuleCondition: 
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+        - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref ConfirmCIDOrganizationModuleInstalled
+          - '<select>'
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if the module is deployed, otherwise select 'no'."
+
+  ValidateCIDDataCollectionBucketName:
+    # CIDDataCollectionBucketName is required if ConfirmCIDOrganizationModuleInstalled is yes
+    # in case CIDDataCollectionBucketName must be given, then the Lambda that configure account names must have additional permissions
+    RuleCondition:
+      # Cannot use !Condition IsCreateDashboardResources, must replicate the conditions
+      Fn::And:
+        - !Equals [!Ref LogArchiveAccountId, !Ref 'AWS::AccountId']
+        - !Equals [!Ref LogArchiveAccountId, !Ref DashboardAccountId]
+        - !Equals [!Ref LogArchiveBucketName, !Ref DashboardBucketName]
+        - !Equals [!Ref ConfirmCIDOrganizationModuleInstalled, 'yes']
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref CIDDataCollectionBucketName
+          - ''
+        AssertDescription: "REQUIRED PARAMETER - Enter the CID Data Collection S3 bucket name."
 
 Resources:
 
@@ -495,6 +602,10 @@ Resources:
             reason: "We accept Athena query result bucket has no access logging"
           - id: W51
             reason: "We accept Athena query result bucket has no bucket policy"
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_LOGGING_ENABLED
+          - S3_BUCKET_VERSIONING_ENABLED
 
   # Athena workgroup to execute CRCD queries with its own result bucket
   # Using RecursiveDeleteOption - The option to delete a workgroup and its contents even if the workgroup contains any named queries. The default is false.
@@ -518,7 +629,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     DeletionPolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard - Allows QuickSight datasource access to Athena/Glue and the S3 bucket that contains AWS Config files"
+      Description: "CRCD Dashboard - Allows Quick Sight datasource access to Athena/Glue and the S3 bucket that contains AWS Config files"
       Path: "/"
       ManagedPolicyArns:
       - Ref: "IAMManagedPolicyQuickSightDataSource"
@@ -538,7 +649,7 @@ Resources:
             reason: "Role names are as per our design"
 
   # Must create a KMS key in this case
-  # Will encrypt the Dashboard bucket, and QuickSight will be allowed to use it
+  # Will encrypt the Dashboard bucket, and Quick Sight will be allowed to use it
   DashboardBucketKmsKey:
     Type: AWS::KMS::Key
     UpdateReplacePolicy: "Delete"
@@ -557,9 +668,9 @@ Resources:
               AWS: !Sub "arn:${AWS::Partition}:iam::${DashboardAccountId}:root"
             Action: 'kms:*'
             Resource: '*'
-          # Allow the account on the other side (Log Archive) to use this for replication
+          # Allow the account on the other side (AWS Config account) to use this for replication
           # It would be better to allow only the replication role, but it does not exist yet!
-          - Sid: 'Allow Log Archive account use the key for replication'
+          - Sid: 'Allow AWS Config account use the key for replication'
             Effect: Allow
             Principal:
               AWS: !Sub "arn:${AWS::Partition}:iam::${LogArchiveAccountId}:root"
@@ -583,7 +694,7 @@ Resources:
     Properties:
       ManagedPolicyName: "crcd-quicksight-datasource-policy"
       Path: "/"
-      Description: "CRCD Dashboard - Policy that allows QuickSight to access Glue, Athena and the S3 bucket source of AWS Config files"
+      Description: "CRCD Dashboard - Policy that allows Quick Sight to access Glue, Athena and the S3 bucket source of AWS Config files"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -620,6 +731,7 @@ Resources:
               - "athena:GetQueryResultsStream"
               - "athena:ListTableMetadata"
               - "athena:GetTableMetadata"
+              - "athena:GetWorkGroup"
             Effect: "Allow"
             Resource:
               - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:datacatalog/${GlueDataCatalogName}"
@@ -705,11 +817,45 @@ Resources:
           - "glue:GetDatabase"
           Effect: "Allow"
           Sid: "GluePartitions"
+        - Resource:
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:table/${AccountNamesOrganizationDataDatabaseName}/*"
+          - !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:database/${AccountNamesOrganizationDataDatabaseName}"
+          Action:
+          - "glue:GetPartitions"
+          Effect: "Allow"
+          Sid: "ReadSourceTableMetadata"
     Metadata:
       cfn_nag:
         rules_to_suppress:
           - id: W28
             reason: "Policy names are as per our design"
+
+  # Account names: policy to allow the lambda that builds the account view to extracts all the tags used in the AWS Organization
+  IAMManagedPolicyReadOrganizationTagsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsCIDOrganizationModuleInstalled
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ManagedPolicyName: "crcd-read-organization-tags"
+      Description: "CRCD Dashboard - Retrieves tags assigned to Accounts and Organization Units from AWS Organization"
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowQueryForTags
+            Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetObject
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucketName}"
+              - !Sub "arn:${AWS::Partition}:s3:::${CIDDataCollectionBucketName}/*"
+          - Sid: AllowGetQueryResults
+            Effect: Allow
+            Action:
+              - athena:GetQueryResults
+            Resource:
+              - !Sub "arn:${AWS::Partition}:athena:${AWS::Region}:${AWS::AccountId}:workgroup/${AthenaWorkgroupName}"
 
   IAMManagedPolicyLambdaS3AthenaQueryResults:
     Type: AWS::IAM::ManagedPolicy
@@ -833,6 +979,9 @@ Resources:
         rules_to_suppress:
           - id: W84
             reason: "No KMS encryption needed"
+      guard:
+        SuppressedRules:
+        - CLOUDWATCH_LOG_GROUP_ENCRYPTED
 
   LambdaFunctionPartitionerConfig:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
@@ -1229,7 +1378,7 @@ Resources:
   # Resources on Dashboard account only
   # Bucket for the copy of the AWS Config files
   # Trigger configuration for the partitioner Lambda
-  # Permissions to receive files from the replication of the objects in the Log Archive account
+  # Permissions to receive files from the replication of the objects in the AWS Config account
   # *********************************************************************************************************************************************************************
   # *********************************************************************************************************************************************************************
   
@@ -1286,6 +1435,11 @@ Resources:
         config:
           ignore_checks:
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl. This bucket is created with the same configuration as the AWS Config bucket when created by AWS ControlTower
+      guard:
+        SuppressedRules:
+          - S3_BUCKET_LOGGING_ENABLED
+          - S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED
+          - S3_DEFAULT_ENCRYPTION_KMS
 
   # Authorizing the replication configuration on the receiving side
   ReplicationConfigurationDataCollection:
@@ -1298,7 +1452,6 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          # TODO test
           # BSC17 Risk mitigation
           - Sid: "AllowSSLRequestsOnly"
             Action: "s3:*"
@@ -1311,8 +1464,8 @@ Resources:
           - Sid: "ReplicationPermissionsObjects"
             Effect: "Allow"
             Principal:
-              # The replication service role is always on the Log Archive account
-              # Since at this point the role does not exist yet, I can only grant permissions to the entire Log Archive account
+              # The replication service role is always on the AWS Config account
+              # Since at this point the role does not exist yet, I can only grant permissions to the entire AWS Config account
               AWS: !Ref LogArchiveAccountId
             Action:
             - "s3:ReplicateObject"
@@ -1321,8 +1474,8 @@ Resources:
           - Sid: "ReplicationPermissionsBucket"
             Effect: "Allow"
             Principal:
-              # The replication service role is always on the Log Archive account
-              # Since at this point the role does not exist yet, I can only grant permissions to the entire Log Archive account
+              # The replication service role is always on the AWS Config account
+              # Since at this point the role does not exist yet, I can only grant permissions to the entire AWS Config account
               AWS: !Ref LogArchiveAccountId
             Action:
             - "s3:List*"
@@ -1427,7 +1580,6 @@ Resources:
       DestinationAccountId: !Ref DashboardAccountId
       ReplicationRoleArn: !GetAtt ReplicationConfigurationConfigBucketRole.Arn
       
-
   ConfigBucketReplicationConfigurationLambdaRole:
     Type: AWS::IAM::Role
     Condition: IsConfigureS3Replication
@@ -1649,7 +1801,7 @@ Resources:
   # Use case 1 - other than the CRCD resources I have to configure the bucket notification from the Config Logging bucket
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
-  # Authorizing the notification configuration on the log archive bucket that already exists
+  # Authorizing the notification configuration on the AWS Config Logs bucket that already exists
   ConfigBucketNotificationConfigurationLambdaTrigger:
     Type: Custom::ConfigBucketNotificationConfigurationLambda
     Condition: IsConfigureS3EventNotificationToLambdaLogArchiveAccount
@@ -1692,7 +1844,7 @@ Resources:
                   - 's3:GetBucketNotification'
                 Resource: !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
 
-  # Lambda triggered by CloudFormation to configure bucket notification on AWS Config Log Archive bucket
+  # Lambda triggered by CloudFormation to configure bucket notification on AWS Config Logs bucket
   ConfigBucketNotificationConfigurationLambda:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
@@ -1702,7 +1854,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: "crcd-support-configure-s3-event-notification"
-      Description: "CRCD Dashboard - Configures the Log Archive bucket S3 event notification to trigger the CRCD Lambda Partitioner function (one-time execution)"
+      Description: "CRCD Dashboard - Configures the AWS Config Logs bucket S3 event notification to trigger the CRCD Lambda Partitioner function (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaRole.Arn
       Timeout: 300
@@ -1852,7 +2004,7 @@ Resources:
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
   # Account names discovery
-  # Will find account names data from either "optimization_data"."organization_data" or "cid_cur"."account_map"
+  # Will find account names data from either "optimization_data"."organization_data" or "cid_cur"."account_map" (defined as parameters)
   # ********************************************************************************************************************************************************
   # ********************************************************************************************************************************************************
 
@@ -1870,6 +2022,7 @@ Resources:
       - Ref: IAMManagedPolicyLambdaGlue
       - Ref: IAMManagedPolicyLambdaS3AthenaQueryResults
       - Ref: IAMManagedPolicyLambdaGlueAccountNames
+      - !If [IsCIDOrganizationModuleInstalled, !Ref IAMManagedPolicyReadOrganizationTagsPolicy, !Ref "AWS::NoValue"]
       MaxSessionDuration: 3600
       RoleName: "crcd-account-names-setup-role"
       AssumeRolePolicyDocument:
@@ -1927,6 +2080,10 @@ Resources:
   AccountNamesConfigurationLambdaTrigger:
     Type: Custom::AccountNamesConfigurationLambda
     Condition: IsCreateDashboardResources
+    # Must be sure the Glue table and Athena database are there when this function creates a view
+    DependsOn:
+      - GlueTable
+      - AthenaWorkgroup
     Properties:
       ServiceToken: !GetAtt AccountNamesConfigurationLambda.Arn
 
@@ -1969,10 +2126,11 @@ Resources:
       Environment:
         Variables:
           # Possible sources of account names, from other CID dashboards
-          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE: "cid_cur"
-          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE: "account_map"
-          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: "optimization_data"
-          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: "organization_data"
+          # TODO: make these configurable via CFN parameters, customers may have changed the name when deploying
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE: !Ref AccountNamesAccountMapDatabaseName
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE: !Ref AccountNamesAccountMapTableName
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE: !Ref AccountNamesOrganizationDataDatabaseName
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE: !Ref AccountNamesOrganizationDataTableName
           # Athena view that the Lambda is going to create
           CRCD_ACCOUNT_NAMES_VIEW_NAME: "config_sys_account_data"
           # Other input parameters
@@ -1981,17 +2139,29 @@ Resources:
           ATHENA_WORKGROUP: !Ref AthenaWorkgroupName
       Code:
         ZipFile: |
+          import re
           import json
           import os
           import boto3
           import time
           import logging
+          from botocore.exceptions import ClientError
 
           # Configure the logger
           # This lambda is run once
           logger = logging.getLogger()
           logger.setLevel(logging.INFO)
 
+          # Get the necessary parameters from the environment variables
+          # All are required and will raise a KeyError if the environment variable doesn't exist
+          CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]
+          CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
+          ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
+          ATHENA_WORKGROUP = os.environ["ATHENA_WORKGROUP"]
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE"]
+          ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE"]
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE"]
+          ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE = os.environ["ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE"]
 
           class AthenaException(Exception):
               ''''This is raised in case of Exception while running queries on Athena or Glue'''
@@ -2003,21 +2173,9 @@ Resources:
               organization_table_exists = False
               account_map_exists = False 
 
-              # Get the necessary parameters from the environment variables
-              # All are required and will raise a KeyError if the environment variable doesn't exist
-              CRCD_DATABASE_NAME = os.environ["CRCD_DATABASE_NAME"]   
-              CRCD_ACCOUNT_NAMES_VIEW_NAME = os.environ["CRCD_ACCOUNT_NAMES_VIEW_NAME"]
-              ATHENA_QUERY_RESULTS_BUCKET_NAME = os.environ["ATHENA_QUERY_RESULTS_BUCKET_NAME"]
-              ATHENA_WORKGROUP = os.environ["ATHENA_WORKGROUP"]
-              ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE"]
-              ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE = os.environ["ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE"]
-              ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE = os.environ["ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE"]
-              ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE = os.environ["ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE"]
-
               # Athena and Glue clients
               glue = boto3.client('glue') 
               athena = boto3.client('athena')
-
 
               if event['RequestType'] == 'Delete':
                   # remove view CRCD_ACCOUNT_NAMES_VIEW_NAME
@@ -2036,7 +2194,7 @@ Resources:
                           send_response(event, context, 'SUCCESS', {})
                       else:
                           logger.error(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} was not deleted successfully.")
-                          send_response(event, context, 'FAILED', {'Error': 'Athena query was not successful: cloud not delete view.'})
+                          send_response(event, context, 'FAILED', {'Error': 'Athena query was not successful: could not delete view.'})
                   except AthenaException as ae:
                       # Send a failed response back to CloudFormation
                       logger.error(f'Exception during query execution: {str(ae)}')
@@ -2048,29 +2206,27 @@ Resources:
 
               else:
                   try:
+                      success = False
+
                       # Check which tables exist
-                      if False and check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
-                          # Organization data collection is not supported at the moment
+                      if check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE):
+                          # Organization data collection is the preferred source of account name information
                           organization_table_exists = True
                       else:
                           account_map_exists = check_table_exists(glue, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE, ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE)
 
                       # Prepare CREATE OR REPLACE VIEW query based on table existence
                       if organization_table_exists:
-                          create_view_query = f"""
-                          CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
-                          SELECT 
-                              id as account_id,
-                              payer_id as payer_account_id,  
-                              name as account_name
-                          FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
-                          """
+                          create_view_query = build_view_query(athena)
+
                       elif account_map_exists:
+                          # Account map table has only: account_id, account_name, parent_account_id, parent_account_name
                           create_view_query = f"""
                           CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
                           SELECT 
                               account_id,
                               parent_account_id as payer_account_id,
+                              'NO_DATA' as organization_unit,
                               account_name
                           FROM "{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ACCOUNT_MAP_TABLE}"
                           """
@@ -2079,14 +2235,16 @@ Resources:
                           create_view_query = f"""
                           CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
                           SELECT 
-                              'NO_TABLES_EXIST' as account_id,
-                              'NO_TABLES_EXIST' as payer_account_id,
-                              'NO_TABLES_EXIST' as account_name
+                              'NO_DATA' as account_id,
+                              'NO_DATA' as payer_account_id,
+                              'NO_DATA' as organization_unit,
+                              'NO_DATA' as account_name
                           WHERE false
                           """
-
-                      # Execute the view creation query    
+                          
+                      # Execute the view creation query
                       success = execute_athena_query(athena, create_view_query, ATHENA_WORKGROUP, CRCD_DATABASE_NAME, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+
                       if success:
                           logger.info(f"View {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} created successfully. Data sources: organization_table_exists {organization_table_exists}, account_map_exists {account_map_exists}")
                           # Send a successful response back to CloudFormation
@@ -2102,6 +2260,84 @@ Resources:
                       logger.error(f'Exception during function execution: {str(e)}')
                       send_response(event, context, 'FAILED', {'Error': str(e)})
 
+          def build_view_query(athena):
+
+              # read the hierarchytags of the entire table and iterates through its rows
+              query = f"""
+              SELECT hierarchytags 
+              FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
+              """
+
+              logger.info(f"Executing query to extract tags: {query}")
+              # execute this query on the organization database
+              query_execution_id = execute_athena_query(athena, query, ATHENA_WORKGROUP, ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE, ATHENA_QUERY_RESULTS_BUCKET_NAME)
+              results = get_query_results(query_execution_id, athena)
+
+              # Skip header row
+              data_rows = results[1:]
+              
+              # Collect all unique keys
+              all_keys = set()
+              
+              logger.info(f"Processing {len(data_rows)} records...")
+              for row in data_rows:
+                  if row and row[0]:  # Check if hierarchytags value exists
+                      hierarchytags_value = row[0]
+                      keys = extract_keys_from_hierarchytags(hierarchytags_value)
+                      all_keys.update(keys)
+              
+              # Display results
+              logger.info("=== All Unique Keys Found in hierarchytags ===")
+              query_tags = ""
+              for key in sorted(all_keys):
+                  sanitized_tag_name = sanitize_string(key)
+                  logger.info(f"  - {key} [{sanitized_tag_name}]")
+                  query_tags = query_tags + " " + f", TRY(FILTER(hierarchytags, x -> x.key = '{key}')[1].value) as ou_tag_{sanitized_tag_name}"
+
+              
+              logger.info(f"Total unique keys: {len(all_keys)}")
+              logger.info(f"Final query snippet: {query_tags}")
+              
+              create_view_query = f"""
+                  CREATE OR REPLACE VIEW {CRCD_DATABASE_NAME}.{CRCD_ACCOUNT_NAMES_VIEW_NAME} AS
+                  SELECT 
+                      id as account_id
+                      , payer_id as payer_account_id
+                      , name as account_name
+                      , parent as organization_unit
+                      {query_tags}
+                  FROM "{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_DATABASE}"."{ACCOUNT_NAMES_SOURCE_ORGANIZATION_DATA_TABLE}"
+                  """
+              
+              logger.info(f"Final query for the view: {create_view_query}")
+              return create_view_query
+
+          def sanitize_string(input_string):
+              """
+              Replace spaces and any character that is not a letter or number with '_'
+              
+              Args:
+                  input_string: The string to sanitize
+                  
+              Returns:
+                  Sanitized string with only letters, numbers, and underscores
+              """
+              # Replace any character that is NOT alphanumeric with underscore
+              sanitized = re.sub(r'[^a-zA-Z0-9]', '_', input_string)
+              return sanitized
+
+          def extract_keys_from_hierarchytags(hierarchytags_value):
+              """Extract all keys from a hierarchytags string"""
+              keys = set()
+              
+              # Pattern to match key=value pairs
+              pattern = r'key=([^,}\]]+)'
+              matches = re.findall(pattern, hierarchytags_value)
+              
+              for match in matches:
+                  keys.add(match.strip())
+              
+              return keys
 
           def check_table_exists(glue, database_name, table_name):
               """Check if table exists in Glue Data Catalog"""
@@ -2165,6 +2401,17 @@ Resources:
                   logger.error(f'Exception during query execution: {str(e)}')
                   raise
 
+          def get_query_results(query_execution_id, athena):
+              """Retrieve query results"""
+              results = []
+              paginator = athena.get_paginator('get_query_results')
+              
+              for page in paginator.paginate(QueryExecutionId=query_execution_id):
+                  for row in page['ResultSet']['Rows']:
+                      results.append([col.get('VarCharValue', '') for col in row['Data']])
+              
+              return results
+
           def send_response(event, context, response_status, response_data):
               """Interacts with the Cloud Formation template that called this Lambda"""
               response_body = json.dumps({
@@ -2193,7 +2440,7 @@ Resources:
 Outputs:
   # parameter --quicksight-datasource-role on CID-CMD tool
   QuickSightDataSourceRoleName:
-    Description: "Name of the IAM role created for QuickSight"
+    Description: "Name of the IAM role created for Quick Sight"
     Condition: IsCreateDashboardResources
     Value: !Ref IAMRoleQuickSightDataSource
 
@@ -2255,7 +2502,7 @@ Outputs:
 
 #  ConditionIsLogArchiveAccountDeployment: 
 #    # use case 1
-#    Description: "Development parameter: use case 1, full deployment on Log Archive account"
+#    Description: "Development parameter: use case 1, full deployment on AWS Config account"
 #    Value: !If [IsLogArchiveAccountDeployment, 'true', 'false']
 #    
 #  ConditionIsDashboardAccountDeployment: 
@@ -2275,10 +2522,10 @@ Outputs:
 
 #  ConditionIsConfigureS3EventNotificationToLambdaLogArchiveAccount: 
 #    # True on use case 1 with lambda trigger selected
-#    Description: "Development parameter: create lambda trigger resources on Log Archive account - use case 1"
+#    Description: "Development parameter: create lambda trigger resources on AWS Config account - use case 1"
 #    Value: !If [IsConfigureS3EventNotificationToLambdaLogArchiveAccount, 'true', 'false'#]
 
 #  ConditionIsConfigureS3Replication: 
 #    # True on use case 2.2 with s3 replication selected
-#    Description: "Development parameter: create s3 replication configuration Log Archive account - use case 2.2"
+#    Description: "Development parameter: create s3 replication configuration AWS Config account - use case 2.2"
 #    Value: !If [IsConfigureS3Replication, 'true', 'false']
