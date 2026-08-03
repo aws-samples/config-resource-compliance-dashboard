@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Config Resource Compliance Dashboard (CRCD) - Preprocessing AWS Config files using AWS Glue'
+Description: 'AWS Config Resource Compliance Dashboard (CRCD) - Preprocessing AWS Config files using AWS Fargate'
 
 # In environments with a large number of resources, AWS Config may generate files that are bigger that 32MB (uncompressed).
 # This will break an Athena service limit and make it impossible to run queries, as all queries that try to open one of those files will fail.
@@ -12,43 +12,44 @@ Metadata:
         Label:
           default: "AWS Config logging - the source of data for the pre-processing job, where your AWS Config files are delivered"
         Parameters:
-          # TODO ask for the LogArchive account id and validate it is THE CURRENT account - LogArchiveAccountId
           - LogArchiveBucketName
-          # TODO support KMS encrypted log archive bucket, see if additional permissions are needed at all - LogArchiveBucketKmsKeyArn
       -
-        Label:
-          # TODO remove default: "Dashboard bucket - destination bucket of the pre-processing job and source of data for the dashboard" 
+        Label: 
           default: "Pre-processing job configuration"
         Parameters:
           - ConfigureS3EventNotificationToLambdaJobProducer
           - DashboardBucketNamePrefix
       -
         Label:
+          default: "Fargate networking"
+        Parameters:
+          - FargateSubnetIds
+          - FargateSecurityGroupIds
+      -
+        Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - PreProcessingLambdaProducerName
-          - PreProcessingGlueJobName
-          - DynamoDBJobTrackingTableName # TODO, make this optional
+          - DynamoDBJobTrackingTableName
           - LambdaSupportJobTriggerConfigurationName
-          - LambdaSupportGlueJobUploaderName
     
     ParameterLabels:
       LogArchiveBucketName:
         default: "Log Archive bucket"
       DashboardBucketNamePrefix:
         default: "Dashboard bucket (prefix)"
-      PreProcessingGlueJobName:
-        default: "CRCD Glue Job name"
       DynamoDBJobTrackingTableName:
         default: "Dynamo DB tracking table"
       ConfigureS3EventNotificationToLambdaJobProducer:
-        default: "Configure S3 event notification to trigger the job automatically on every new AWS Config file" 
+        default: "Configure S3 event notification to trigger the job automatically on every new AWS Config file"
       LambdaSupportJobTriggerConfigurationName:
         default: "Name of the Lambda function that performs supporting configurations: S3 object notification"
-      LambdaSupportGlueJobUploaderName:
-        default: "Name of the Lambda function that performs supporting configurations: Glue Job script upload"
       PreProcessingLambdaProducerName:
         default: "Name of the Lambda function that triggers the pre-processing job"
+      FargateSubnetIds:
+        default: "Subnet IDs for Fargate tasks"
+      FargateSecurityGroupIds:
+        default: "Security Group IDs for Fargate tasks"
 
 
 Parameters:
@@ -60,11 +61,9 @@ Parameters:
     ConstraintDescription: "Log Archive bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   DashboardBucketNamePrefix:
-    # TODO if customer installs on Log Archive account, this will be the Dashboard bucket. 
-    # If the customer installs on a dedicated Dashboard account, this will be confusing. Think about a better name.
     Type: String
     Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This can be used as source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and regions will be added automatically (Required)."
-    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$' # TODO remove length of region and 12 digit account number
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     MinLength: 1
     Default: 'crcd-dashboard-bucket' 
     ConstraintDescription: "Dashboard bucket prefix name is missing or does not satisfy the Amazon S3 naming convention."
@@ -76,19 +75,13 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that triggers the preprocessing job of AWS Config files."
     Description: "Name of the AWS Lambda function that triggers the preprocessing job of AWS Config files (Required)."
 
-  PreProcessingGlueJobName:
-    Type: String
-    Default: "crcd-config-file-preprocessing-job"
-    MinLength: 1
-    ConstraintDescription: "Required: name of the AWS Glue job that pre-processes AWS Config files."
-    Description: "Name of the AWS Glue job that pre-processes AWS Config files (Required)."
 
   DynamoDBJobTrackingTableName:
     Type: String
     Default: 'CRCDPreprocessingJobTracking'
     MinLength: 1
-    ConstraintDescription: "Required: name of the Amazon Dynamo DB table used to track the activities of the pre-processing Glue job."
-    Description: "Name of the Amazon Dynamo DB table used to track the activities of the pre-processing Glue job (Required)."
+    ConstraintDescription: "Required: name of the Amazon DynamoDB table used to track the activities of the pre-processing job."
+    Description: "Name of the Amazon DynamoDB table used to track the activities of the pre-processing job (Required)."
 
   ConfigureS3EventNotificationToLambdaJobProducer:
     Type: "String"
@@ -103,12 +96,14 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that configures S3 notifications on the Log Archive bucket."
     Description: "Name of the AWS Lambda function that configures S3 notifications on the Log Archive bucket (Required)."
 
-  LambdaSupportGlueJobUploaderName:
-    Type: "String"
-    Default: "crcd-support-configure-glue-job"
-    MinLength: 1
-    ConstraintDescription: "Required: AWS Lambda function that uploads the source code for the preprocessing Glue Job."
-    Description: "Name of the AWS Lambda function that uploads the source code for the preprocessing Glue Job (Required)."
+  FargateSubnetIds:
+    Type: "List<AWS::EC2::Subnet::Id>"
+    Description: "Subnet IDs where Fargate tasks will run. Must have internet access (public subnet with auto-assign public IP, or private subnet with NAT gateway) to reach S3 and DynamoDB (Required)."
+
+  FargateSecurityGroupIds:
+    Type: "List<AWS::EC2::SecurityGroup::Id>"
+    Description: "Security Group IDs for Fargate tasks. Must allow outbound HTTPS (port 443) to reach AWS services (Required)."
+
 
 
 Conditions:
@@ -142,13 +137,6 @@ Rules:
           - ''
         AssertDescription: "Lambda function name is required"
 
-  MandatoryPreProcessingGlueJobName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref PreProcessingGlueJobName
-          - ''
-        AssertDescription: "AWS Glue job name is required"
 
   MandatoryLambdaSupportJobTriggerConfigurationName:
     Assertions:
@@ -158,13 +146,6 @@ Rules:
           - ''
         AssertDescription: "Lambda function name is required"
 
-  MandatoryLambdaSupportGlueJobUploaderName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref LambdaSupportGlueJobUploaderName
-          - ''
-        AssertDescription: "Lambda function name is required"
 
   ValidateConfigureS3EventNotificationToLambdaJobProducer:
     # must be selected
@@ -248,6 +229,7 @@ Resources:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
+    DependsOn: ConfigBucketNotificationConfigurationLambdaJobProducerLogGroup
     Condition: IsConfigureS3EventNotificationToLambdaJobProducer
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -421,7 +403,6 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       BucketName: !Sub '${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}'
-      # TODO bucket encryption must be KMS if the original Log Archive bucked is KMS encrypted
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -445,18 +426,12 @@ Resources:
         config:
           ignore_checks:
             - W3045 # Consider using AWS::S3::BucketPolicy instead of AccessControl
-      # TODO see if you need this
-      #cfn_nag:
-      #  rules_to_suppress:
-      #    - id: W35
-      #      reason: "We accept Athena query result bucket has no access logging"
-      #    - id: W51
-      #      reason: "We accept Athena query result bucket has no bucket policy"
+      
   
 
   # *************************************************************************************************************************
   # *************************************************************************************************************************
-  # Lambda that triggers the Glue job for every new AWS Config file on Log Archive bucket
+  # Lambda that triggers the Fargate task for every new AWS Config file on Log Archive bucket
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
@@ -466,7 +441,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       RoleName: "crcd-lambda-preprocessing-job-producer-role"
-      Description: "CRCD Dashboard - Allows to trigger Glue jobs, send logs to Cloudwatch, receive objects from AWS Config bucket."
+      Description: "CRCD Dashboard - Allows to trigger Fargate tasks, send logs to CloudWatch, and write to DynamoDB."
       Path: "/"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -478,49 +453,37 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       Policies:
-        - PolicyName: crcd-preprocessing-trigger-glue-dynamodb-s3 
+        - PolicyName: crcd-preprocessing-trigger-fargate-dynamodb
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
-              - Effect: Allow
-                Action:
-                  - glue:StartJobRun
-                Resource: !Sub "arn:${AWS::Partition}:glue:${AWS::Region}:${AWS::AccountId}:job/${ConfigFilePreprocessingGlueJob}"
               - Effect: Allow
                 Action:
                   - dynamodb:PutItem
                 Resource: !GetAtt CRCDJobTrackingTable.Arn
               - Effect: Allow
                 Action:
-                  - "s3:GetObject"
-                  - "s3:ListBucket"
-                  - "s3:ListBucketVersions"
-                  - "s3:GetObjectVersion"
-                  - "s3:GetLifecycleConfiguration"
-                Resource: 
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+                  - ecs:RunTask
+                Resource: !Ref PreProcessingTaskDefinition
               - Effect: Allow
                 Action:
-                  - "s3:PutObject"
+                  - iam:PassRole
                 Resource:
-                  # TODO check it works 
-                  - !GetAtt DashboardBucket.Arn
-                  - !Sub '${DashboardBucket.Arn}/*'
-                  # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
-                  # - !Sub "arn:${AWS::Partition}:s3:::${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}/*"
+                  - !GetAtt PreProcessingTaskExecutionRole.Arn
+                  - !GetAtt PreProcessingTaskRole.Arn
 
-  # Lambda Function that triggers Glue jobs
+  # Lambda Function that triggers Fargate tasks
   ConfigFilePreprocessingProducerLambda:
   # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer-dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
   # checkov:skip=CKV_AWS_116: No DLQ needed
     Type: AWS::Lambda::Function
+    DependsOn: ConfigFilePreprocessingProducerLambdaLogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: !Sub "${PreProcessingLambdaProducerName}" 
-      Description: "CRCD Dashboard - Lambda function that triggers a Glue job to pre-process new AWS Config files"
+      FunctionName: !Sub "${PreProcessingLambdaProducerName}"
+      Description: "CRCD Dashboard - Lambda function that triggers a Fargate task to pre-process new AWS Config files"
       Handler: index.lambda_handler
       Role: !GetAtt IAMRoleConfigFilePreprocessingProducerLambda.Arn
       LoggingConfig:
@@ -540,7 +503,11 @@ Resources:
         Variables:
           DYNAMODB_TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
           DASHBOARD_BUCKET_NAME: !Ref DashboardBucket
-          GLUE_JOB_NAME: !Ref ConfigFilePreprocessingGlueJob
+          ECS_CLUSTER_ARN: !GetAtt PreProcessingECSCluster.Arn
+          TASK_DEFINITION_ARN: !Ref PreProcessingTaskDefinition
+          SUBNETS: !Join [",", !Ref FargateSubnetIds]
+          SECURITY_GROUPS: !Join [",", !Ref FargateSecurityGroupIds]
+          TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
       Code:
         ZipFile: |
           import boto3
@@ -549,80 +516,83 @@ Resources:
           import os
           import re
 
-          # This regular expressions pattern is compatible with how ControlTower Config logs AND also with how Config Logs are stored in S3 in standalone account
-          # Structure for Config Snapshots: ORG-ID/AWSLogs/ACCOUNT-NUMBER/Config/REGION/YYYY/MM/DD/ConfigSnapshot/objectname.json.gz
-          # Object name follows this pattern: ACCOUNT-NUMBER_Config_REGION_ConfigSnapshot_TIMESTAMP-YYYYMMDDHHMMSS_RANDOM-TEXT.json.gz
-          # For example: 123412341234_Config_eu-north-1_ConfigSnapshot_20240306T122755Z_09c5h4kc-3jc7-4897-830v-d7a858325638.json.gz
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
           def lambda_handler(event, context):
-              glue = boto3.client('glue')
-
-              # Get the table name from environment variable
               table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
-              
-              # Use the environment variable for the table name
               dynamodb = boto3.resource('dynamodb').Table(table_name)
-
-              # Gets more environment variables
               dashboard_bucket_name = os.environ["DASHBOARD_BUCKET_NAME"]
-              preprocessing_glue_job = os.environ["GLUE_JOB_NAME"]
-              
+
+              ecs = boto3.client('ecs')
+              cluster_arn = os.environ["ECS_CLUSTER_ARN"]
+              task_definition = os.environ["TASK_DEFINITION_ARN"]
+              subnets = os.environ["SUBNETS"].split(",")
+              security_groups = os.environ["SECURITY_GROUPS"].split(",")
+              tracking_table = os.environ["TRACKING_TABLE_NAME"]
+
               records = event['Records']
               for record in records:
                   bucket = record['s3']['bucket']['name']
                   key = record['s3']['object']['key']
 
-                  # process object key
-                  match  = re.match(PATTERN, key)
+                  match = re.match(PATTERN, key)
                   if not match:
                       print(f'SKIPPING: Cannot match {key} as AWS Config file, skipping.')
                       continue
 
-                  # Extract the filename from the full path
                   filename = os.path.basename(key)
-                  # Remove the .json.gz extension if present
                   filename = filename.replace('.json.gz', '')
 
-                  # Split by underscore and take the last two parts
                   parts = filename.split('_')
                   if len(parts) >= 2:
                       timestamp_and_random = f"{parts[-2]}_{parts[-1]}"
                   else:
-                      # Fallback: use the entire filename without extensions
                       timestamp_and_random = filename
-                  
+
                   run_id = timestamp_and_random
-                  
-                  # Record job start in DynamoDB
+
                   dynamodb.put_item(
                       Item={
                           'source_file': key,
                           'job_run_id': run_id,
                           'status': 'STARTED',
                           'start_time': datetime.now().isoformat(),
-                          'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))  # 90 days TTL
+                          'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))
                       }
                   )
-                  
-                  # Start Glue job
+
                   try:
-                      response = glue.start_job_run(
-                          JobName=preprocessing_glue_job,
-                          Arguments={
-                              '--tracking_table_name': f"{table_name}",
-                              '--source_path': f"s3://{bucket}/{key}",
-                              '--destination_path': f"s3://{dashboard_bucket_name}/",
-                              '--CRCD_JOB_RUN_ID': run_id
+                      response = ecs.run_task(
+                          cluster=cluster_arn,
+                          taskDefinition=task_definition,
+                          launchType='FARGATE',
+                          networkConfiguration={
+                              'awsvpcConfiguration': {
+                                  'subnets': subnets,
+                                  'securityGroups': security_groups,
+                                  'assignPublicIp': 'ENABLED'
+                              }
+                          },
+                          overrides={
+                              'containerOverrides': [{
+                                  'name': 'crcd-preprocessing',
+                                  'environment': [
+                                      {'name': 'SOURCE_PATH', 'value': f's3://{bucket}/{key}'},
+                                      {'name': 'DESTINATION_BUCKET', 'value': dashboard_bucket_name},
+                                      {'name': 'TRACKING_TABLE_NAME', 'value': tracking_table},
+                                      {'name': 'JOB_RUN_ID', 'value': run_id}
+                                  ]
+                              }]
                           }
                       )
-                      
-                      print(f"Started Glue job for bucket {bucket} on object {key} with run ID: {response['JobRunId']}")
-                      
+
+                      task_arn = response['tasks'][0]['taskArn'] if response['tasks'] else 'UNKNOWN'
+                      print(f"Started Fargate task {task_arn} for {key} with run ID: {run_id}")
+
                   except Exception as e:
-                      print(f"Error starting Glue job for {key}: {str(e)}")
+                      print(f"Error starting Fargate task for {key}: {str(e)}")
                       raise
-              
+
               return {
                   'statusCode': 200,
                   'body': json.dumps('Successfully processed S3 event')
@@ -677,16 +647,188 @@ Resources:
 
   # *************************************************************************************************************************
   # *************************************************************************************************************************
-  # Glue Job that performs the ETL pre-processing of AWS Config files
+  # Fargate task that performs the streaming split of AWS Config files
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
-  # Glue Job Script - a Lambda triggered by CloudFormation will create the Glue script
-  GlueScriptUploaderLambdaRole:
+  ECSServiceLinkedRoleLambdaRole:
     Type: AWS::IAM::Role
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard - Glue Job will have permission to deliver ETL objects to a destination bucket"
-      RoleName: "crcd-glue-script-uploader-lambda-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CreateServiceLinkedRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/ecs.amazonaws.com/*"
+
+  ECSServiceLinkedRoleLambda:
+  # checkov:skip=CKV_AWS_115: One-time execution
+  # checkov:skip=CKV_AWS_116: No DLQ needed
+    Type: AWS::Lambda::Function
+    DependsOn: ECSServiceLinkedRoleLambdaLogGroup
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      FunctionName: "crcd-support-ensure-ecs-service-role"
+      Description: "CRCD Dashboard - Creates ECS service-linked role if it does not already exist (one-time execution)"
+      Runtime: python3.12
+      Timeout: 30
+      MemorySize: 128
+      Architectures:
+        - "x86_64"
+      Handler: index.lambda_handler
+      Role: !GetAtt ECSServiceLinkedRoleLambdaRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+
+          def lambda_handler(event, context):
+              try:
+                  if event['RequestType'] in ['Create', 'Update']:
+                      iam = boto3.client('iam')
+                      try:
+                          iam.create_service_linked_role(AWSServiceName='ecs.amazonaws.com')
+                          print("Created ECS service-linked role")
+                      except iam.exceptions.InvalidInputException:
+                          print("ECS service-linked role already exists, skipping")
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W92
+            reason: "This function does not need reserved concurrent executions"
+
+  ECSServiceLinkedRoleLambdaLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      LogGroupName: "/aws/lambda/crcd-support-ensure-ecs-service-role"
+      RetentionInDays: 14
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "No KMS encryption needed"
+
+  EnsureECSServiceLinkedRole:
+    Type: Custom::ECSServiceLinkedRole
+    Properties:
+      ServiceToken: !GetAtt ECSServiceLinkedRoleLambda.Arn
+
+  PreProcessingECSCluster:
+    Type: AWS::ECS::Cluster
+    DependsOn: EnsureECSServiceLinkedRole
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      ClusterName: "crcd-preprocessing-cluster"
+      CapacityProviders:
+        - FARGATE
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+
+  # Role assumed by ECS to pull images and write logs (task execution role)
+  PreProcessingTaskExecutionRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      RoleName: "crcd-preprocessing-task-execution-role"
+      Description: "CRCD Dashboard - Allows ECS to pull container images and write logs"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  # Role assumed by the container itself to access S3 and DynamoDB (task role)
+  PreProcessingTaskRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      RoleName: "crcd-preprocessing-task-role"
+      Description: "CRCD Dashboard - Allows the preprocessing container to read from Log Archive, write to Dashboard bucket, and update DynamoDB"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: crcd-preprocessing-s3-dynamodb
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+                  - !Sub '${DashboardBucket.Arn}/crcd-scripts/*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource:
+                  - !Sub '${DashboardBucket.Arn}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+                  - !GetAtt DashboardBucket.Arn
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:GetItem
+                Resource: !GetAtt CRCDJobTrackingTable.Arn
+
+  PreProcessingTaskLogGroup:
+  # checkov:skip=CKV_AWS_158: No KMS encryption needed
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      LogGroupName: "/ecs/crcd-preprocessing-task"
+      RetentionInDays: 14
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "No KMS encryption needed"
+
+  # Lambda that uploads the preprocessing script to S3 during stack creation
+  ScriptUploaderLambdaRole:
+    Type: AWS::IAM::Role
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      RoleName: "crcd-script-uploader-lambda-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -704,38 +846,31 @@ Resources:
               - Effect: Allow
                 Action:
                   - s3:PutObject
+                  - s3:DeleteObject
                 Resource: !Sub '${DashboardBucket.Arn}/crcd-scripts/*'
 
-  GlueScriptUploaderLambda:
-  # checkov:skip=CKV_AWS_115: Cuncurrency limit needs are customer dependent. This lambda is called whenever AWS Config delivers a file to S3, we don't anticipate the need for reserved concurrency for the moment.
-  # checkov:skip=CKV_AWS_116: No DQL needed.
+  ScriptUploaderLambda:
+  # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
+  # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
+    DependsOn: ScriptUploaderLambdaLogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: !Sub "${LambdaSupportGlueJobUploaderName}"
-      Description: "CRCD Dashboard - Supports the deployment of the preprocessing Glue Job (one-time execution)"
+      FunctionName: "crcd-support-upload-preprocessing-script"
+      Description: "CRCD Dashboard - Uploads the preprocessing Python script to S3 (one-time execution)"
       Runtime: python3.12
       Timeout: 120
       MemorySize: 128
       Architectures:
         - "x86_64"
-      TracingConfig:
-        Mode: "Active"
-      VpcConfig:
-        SecurityGroupIds: []
-        SubnetIds: []
-        Ipv6AllowedForDualStack: false
-      LoggingConfig:
-        LogFormat: "Text"
       Handler: index.lambda_handler
-      Role: !GetAtt GlueScriptUploaderLambdaRole.Arn
+      Role: !GetAtt ScriptUploaderLambdaRole.Arn
       Code:
         ZipFile: |
           import boto3
           import cfnresponse
-          import json
-          
+
           def lambda_handler(event, context):
               try:
                   if event['RequestType'] in ['Create', 'Update']:
@@ -743,42 +878,35 @@ Resources:
                       bucket = event['ResourceProperties']['Bucket']
                       key = event['ResourceProperties']['Key']
                       content = event['ResourceProperties']['Content']
-                      
-                      # Upload the script to S3
+
                       s3.put_object(
                           Bucket=bucket,
                           Key=key,
                           Body=content,
                           ContentType='text/x-python'
                       )
-                      
-                      response_data = {
-                          'Message': f'Successfully uploaded script to s3://{bucket}/{key}'
-                      }
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, response_data)
-                  
+
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS,
+                                       {'Message': f'Uploaded to s3://{bucket}/{key}'})
+
                   elif event['RequestType'] == 'Delete':
-                      # Handle delete event, should we delete the Glue Job file?
-                      # Not now. The bucket has all other ETL'ed AWS Config files and would need to be emptied anyway.
                       cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-                      
+
               except Exception as e:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
     Metadata:
       cfn_nag:
         rules_to_suppress:
-          - id: W58
-            reason: "Permission to write CloudWatch logs is given in IAMRoleLambdaPartitionerConfig"
           - id: W92
             reason: "This function does not need reserved concurrent executions"
 
-  GlueScriptUploaderLambdaLogGroup:
+  ScriptUploaderLambdaLogGroup:
   # checkov:skip=CKV_AWS_158: No KMS encryption needed
     Type: AWS::Logs::LogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      LogGroupName: !Sub "/aws/lambda/${LambdaSupportGlueJobUploaderName}"
+      LogGroupName: "/aws/lambda/crcd-support-upload-preprocessing-script"
       RetentionInDays: 14
     Metadata:
       cfn_nag:
@@ -786,502 +914,333 @@ Resources:
           - id: W84
             reason: "No KMS encryption needed"
 
-  # Triggers the Lmabda from CloudFormation
-  GlueScript:
-    Type: Custom::GlueScriptUploaderLambda
+  # Custom Resource that triggers the script upload
+  PreProcessingScript:
+    Type: Custom::ScriptUploader
     Properties:
-      ServiceToken: !GetAtt GlueScriptUploaderLambda.Arn
+      ServiceToken: !GetAtt ScriptUploaderLambda.Arn
       Bucket: !Ref DashboardBucket
-      Key: !Sub 'crcd-scripts/${PreProcessingGlueJobName}-DO-NOT-DELETE.py'
+      Key: "crcd-scripts/config_stream_splitter.py"
       Content: |
-        import sys
-        from awsglue.utils import getResolvedOptions
-        from pyspark.context import SparkContext
-        from awsglue.context import GlueContext
-        from awsglue.job import Job
-        from awsglue.dynamicframe import DynamicFrame
-        import boto3
-        from datetime import datetime
-        import os
-        import json
         import gzip
         import io
-        import random
-        import string
+        import json
+        import os
+        import re
         import urllib.parse
-        from collections import Counter
+        import uuid
+        from datetime import datetime
+        from decimal import Decimal
+
+        import boto3
+        import ijson
 
 
-        # Get job parameters
-        args = getResolvedOptions(sys.argv, [
-            'JOB_NAME',
-            'tracking_table_name',
-            'source_path',
-            'destination_path',
-            'CRCD_JOB_RUN_ID'
-        ])
-
-        sc = SparkContext()
-        glueContext = GlueContext(sc)
-        spark = glueContext.spark_session
-        logger = glueContext.get_logger()  # Get the Glue logger
-        job = Job(glueContext)
-        job.init(args['JOB_NAME'], args)
-
-        # Configure Spark for better GZIP processing
-        spark.conf.set("spark.sql.files.maxPartitionBytes", 134217728)  # 128MB
-        spark.conf.set("spark.sql.files.openCostInBytes", 134217728)  # 128MB
-        spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
-        spark.conf.set("spark.sql.adaptive.enabled", "true")
+        class DecimalEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, Decimal):
+                    if obj == int(obj):
+                        return int(obj)
+                    return float(obj)
+                return super().default(obj)
 
 
-        # Initialize DynamoDB client
-        dynamodb = boto3.resource('dynamodb')
-        # table = dynamodb.Table('CRCDFlatteningJobTracking') # TODO delete when tested
-        table = dynamodb.Table(args['tracking_table_name'])
+        SOURCE_SNAPSHOT_PATTERN = re.compile(
+            r'^(?P<account_id>\d+)_Config_(?P<region>[\w-]+)_(?P<type>ConfigSnapshot)_(?P<timestamp>\d{8}T\d{6}Z)_(?P<uuid>[\w-]+)\.json\.gz$'
+        )
+        SOURCE_HISTORY_PATTERN = re.compile(
+            r'^(?P<account_id>\d+)_Config_(?P<region>[\w-]+)_(?P<type>ConfigHistory)_(?P<resource_type>[^_]+(?:_[^_]+)*)_(?P<timestamp>\d{8}T\d{6}Z)_(?P<end_timestamp>\d{8}T\d{6}Z)_(?P<sequence>\d+)\.json\.gz$'
+        )
+
+
+        def parse_source_filename(source_key):
+            filename = os.path.basename(source_key)
+            match = SOURCE_SNAPSHOT_PATTERN.match(filename)
+            if match:
+                return match.groupdict()
+            match = SOURCE_HISTORY_PATTERN.match(filename)
+            if match:
+                return match.groupdict()
+            return None
 
 
         def decode_s3_key(s3_path):
-            """Decode only the key part of the S3 path"""
             if not s3_path.startswith('s3://'):
                 return s3_path
-            
-            # Split the S3 path into bucket and key
             parts = s3_path[5:].split('/', 1)
             if len(parts) < 2:
                 return s3_path
-            
             bucket = parts[0]
-            key = parts[1]
-            
-            # Decode only the key part
-            decoded_key = urllib.parse.unquote(key)
-            
-            return f"s3://{bucket}/{decoded_key}"
+            key = urllib.parse.unquote(parts[1])
+            return f"s3://{bucket}/{key}"
+
 
         def get_relative_path(source_path):
-            """Extract the relative path from the full S3 path"""
             decoded_path = decode_s3_key(source_path)
             parts = decoded_path.replace('s3://', '').split('/', 1)
             if len(parts) > 1:
                 return parts[1]
             return ''
 
-        def get_destination_path(source_path, destination_base, filename):
-            """Generate destination path maintaining the source directory structure"""
+
+        def get_destination_key(source_path, filename):
             relative_path = get_relative_path(source_path)
             dir_path = os.path.dirname(relative_path)
-            
-            # Ensure the destination base is properly decoded
-            decoded_destination_base = decode_s3_key(destination_base)
-            
             if dir_path:
-                return f"{decoded_destination_base.rstrip('/')}/{dir_path}/{filename}"
-            return f"{decoded_destination_base.rstrip('/')}/{filename}"
-
-        def update_job_status(status, processed_items=0, error_message=None):
-            try:
-                update_expression = "SET #status = :status, end_time = :end_time, processed_items = :processed_items"
-                expression_values = {
-                    ':status': status,
-                    ':end_time': datetime.now().isoformat(),
-                    ':processed_items': processed_items
-                }
-                
-                if error_message:
-                    update_expression += ", error_message = :error_message"
-                    expression_values[':error_message'] = error_message
-
-                source_file = get_relative_path(args['source_path'])
-                
-                table.update_item(
-                    Key={
-                        'source_file': source_file,
-                        'job_run_id': args['CRCD_JOB_RUN_ID']
-                    },
-                    UpdateExpression=update_expression,
-                    ExpressionAttributeNames={
-                        '#status': 'status'
-                    },
-                    ExpressionAttributeValues=expression_values
-                )
-            except Exception as e:
-                print(f"Error updating DynamoDB: {str(e)}")
-
-        def sanitize_s3_name(name):
-            # Generate random string of 10 alphanumeric characters
-            default_name = 'unknownResourceId'.join(random.choices(string.ascii_letters + string.digits, k=10))
-            if not name:
-                return default_name
-                
-            # Replace characters that could cause issues in S3 paths
-            replacements = {
-                '/': '-',
-                '\\': '-',
-                ':': '-',
-                '*': '-',
-                '?': '-',
-                '"': '-',
-                '<': '-',
-                '>': '-',
-                '|': '-',
-                ' ': '-',
-                '=': '-',
-                '@': '-',
-                '#': '-',
-                '$': '-',
-                '&': '-',
-                '{': '-',
-                '}': '-',
-                '[': '-',
-                ']': '-',
-                '`': '-',
-                "'": '-',
-                '!': '-',
-                '+': '-',
-                '^': '-',
-                ',': '-'
-            }
-            
-            for char, replacement in replacements.items():
-                name = name.replace(char, replacement)
-            
-            # Replace multiple consecutive dashes with a single dash
-            while '--' in name:
-                name = name.replace('--', '-')
-            
-            # Remove leading and trailing dashes
-            name = name.strip('-')
-            
-            # If after all replacements name is empty, generate random string
-            if not name:
-                return default_name
-            
-            return name
-
-        # S3 has a limit on the name of objects
-        def truncate_s3_key(key, max_length=1000):  # leaving some room for safety
-            if len(key.encode('utf-8')) <= max_length:
-                return key
-            
-            # Split the key into parts
-            base, extension = os.path.splitext(key)
-            if extension == '.gz':  # handle double extension .json.gz
-                base, json_ext = os.path.splitext(base)
-                extension = json_ext + extension
-            
-            # Calculate how many bytes we need to remove
-            current_length = len(key.encode('utf-8'))
-            excess_bytes = current_length - max_length
-            
-            # Truncate the base name, preserving the extension
-            truncated_base = base.encode('utf-8')[:-excess_bytes-1].decode('utf-8', errors='ignore')
-            return truncated_base + extension
-
-        def process_file():    
-            try:
-                logger.info("10====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                logger.info(f"Original source path: {args['source_path']}")
-                logger.info(f"DDB Table name: {args['tracking_table_name']}")
+                return f"{dir_path}/{filename}"
+            return filename
 
 
-                # if %3A is on the file name, glue does not find it
-                source_path = decode_s3_key(args['source_path'])
-                logger.info("11====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                logger.info(f"Decoded source path: {source_path}")
+        def compress_json(data):
+            json_bytes = json.dumps(data, cls=DecimalEncoder).encode('utf-8')
+            buffer = io.BytesIO()
+            with gzip.GzipFile(mode='wb', fileobj=buffer) as gz:
+                gz.write(json_bytes)
+            buffer.seek(0)
+            return buffer.getvalue()
 
-                
-                # Use Glue's native S3 reading capabilities instead of sc.wholeTextFiles
-                try:
-                    # For gzipped JSON files, we need to use the grokLog format with custom patterns
-                    # or use the format="json" with compression="gzip" if the files are properly formatted
-                    dynamic_frame = glueContext.create_dynamic_frame.from_options(
-                        connection_type="s3",
-                        connection_options={
-                            "paths": [source_path],
-                            "recurse": False,
-                            "compressionType": "gzip"
-                        },
-                        format="json"
+
+        def build_output_filename(account_id, region, config_type, timestamp, sequence_number):
+            seq = sequence_number % 100000
+            random_part = uuid.uuid4().hex[:12]
+            return f"{account_id}_Config_{region}_{config_type}_{timestamp}_{seq:05d}_{random_part}.json.gz"
+
+
+        BATCH_SIZE = 500
+
+
+        class StreamingConfigSplitter:
+
+            def __init__(self, source_bucket, source_key, dest_bucket, dest_prefix="",
+                         tracking_table_name=None, job_run_id=None):
+                self.source_bucket = source_bucket
+                self.source_key = source_key
+                self.dest_bucket = dest_bucket
+                self.dest_prefix = dest_prefix.rstrip('/')
+                self.tracking_table_name = tracking_table_name
+                self.job_run_id = job_run_id
+
+                self.s3 = boto3.client('s3')
+                self.dynamodb_table = None
+                if tracking_table_name:
+                    self.dynamodb_table = boto3.resource('dynamodb').Table(tracking_table_name)
+
+                self.file_version = "1.0"
+                self.config_snapshot_id = ""
+
+                self.source_meta = parse_source_filename(source_key)
+                if not self.source_meta:
+                    raise ValueError(
+                        f"Source key does not match expected AWS Config filename pattern: "
+                        f"{os.path.basename(source_key)}"
                     )
-                    
-                    # Convert to DataFrame for easier processing
-                    df = dynamic_frame.toDF()
-                    
-                    logger.info("20====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                    logger.info(f"dataframe.count = {df.count()}")
-                    
-                    # If the DataFrame is empty, try alternative approach
-                    if df.count() == 0:
-                        logger.info("30====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                        logger.info("No data read using standard approach, trying alternative method...")
-                        
-                        # Use boto3 to read the file directly
-                        s3_path = args['source_path']
-                        path_parts = s3_path.replace('s3://', '').split('/', 1)
-                        bucket = path_parts[0]
-                        key = path_parts[1] if len(path_parts) > 1 else ''
-                        
-                        s3 = boto3.client('s3')
-                        
-                        logger.info("40====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                        logger.info(f"getting object {key} from bucket {bucket}")
-                        
-                        
-                        response = s3.get_object(Bucket=bucket, Key=key)
-                        content = response['Body'].read()
-                        
-                        # Decompress if gzipped
-                        if key.endswith('.gz'):
-                            content = gzip.decompress(content)
-                        
-                        # Parse JSON
-                        json_content = json.loads(content.decode('utf-8'))
-                        
-                        # Create a DataFrame from the JSON
-                        json_rdd = sc.parallelize([json.dumps(json_content)])
-                        df = spark.read.json(json_rdd)
-                    
+
+            def process(self):
+                source_path = f"s3://{self.source_bucket}/{self.source_key}"
+                print(f"Processing: {source_path}")
+                print(f"Destination: s3://{self.dest_bucket}/{self.dest_prefix}/")
+                print(f"Batch size: {BATCH_SIZE} items per file")
+
+                item_count = 0
+                file_count = 0
+                error_count = 0
+                batch = []
+
+                try:
+                    stream = self._open_stream()
+                    parser = ijson.parse(stream)
+
+                    in_items_array = False
+                    builder = None
+                    depth = 0
+
+                    for prefix, event, value in parser:
+                        if prefix == 'fileVersion':
+                            self.file_version = value
+                        elif prefix == 'configSnapshotId':
+                            self.config_snapshot_id = value
+                        elif prefix == 'configurationItems' and event == 'start_array':
+                            in_items_array = True
+                            continue
+                        elif prefix == 'configurationItems' and event == 'end_array':
+                            in_items_array = False
+                            continue
+
+                        if in_items_array:
+                            if event == 'start_map' and prefix == 'configurationItems.item':
+                                builder = ijson.ObjectBuilder()
+                                builder.event(event, value)
+                                depth = 1
+                            elif builder is not None:
+                                builder.event(event, value)
+                                if event in ('start_map', 'start_array'):
+                                    depth += 1
+                                elif event in ('end_map', 'end_array'):
+                                    depth -= 1
+
+                                if depth == 0:
+                                    item = builder.value
+                                    builder = None
+                                    batch.append(item)
+                                    item_count += 1
+
+                                    if len(batch) >= BATCH_SIZE:
+                                        try:
+                                            self._write_batch(batch, file_count + 1)
+                                            file_count += 1
+                                        except Exception as e:
+                                            error_count += len(batch)
+                                            print(f"Error writing batch {file_count + 1}: {e}")
+                                        batch = []
+
+                                    if item_count % 5000 == 0:
+                                        print(f"Progress: {item_count} items read, {file_count} files written")
+
+                    if batch:
+                        try:
+                            self._write_batch(batch, file_count + 1)
+                            file_count += 1
+                        except Exception as e:
+                            error_count += len(batch)
+                            print(f"Error writing final batch: {e}")
+
+                    print(f"\nProcessing complete:")
+                    print(f"  Items processed: {item_count}")
+                    print(f"  Files written: {file_count}")
+                    print(f"  Items with errors: {error_count}")
+
+                    self._update_tracking('COMPLETED', item_count)
+
                 except Exception as e:
-                    
-                    logger.info("300====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====CRCD====")
-                    logger.error(f"Error reading with Glue dynamic frame: {str(e)}")
-                    
-                    # Fallback to direct boto3 reading
-                    s3_path = args['source_path']
-                    path_parts = s3_path.replace('s3://', '').split('/', 1)
-                    bucket = path_parts[0]
-                    key = path_parts[1] if len(path_parts) > 1 else ''
-                    
-                    s3 = boto3.client('s3')
-                    response = s3.get_object(Bucket=bucket, Key=key)
-                    content = response['Body'].read()
-                    
-                    # Decompress if gzipped
-                    if key.endswith('.gz'):
-                        content = gzip.decompress(content)
-                    
-                    # Parse JSON
-                    json_content = json.loads(content.decode('utf-8'))
-                    
-                    # Create a DataFrame from the JSON
-                    json_rdd = sc.parallelize([json.dumps(json_content)])
-                    df = spark.read.json(json_rdd)
-                
-                # Convert DataFrame back to Python dict for processing
-                json_content = json.loads(df.toJSON().collect()[0])
-                
-                processed_count = 0
-                total_items = 0
-                processed_items = []
-                
-                # Check if configurationItems exists and is not empty
-                if 'configurationItems' not in json_content:
-                    raise ValueError("JSON file does not contain 'configurationItems' field")
-                
-                if not json_content['configurationItems']:
-                    raise ValueError("'configurationItems' array is empty")
-                
-                # Count and log total items
-                total_items = len(json_content['configurationItems'])
-                logger.info(f"Found {total_items} items in configurationItems array")
-                
-                # Get the common fields that need to be preserved
-                output_template = {
-                    "fileVersion": json_content.get("fileVersion", "1.0"),
-                    "configSnapshotId": json_content.get("configSnapshotId", ""),
-                    "configurationItems": []
+                    print(f"Fatal error: {e}")
+                    self._update_tracking('FAILED', item_count, str(e))
+                    raise
+
+                return item_count
+
+            def _open_stream(self):
+                response = self.s3.get_object(Bucket=self.source_bucket, Key=self.source_key)
+                raw_stream = response['Body']
+                if self.source_key.endswith('.gz'):
+                    return gzip.GzipFile(fileobj=raw_stream)
+                return raw_stream
+
+            def _write_batch(self, batch, batch_number):
+                output = {
+                    "fileVersion": self.file_version,
+                    "configSnapshotId": self.config_snapshot_id,
+                    "configurationItems": batch
                 }
-                
-                # Process each configuration item
-                for index, item in enumerate(json_content['configurationItems'], 1):
-                    try:
-                        # TODO test if it works without this
-                        # Convert configuration field to string if it's an object
-                        #if 'configuration' in item and isinstance(item['configuration'], dict):
-                        #    item['configuration'] = json.dumps(item['configuration'])
 
-                        # Create a new output object for this item
-                        output_json = output_template.copy()
-                        output_json['configurationItems'] = [item]
-                        
-                        resource_type = sanitize_s3_name(item.get('resourceType', '').replace('::', '-'))
-                        resource_name = sanitize_s3_name(item.get('resourceId', ''))
-                        
-                        run_id = args['CRCD_JOB_RUN_ID']
-                        
-                        # Track the item being processed
-                        item_identifier = f"{resource_type}_{resource_name}"
-                        processed_items.append(item_identifier)
+                filename = build_output_filename(
+                    account_id=self.source_meta['account_id'],
+                    region=self.source_meta['region'],
+                    config_type=self.source_meta['type'],
+                    timestamp=self.source_meta['timestamp'],
+                    sequence_number=batch_number
+                )
 
-                        # Want to be sure every file name is different and also relates to its content and origin
-                        random_part = ''.join(random.choices(string.ascii_letters + string.digits, k=15))
-                                        
-                        filename_original = f"{random_part}_{resource_type}_{resource_name}_{run_id}.json.gz"
-                        # filename must not be too long for S3 - Object key names may be up to 1024 characters long
-                        filename = truncate_s3_key(filename_original)
-                    
-                        destination = get_destination_path(
-                            args['source_path'],
-                            args['destination_path'],
-                            filename
-                        )
-                        
-                        logger.info(f"Processing item {index}/{total_items}: {filename}")
-                        
-                        dest_parts = destination.replace('s3://', '').split('/', 1)
-                        dest_bucket = dest_parts[0]
-                        dest_key = dest_parts[1]
-                        
-                        # Convert JSON to bytes and compress
-                        # AWS Config JSON is all on a single line without indentation, 
-                        # while a problematic JSON is formatted with indentation and newlines. 
-                        # Athena's JSON SerDe expects each line to be a complete JSON object.
-                        # remove the indent=2 parameter
-                        # json_bytes = json.dumps(output_json, indent=2).encode('utf-8')
-                        json_bytes = json.dumps(output_json).encode('utf-8')
-                        
-                        # Create a BytesIO object to hold the gzipped data
-                        gzip_buffer = io.BytesIO()
-                        
-                        # Create a GzipFile object and write the JSON data
-                        with gzip.GzipFile(mode='wb', fileobj=gzip_buffer) as gz:
-                            gz.write(json_bytes)
-                        
-                        # Get the gzipped content
-                        gzip_buffer.seek(0)
-                        gzipped_content = gzip_buffer.getvalue()
-                        
-                        s3 = boto3.client('s3')
-                        s3.put_object(
-                            Bucket=dest_bucket,
-                            Key=dest_key,
-                            Body=gzipped_content,
-                            ContentType='application/json',
-                            ContentEncoding='gzip'
-                        )
-                        processed_count += 1
-                        logger.info(f"Successfully saved {filename} to {destination}")
-                        
-                    except Exception as item_error:
-                        logger.error(f"Error processing item {index}/{total_items}: {str(item_error)}")
-                        logger.error(f"Problematic item: {json.dumps(item)}")
-                        continue  # Continue with next item instead of failing the whole job
-                
-                # Log summary
-                logger.info(f"\nProcessing Summary:")
-                logger.info(f"Total items found: {total_items}")
-                logger.info(f"Items processed successfully: {processed_count}")
-                logger.info(f"Items missed: {total_items - processed_count}")
-                
-                if total_items != processed_count:
-                    logger.info("\nPossible issues:")
-                    # Check for duplicates in processed items
-                    item_counts = Counter(processed_items)
-                    duplicates = {item: count for item, count in item_counts.items() if count > 1}
-                    if duplicates:
-                        logger.info("\nFound duplicate resource names (might have overwritten files):")
-                        for item, count in duplicates.items():
-                            logger.info(f"  {item}: {count} occurrences")
-                    
-                update_job_status('COMPLETED', processed_count)
-                return processed_count
-                
-            except ValueError as ve:
-                # Handle specific validation errors
-                error_message = str(ve)
-                print(f"Validation error: {error_message}")
-                update_job_status('FAILED', 0, error_message)
-                raise
-            except Exception as e:
-                # Handle other unexpected errors
-                error_message = f"Unexpected error: {str(e)}"
-          
-                print(error_message)
-                update_job_status('FAILED', 0, error_message)
-                raise
-        try:
-            items_processed = process_file()
-            print(f"Successfully processed {items_processed} items")
-            job.commit()
-        except Exception as e:
-            print(f"Error processing file: {str(e)}")
-            raise
+                source_path = f"s3://{self.source_bucket}/{self.source_key}"
+                dest_key = get_destination_key(source_path, filename)
+                if self.dest_prefix:
+                    dest_key = f"{self.dest_prefix}/{dest_key}" if dest_key else self.dest_prefix
 
-  PreProcessingGlueJobRole:
-    Type: AWS::IAM::Role
+                compressed = compress_json(output)
+
+                self.s3.put_object(
+                    Bucket=self.dest_bucket,
+                    Key=dest_key,
+                    Body=compressed,
+                    ContentType='application/json',
+                    ContentEncoding='gzip'
+                )
+
+            def _update_tracking(self, status, processed_count, error_message=None):
+                if not self.dynamodb_table or not self.job_run_id:
+                    return
+                try:
+                    update_expr = "SET #status = :status, end_time = :end_time, processed_items = :count"
+                    expr_values = {
+                        ':status': status,
+                        ':end_time': datetime.now().isoformat(),
+                        ':count': processed_count
+                    }
+                    if error_message:
+                        update_expr += ", error_message = :error_message"
+                        expr_values[':error_message'] = error_message
+
+                    self.dynamodb_table.update_item(
+                        Key={
+                            'source_file': self.source_key,
+                            'job_run_id': self.job_run_id
+                        },
+                        UpdateExpression=update_expr,
+                        ExpressionAttributeNames={'#status': 'status'},
+                        ExpressionAttributeValues=expr_values
+                    )
+                except Exception as e:
+                    print(f"Warning: failed to update tracking table: {e}")
+
+
+        def main():
+            source_path = os.environ['SOURCE_PATH']
+            dest_bucket = os.environ['DESTINATION_BUCKET']
+            dest_prefix = os.environ.get('DESTINATION_PREFIX', '')
+            tracking_table = os.environ.get('TRACKING_TABLE_NAME')
+            job_run_id = os.environ.get('JOB_RUN_ID')
+
+            decoded_path = decode_s3_key(source_path)
+            parts = decoded_path.replace('s3://', '').split('/', 1)
+            source_bucket = parts[0]
+            source_key = parts[1] if len(parts) > 1 else ''
+
+            splitter = StreamingConfigSplitter(
+                source_bucket=source_bucket,
+                source_key=source_key,
+                dest_bucket=dest_bucket,
+                dest_prefix=dest_prefix,
+                tracking_table_name=tracking_table,
+                job_run_id=job_run_id
+            )
+
+            splitter.process()
+
+
+        if __name__ == '__main__':
+            main()
+
+  PreProcessingTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    DependsOn: PreProcessingScript
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      Description: "CRCD Dashboard - ETL job on AWS Config files"
-      RoleName: "crcd-preprocessing-glue-job-role"
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: glue.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
-      Policies:
-        - PolicyName: crcd-dynamodb-dashboard-bucket-policy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:ListBucket
-                Resource:
-                  # Log Archive bucket is passed as name, Dashboard bucket created here
-                  - !Sub "${DashboardBucket.Arn}/*"
-                  - !GetAtt DashboardBucket.Arn
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
-              - Effect: Allow
-                Action:
-                  - dynamodb:PutItem
-                  - dynamodb:UpdateItem
-                  - dynamodb:GetItem
-                Resource: !GetAtt CRCDJobTrackingTable.Arn
+      Family: "crcd-preprocessing-task"
+      RequiresCompatibilities:
+        - FARGATE
+      NetworkMode: awsvpc
+      Cpu: '1024'
+      Memory: '4096'
+      ExecutionRoleArn: !GetAtt PreProcessingTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt PreProcessingTaskRole.Arn
+      ContainerDefinitions:
+        - Name: "crcd-preprocessing"
+          Image: "public.ecr.aws/docker/library/python:3.12-slim"
+          Essential: true
+          Command:
+            - /bin/sh
+            - -c
+            - !Sub |
+              pip install --quiet ijson boto3 &&
+              python -c "import boto3; boto3.client('s3').download_file('${DashboardBucket}', 'crcd-scripts/config_stream_splitter.py', '/tmp/config_stream_splitter.py')" &&
+              python /tmp/config_stream_splitter.py
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref PreProcessingTaskLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "preprocessing"
 
-  # Glue Job
-  # TODO check more suggested --conf settings to add to DefaultArguments
-  # TODO review the settings on the account. If I use this it means I have big files and I need power: G4x instances, autoscaling, ...
-  # --conf spark.hadoop.mapreduce.fileoutputcommitter.algorithm.version=2
-  # --conf spark.hadoop.mapreduce.fileoutputcommitter.marksuccessfuljobs=true
-  # --conf spark.hadoop.mapreduce.task.timeout=300000
-  # --conf spark.task.maxFailures=10
-  # --conf spark.network.timeout=800s
-  ConfigFilePreprocessingGlueJob:
-    Type: AWS::Glue::Job
-    DependsOn: GlueScript
-    Properties:
-      Name: !Sub "${PreProcessingGlueJobName}"  #crcd-config-file-processing-job moved to technical parameter
-      Description: "CRCD Dashboard - Glue job that transforms AWS Config files and generates a file for each AWS Config item and saves it onto the destination bucket"
-      Role: !GetAtt PreProcessingGlueJobRole.Arn
-      Command:
-        Name: glueetl
-        PythonVersion: '3'
-        # TODO this fails if the bucket name is  a prefix
-        ScriptLocation: !Sub 's3://${DashboardBucket}/crcd-scripts/${PreProcessingGlueJobName}-DO-NOT-DELETE.py'
-      DefaultArguments:
-        '--enable-metrics': 'true'
-        '--enable-continuous-cloudwatch-log': 'true'
-        '--job-language': 'python'
-        '--enable-spark-ui': 'true'
-        '--enable-job-insights': 'true'
-        '--enable-glue-datacatalog': 'true'
-        '--conf': 'spark.driver.maxResultSize=2g --conf spark.kryoserializer.buffer.max=512m'
-      ExecutionProperty:
-        MaxConcurrentRuns: 10
-      GlueVersion: '4.0'
-      MaxRetries: 0
-      Timeout: 2880
-      NumberOfWorkers: 5
-      WorkerType: G.2X
 
 Outputs:
   DashboardBucketName:
@@ -1292,10 +1251,14 @@ Outputs:
     Description: Name of the DynamoDB tracking table
     Value: !Ref CRCDJobTrackingTable
 
-  GlueJobName:
-    Description: Name of the preprocessing Glue Job
-    Value: !Ref ConfigFilePreprocessingGlueJob
-
   ConfigFilePreprocessingProducerLambdaArn:
-    Description: ARN of the Lambda function that triggers the preprocessing Glue Job
+    Description: ARN of the Lambda function that triggers the preprocessing Fargate task
     Value: !GetAtt ConfigFilePreprocessingProducerLambda.Arn
+
+  ECSClusterArn:
+    Description: ARN of the ECS cluster running preprocessing tasks
+    Value: !GetAtt PreProcessingECSCluster.Arn
+
+  TaskDefinitionArn:
+    Description: ARN of the Fargate task definition for preprocessing
+    Value: !Ref PreProcessingTaskDefinition
