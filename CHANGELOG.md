@@ -1,5 +1,16 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [5.1.0] - 2026-07-31
+## Added
+
+### Dashboard features
+- **AI Governance**: new dashboard tab showing the compliance posture of AI workloads on Amazon Bedrock, Amazon Bedrock AgentCore and Amazon SageMaker. Overall AI compliance rate, resources under governance, compliance gaps, breakdown by AI service, a non-compliance heat map by account and Region, a governance coverage flow from AI service to AWS Config rule, and compliance trend over time.
+- **AI Agent Inventory**: new dashboard tab for the Bedrock AgentCore Runtime fleet. Guardrail coverage, IAM role assignment, network mode and tracing shown as both KPIs and per-control gauges, a compound risk breakdown by number of failing controls, agent fleet growth over time, guardrail coverage by account, foundation model distribution, an estate treemap of every recorded AI resource type, the full agent roster, and a resource relationship map linking agents to the guardrails, IAM roles, models and KMS keys they use.
+- **AI Remediation Activity**: new dashboard tab covering the open finding backlog, finding age bands against a 7/30/90 day SLA, time to resolve, remediation velocity, and prioritised non-compliant AI resources by AWS Config rule and resource type.
+- All three tabs share the Account ID, Account Name and Region filters used by the rest of the dashboard, and support the same organizational taxonomy.
+- 5 new Athena views and 5 new Quick Sight datasets, built on the existing AWS Config data pipeline. No new collection infrastructure is required.
+
+
 # [5.0.0] - 2026-06-30
 ## Added
 

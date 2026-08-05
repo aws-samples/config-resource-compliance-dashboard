@@ -16,13 +16,18 @@ dashboards:
       - config_inventory_lambda
       - config_inventory_rds
       - config_inventory_s3
+      - ai_governance_compliance
+      - ai_governance_agents
+      - ai_governance_remediation
+      - ai_governance_inventory
+      - ai_governance_relationships
     
     # CUSTOMIZATION - descriptive name of the dashboard
     name: "AWS Config Resource Compliance Dashboard (CRCD)"
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    version: v5.0.0
+    version: v5.1.0
     # CUSTOMIZATION - make sure it references cid-crcd-definition.yaml  
     file: ./cid-crcd-definition.yaml
 
@@ -1655,6 +1660,497 @@ datasets:
     - default
 
 # CUSTOMIZATION - daily incremental refresh configuration
+  ai_governance_compliance:
+    data:
+      DataSetId: ai-governance-compliance
+      Name: ai_governance_compliance
+      PhysicalTableMap:
+        ai-governance-compliance-acct:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+            - Name: organization_unit
+              Type: STRING
+        ai-governance-compliance-table:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: v_ai_governance_compliance
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: resourcename
+              Type: STRING
+            - Name: capture_time
+              Type: STRING
+            - Name: dt
+              Type: STRING
+            - Name: snapshot_date
+              Type: DATETIME
+            - Name: config_rule_name
+              Type: STRING
+            - Name: compliance_type
+              Type: STRING
+            - Name: target_resource_type
+              Type: STRING
+            - Name: target_resource_id
+              Type: STRING
+      ImportMode: SPICE
+      LogicalTableMap:
+        ai-governance-compliance-acct-logical:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ai-governance-compliance-acct
+        ai-governance-compliance-joined:
+          Alias: Intermediate Table
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - resourcetype
+              - resourceid
+              - resourcename
+              - capture_time
+              - dt
+              - snapshot_date
+              - config_rule_name
+              - compliance_type
+              - target_resource_type
+              - target_resource_id
+              - payer_account_id
+              - account_name
+              - organization_unit
+          Source:
+            JoinInstruction:
+              LeftOperand: ai-governance-compliance-table-logical
+              RightOperand: ai-governance-compliance-acct-logical
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ai-governance-compliance-table-logical:
+          Alias: ai_governance_compliance
+          Source:
+            PhysicalTableId: ai-governance-compliance-table
+    dependsOn:
+      views:
+      - v_ai_governance_compliance
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
+  ai_governance_agents:
+    data:
+      DataSetId: ai-governance-agents
+      Name: ai_governance_agents
+      PhysicalTableMap:
+        ai-governance-agents-acct:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+            - Name: organization_unit
+              Type: STRING
+        ai-governance-agents-table:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: v_ai_governance_agents
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: agent_id
+              Type: STRING
+            - Name: agent_name
+              Type: STRING
+            - Name: capture_time
+              Type: STRING
+            - Name: dt
+              Type: STRING
+            - Name: snapshot_date
+              Type: DATETIME
+            - Name: model_id
+              Type: STRING
+            - Name: guardrail_id
+              Type: STRING
+            - Name: guardrail_status
+              Type: STRING
+            - Name: iam_role_arn
+              Type: STRING
+            - Name: iam_role_status
+              Type: STRING
+            - Name: network_mode
+              Type: STRING
+            - Name: network_compliance
+              Type: STRING
+            - Name: tracing_enabled
+              Type: STRING
+            - Name: agent_status
+              Type: STRING
+      ImportMode: SPICE
+      LogicalTableMap:
+        ai-governance-agents-acct-logical:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ai-governance-agents-acct
+        ai-governance-agents-joined:
+          Alias: Intermediate Table
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - agent_id
+              - agent_name
+              - capture_time
+              - dt
+              - snapshot_date
+              - model_id
+              - guardrail_id
+              - guardrail_status
+              - iam_role_arn
+              - iam_role_status
+              - network_mode
+              - network_compliance
+              - tracing_enabled
+              - agent_status
+              - payer_account_id
+              - account_name
+              - organization_unit
+          Source:
+            JoinInstruction:
+              LeftOperand: ai-governance-agents-table-logical
+              RightOperand: ai-governance-agents-acct-logical
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ai-governance-agents-table-logical:
+          Alias: ai_governance_agents
+          Source:
+            PhysicalTableId: ai-governance-agents-table
+    dependsOn:
+      views:
+      - v_ai_governance_agents
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
+  ai_governance_remediation:
+    data:
+      DataSetId: ai-governance-remediation
+      Name: ai_governance_remediation
+      PhysicalTableMap:
+        ai-governance-remediation-acct:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+            - Name: organization_unit
+              Type: STRING
+        ai-governance-remediation-table:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: v_ai_governance_remediation
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: capture_time
+              Type: STRING
+            - Name: dt
+              Type: STRING
+            - Name: snapshot_date
+              Type: DATETIME
+            - Name: config_rule_name
+              Type: STRING
+            - Name: compliance_type
+              Type: STRING
+            - Name: resource_type_extracted
+              Type: STRING
+            - Name: target_resource_id
+              Type: STRING
+            - Name: priority
+              Type: STRING
+            - Name: first_seen
+              Type: DATETIME
+            - Name: last_seen
+              Type: DATETIME
+            - Name: days_open
+              Type: INTEGER
+            - Name: finding_status
+              Type: STRING
+      ImportMode: SPICE
+      LogicalTableMap:
+        ai-governance-remediation-acct-logical:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ai-governance-remediation-acct
+        ai-governance-remediation-joined:
+          Alias: Intermediate Table
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - resourceid
+              - capture_time
+              - dt
+              - snapshot_date
+              - config_rule_name
+              - compliance_type
+              - resource_type_extracted
+              - target_resource_id
+              - priority
+              - first_seen
+              - last_seen
+              - days_open
+              - finding_status
+              - payer_account_id
+              - account_name
+              - organization_unit
+          Source:
+            JoinInstruction:
+              LeftOperand: ai-governance-remediation-table-logical
+              RightOperand: ai-governance-remediation-acct-logical
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ai-governance-remediation-table-logical:
+          Alias: ai_governance_remediation
+          Source:
+            PhysicalTableId: ai-governance-remediation-table
+    dependsOn:
+      views:
+      - v_ai_governance_remediation
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
+  ai_governance_inventory:
+    data:
+      DataSetId: ai-governance-inventory
+      Name: ai_governance_inventory
+      PhysicalTableMap:
+        ai-governance-inventory-acct:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+            - Name: organization_unit
+              Type: STRING
+        ai-governance-inventory-table:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: v_ai_governance_inventory
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: resourcetype
+              Type: STRING
+            - Name: resourceid
+              Type: STRING
+            - Name: resourcename
+              Type: STRING
+            - Name: capture_time
+              Type: STRING
+            - Name: dt
+              Type: STRING
+            - Name: snapshot_date
+              Type: DATETIME
+            - Name: creation_time
+              Type: STRING
+            - Name: model_id
+              Type: STRING
+            - Name: guardrail_id
+              Type: STRING
+            - Name: iam_role_arn
+              Type: STRING
+            - Name: network_mode
+              Type: STRING
+            - Name: encryption_key
+              Type: STRING
+      ImportMode: SPICE
+      LogicalTableMap:
+        ai-governance-inventory-acct-logical:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ai-governance-inventory-acct
+        ai-governance-inventory-joined:
+          Alias: Intermediate Table
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - resourcetype
+              - resourceid
+              - resourcename
+              - capture_time
+              - dt
+              - snapshot_date
+              - creation_time
+              - model_id
+              - guardrail_id
+              - iam_role_arn
+              - network_mode
+              - encryption_key
+              - payer_account_id
+              - account_name
+              - organization_unit
+          Source:
+            JoinInstruction:
+              LeftOperand: ai-governance-inventory-table-logical
+              RightOperand: ai-governance-inventory-acct-logical
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ai-governance-inventory-table-logical:
+          Alias: ai_governance_inventory
+          Source:
+            PhysicalTableId: ai-governance-inventory-table
+    dependsOn:
+      views:
+      - v_ai_governance_inventory
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
+  ai_governance_relationships:
+    data:
+      DataSetId: ai-governance-relationships
+      Name: ai_governance_relationships
+      PhysicalTableMap:
+        ai-governance-relationships-acct:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: config_inventory_account
+            InputColumns:
+            - Name: account_id
+              Type: STRING
+            - Name: payer_account_id
+              Type: STRING
+            - Name: account_name
+              Type: STRING
+            - Name: organization_unit
+              Type: STRING
+        ai-governance-relationships-table:
+          RelationalTable:
+            DataSourceArn: ${athena_datasource_arn}
+            Catalog: AwsDataCatalog
+            Schema: ${athena_database_name}
+            Name: v_ai_governance_relationships
+            InputColumns:
+            - Name: accountid
+              Type: STRING
+            - Name: region
+              Type: STRING
+            - Name: source_type
+              Type: STRING
+            - Name: source_id
+              Type: STRING
+            - Name: source_name
+              Type: STRING
+            - Name: relationship
+              Type: STRING
+            - Name: target_type
+              Type: STRING
+            - Name: target_id
+              Type: STRING
+            - Name: target_name
+              Type: STRING
+            - Name: edge_count
+              Type: INTEGER
+      ImportMode: SPICE
+      LogicalTableMap:
+        ai-governance-relationships-acct-logical:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: ai-governance-relationships-acct
+        ai-governance-relationships-joined:
+          Alias: Intermediate Table
+          DataTransforms:
+          - ProjectOperation:
+              ProjectedColumns:
+              - accountid
+              - region
+              - source_type
+              - source_id
+              - source_name
+              - relationship
+              - target_type
+              - target_id
+              - target_name
+              - edge_count
+              - payer_account_id
+              - account_name
+              - organization_unit
+          Source:
+            JoinInstruction:
+              LeftOperand: ai-governance-relationships-logical
+              RightOperand: ai-governance-relationships-acct-logical
+              Type: LEFT
+              OnClause: '{accountid} = {account_id}'
+        ai-governance-relationships-logical:
+          Alias: ai_governance_relationships
+          Source:
+            PhysicalTableId: ai-governance-relationships-table
+    dependsOn:
+      views:
+      - v_ai_governance_relationships
+      dataProviders:
+      - CRCDConfigDashboard
+    schedules:
+    - default
 schedules:
   incremental-daily-config-event-rule:
     ScheduleId: crcd-daily-incremental-daily-config-event-rule
@@ -2422,3 +2918,125 @@ views:
       , r.ConfigItemStatus
       FROM
         resource_info r
+  v_ai_governance_compliance:
+    dependsOn: {}
+    data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_compliance AS\nSELECT\n  \"\
+      accountId\" accountid\n, \"region\" region\n, \"configurationItem\".\"resourcetype\" resourcetype\n\
+      , \"configurationItem\".\"resourceId\" resourceid\n, \"configurationItem\".\"resourceName\" resourcename\n\
+      , \"configurationItem\".\"configurationitemcapturetime\" capture_time\n, \"dt\" dt\n, CAST(date_parse(\"\
+      dt\", '%Y-%m-%d') AS timestamp) snapshot_date\n, \"json_extract_scalar\"(rule, '$.configRuleName')\
+      \ config_rule_name\n, \"json_extract_scalar\"(rule, '$.complianceType') compliance_type\n, \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceType') target_resource_type\n, \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceId') target_resource_id\nFROM\n  ((cid_crcd_config\n\
+      CROSS JOIN UNNEST(\"configurationitems\") t (configurationItem))\nCROSS JOIN UNNEST(CAST(\"json_extract\"\
+      (\"configurationItem\".\"configuration\", '$.configRuleList') AS array(json))) u (rule))\nWHERE (regexp_like(\"\
+      dt\", '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n  AND (datasource = 'ConfigSnapshot')\n  AND (\"configurationItem\"\
+      .\"resourcetype\" = 'AWS::Config::ResourceCompliance')\n  AND ((\"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.targetResourceType') LIKE '%Bedrock%')\n    OR (\"json_extract_scalar\"(\"\
+      configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%AgentCore%')\n    OR (\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%SageMaker%')))"
+  v_ai_governance_agents:
+    dependsOn: {}
+    data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_agents AS\nSELECT\n  \"accountId\"\
+      \ accountid\n, \"region\" region\n, \"configurationItem\".\"resourceId\" agent_id\n, \"configurationItem\"\
+      .\"resourceName\" agent_name\n, \"configurationItem\".\"configurationitemcapturetime\" capture_time\n\
+      , \"dt\" dt\n, CAST(date_parse(\"dt\", '%Y-%m-%d') AS timestamp) snapshot_date\n, \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.modelId') model_id\n, \"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.guardrailConfiguration.guardrailIdentifier') guardrail_id\n, (CASE WHEN (\"\
+      json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.guardrailConfiguration.guardrailIdentifier')\
+      \ IS NOT NULL) THEN 'Applied' ELSE 'Missing' END) guardrail_status\n, \"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.roleArn') iam_role_arn\n, (CASE WHEN (\"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.roleArn') IS NOT NULL) THEN 'Assigned' ELSE 'Missing' END) iam_role_status\n\
+      , (CASE WHEN (\"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.networkConfiguration.networkMode')\
+      \ = 'PRIVATE') THEN 'Private' ELSE 'Public' END) network_mode\n, (CASE WHEN (\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.networkConfiguration.networkMode') = 'PRIVATE') THEN\
+      \ 'Compliant' ELSE 'Non-Compliant' END) network_compliance\n, (CASE WHEN (\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.tracingConfiguration.enabled') = 'true') THEN 'Enabled'\
+      \ ELSE 'Disabled' END) tracing_enabled\n, \"json_extract_scalar\"(\"configurationItem\".\"configuration\"\
+      , '$.status') agent_status\nFROM\n  (cid_crcd_config\nCROSS JOIN UNNEST(\"configurationitems\") t\
+      \ (configurationItem))\nWHERE (regexp_like(\"dt\", '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n  AND (datasource\
+      \ = 'ConfigSnapshot')\n  AND (\"configurationItem\".\"resourcetype\" = 'AWS::BedrockAgentCore::Runtime'))"
+  v_ai_governance_remediation:
+    dependsOn: {}
+    data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_remediation AS\nWITH findings\
+      \ AS (\nSELECT\n  \"accountId\" accountid\n, \"region\" region\n, \"configurationItem\".\"resourceId\"\
+      \ resourceid\n, \"configurationItem\".\"configurationitemcapturetime\" capture_time\n, \"dt\" dt\n\
+      , CAST(date_parse(\"dt\", '%Y-%m-%d') AS timestamp) snapshot_date\n, \"json_extract_scalar\"(rule,\
+      \ '$.configRuleName') config_rule_name\n, \"json_extract_scalar\"(rule, '$.complianceType') compliance_type\n\
+      , \"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.targetResourceType') resource_type_extracted\n\
+      , \"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.targetResourceId') target_resource_id\n\
+      , (CASE WHEN (\"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.targetResourceType')\
+      \ LIKE '%AgentCore%') THEN 'High'\n        WHEN (\"json_extract_scalar\"(\"configurationItem\".\"\
+      configuration\", '$.targetResourceType') LIKE '%Bedrock%') THEN 'Medium'\n        WHEN (\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%SageMaker%') THEN 'Medium'\n\
+      \        ELSE 'Low' END) priority\nFROM\n  ((cid_crcd_config\nCROSS JOIN UNNEST(\"configurationitems\"\
+      ) t (configurationItem))\nCROSS JOIN UNNEST(CAST(\"json_extract\"(\"configurationItem\".\"configuration\"\
+      , '$.configRuleList') AS array(json))) u (rule))\nWHERE (regexp_like(\"dt\", '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n\
+      \  AND (datasource = 'ConfigSnapshot')\n  AND (\"configurationItem\".\"resourcetype\" = 'AWS::Config::ResourceCompliance')\n\
+      \  AND (\"json_extract_scalar\"(rule, '$.complianceType') = 'NON_COMPLIANT')\n  AND ((\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%Bedrock%')\n    OR (\"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%AgentCore%')\n    OR (\"\
+      json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.targetResourceType') LIKE '%SageMaker%')))\n\
+      )\nSELECT\n  f.*\n, MIN(f.snapshot_date) OVER (PARTITION BY f.resourceid) first_seen\n, MAX(f.snapshot_date)\
+      \ OVER (PARTITION BY f.resourceid) last_seen\n, (date_diff('day', MIN(f.snapshot_date) OVER (PARTITION\
+      \ BY f.resourceid), MAX(f.snapshot_date) OVER (PARTITION BY f.resourceid)) + 1) days_open\n, (CASE\
+      \ WHEN (MAX(f.snapshot_date) OVER (PARTITION BY f.resourceid) = MAX(f.snapshot_date) OVER ()) THEN\
+      \ 'Open' ELSE 'Resolved' END) finding_status\nFROM findings f"
+  v_ai_governance_inventory:
+    dependsOn: {}
+    data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_inventory AS\nSELECT\n  \"\
+      accountId\" accountid\n, \"region\" region\n, \"configurationItem\".\"resourcetype\" resourcetype\n\
+      , \"configurationItem\".\"resourceId\" resourceid\n, \"configurationItem\".\"resourceName\" resourcename\n\
+      , \"configurationItem\".\"configurationitemcapturetime\" capture_time\n, \"dt\" dt\n, CAST(date_parse(\"\
+      dt\", '%Y-%m-%d') AS timestamp) snapshot_date\n, \"configurationItem\".\"resourcecreationtime\" creation_time\n\
+      , (CASE WHEN (\"configurationItem\".\"resourcetype\" = 'AWS::BedrockAgentCore::Runtime') THEN \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.modelId')\n        WHEN (\"configurationItem\".\"resourcetype\"\
+      \ = 'AWS::Bedrock::ApplicationInferenceProfile') THEN \"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.modelId')\n        ELSE null END) model_id\n, (CASE WHEN (\"configurationItem\"\
+      .\"resourcetype\" = 'AWS::BedrockAgentCore::Runtime') THEN \"json_extract_scalar\"(\"configurationItem\"\
+      .\"configuration\", '$.guardrailConfiguration.guardrailIdentifier') ELSE null END) guardrail_id\n\
+      , (CASE WHEN (\"configurationItem\".\"resourcetype\" = 'AWS::BedrockAgentCore::Runtime') THEN \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.roleArn')\n        WHEN (\"configurationItem\".\"resourcetype\"\
+      \ = 'AWS::Bedrock::KnowledgeBase') THEN \"json_extract_scalar\"(\"configurationItem\".\"configuration\"\
+      , '$.roleArn')\n        ELSE null END) iam_role_arn\n, (CASE WHEN (\"configurationItem\".\"resourcetype\"\
+      \ IN ('AWS::BedrockAgentCore::Runtime', 'AWS::BedrockAgentCore::BrowserCustom', 'AWS::BedrockAgentCore::CodeInterpreterCustom'))\
+      \ THEN \"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.networkConfiguration.networkMode')\
+      \ ELSE null END) network_mode\n, (CASE WHEN (\"configurationItem\".\"resourcetype\" = 'AWS::Bedrock::Guardrail')\
+      \ THEN \"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.kmsKeyArn')\n        WHEN\
+      \ (\"configurationItem\".\"resourcetype\" = 'AWS::Bedrock::KnowledgeBase') THEN \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.serverSideEncryptionConfiguration.kmsKeyArn')\n     \
+      \   WHEN (\"configurationItem\".\"resourcetype\" = 'AWS::SageMaker::EndpointConfig') THEN \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.kmsKeyId')\n        WHEN (\"configurationItem\".\"resourcetype\"\
+      \ = 'AWS::Bedrock::Prompt') THEN \"json_extract_scalar\"(\"configurationItem\".\"configuration\",\
+      \ '$.customerEncryptionKeyArn')\n        WHEN (\"configurationItem\".\"resourcetype\" = 'AWS::BedrockAgentCore::Gateway')\
+      \ THEN \"json_extract_scalar\"(\"configurationItem\".\"configuration\", '$.kmsKeyArn')\n        WHEN\
+      \ (\"configurationItem\".\"resourcetype\" = 'AWS::BedrockAgentCore::Memory') THEN \"json_extract_scalar\"\
+      (\"configurationItem\".\"configuration\", '$.encryptionKeyArn')\n        ELSE null END) encryption_key\n\
+      FROM\n  (cid_crcd_config\nCROSS JOIN UNNEST(\"configurationitems\") t (configurationItem))\nWHERE\
+      \ (regexp_like(\"dt\", '^[0-9]{4}-[0-9]{2}-[0-9]{2}$')\n  AND (datasource = 'ConfigSnapshot')\n  AND\
+      \ (\"configurationItem\".\"resourcetype\" IN ('AWS::Bedrock::Guardrail', 'AWS::Bedrock::KnowledgeBase',\
+      \ 'AWS::Bedrock::Prompt', 'AWS::Bedrock::ApplicationInferenceProfile', 'AWS::BedrockAgentCore::Runtime',\
+      \ 'AWS::BedrockAgentCore::Gateway', 'AWS::BedrockAgentCore::Memory', 'AWS::BedrockAgentCore::BrowserCustom',\
+      \ 'AWS::BedrockAgentCore::CodeInterpreterCustom', 'AWS::SageMaker::EndpointConfig', 'AWS::SageMaker::Model')))"
+  v_ai_governance_relationships:
+    dependsOn:
+      views:
+      - v_ai_governance_inventory
+    data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_relationships AS\nWITH\n \
+      \ inv AS (\n   SELECT *\n   FROM\n     awsconfig.v_ai_governance_inventory\n   WHERE (dt = (SELECT\
+      \ max(dt)\nFROM\n  awsconfig.v_ai_governance_inventory\n))\n) \nSELECT\n  a.accountid\n, a.region\n\
+      , a.resourcetype source_type\n, a.resourceid source_id\n, COALESCE(a.resourcename, a.resourceid) source_name\n\
+      , (CASE WHEN (a.guardrail_id IS NOT NULL) THEN 'Protected by guardrail' ELSE 'No guardrail attached'\
+      \ END) relationship\n, 'AWS::Bedrock::Guardrail' target_type\n, COALESCE(a.guardrail_id, 'NONE') target_id\n\
+      , COALESCE(g.resourcename, a.guardrail_id, 'No guardrail') target_name\n, 1 edge_count\nFROM\n  (inv\
+      \ a\nLEFT JOIN inv g ON ((g.resourceid = a.guardrail_id) AND (g.resourcetype = 'AWS::Bedrock::Guardrail')))\n\
+      WHERE (a.resourcetype = 'AWS::BedrockAgentCore::Runtime')\nUNION ALL SELECT\n  a.accountid\n, a.region\n\
+      , a.resourcetype\n, a.resourceid\n, COALESCE(a.resourcename, a.resourceid)\n, 'Invokes model'\n, 'Foundation\
+      \ model'\n, a.model_id\n, a.model_id\n, 1\nFROM\n  inv a\nWHERE ((a.resourcetype = 'AWS::BedrockAgentCore::Runtime')\
+      \ AND (a.model_id IS NOT NULL))\nUNION ALL SELECT\n  a.accountid\n, a.region\n, a.resourcetype\n,\
+      \ a.resourceid\n, COALESCE(a.resourcename, a.resourceid)\n, 'Assumes IAM role'\n, 'AWS::IAM::Role'\n\
+      , a.iam_role_arn\n, element_at(split(a.iam_role_arn, '/'), -1)\n, 1\nFROM\n  inv a\nWHERE ((a.resourcetype\
+      \ = 'AWS::BedrockAgentCore::Runtime') AND (a.iam_role_arn IS NOT NULL))\nUNION ALL SELECT\n  r.accountid\n\
+      , r.region\n, r.resourcetype\n, r.resourceid\n, COALESCE(r.resourcename, r.resourceid)\n, 'Encrypted\
+      \ by KMS key'\n, 'AWS::KMS::Key'\n, r.encryption_key\n, element_at(split(r.encryption_key, '/'), -1)\n\
+      , 1\nFROM\n  inv r\nWHERE (r.encryption_key IS NOT NULL)"

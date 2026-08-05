@@ -218,6 +218,156 @@ CalculatedFields:
   Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
     accountid))
   Name: account-name-id
+- DataSetIdentifier: ai_agents
+  Expression: ifelse({guardrail_status} = 'Missing' OR {iam_role_status} = 'Missing'
+    OR {network_mode} <> 'Private', {agent_id}, NULL)
+  Name: ai_agent_with_gap
+- DataSetIdentifier: ai_agents
+  Expression: distinct_count({agent_id})
+  Name: ai_agents_total
+- DataSetIdentifier: ai_agents
+  Expression: ifelse({guardrail_status} = 'Applied' AND {iam_role_status} = 'Assigned'
+    AND {network_mode} = 'Private', {agent_id}, NULL)
+  Name: ai_fully_governed_agent
+- DataSetIdentifier: ai_agents
+  Expression: distinct_countIf({agent_id}, {guardrail_status} = 'Applied')
+  Name: ai_guardrail_ok
+- DataSetIdentifier: ai_agents
+  Expression: (distinct_countIf({agent_id}, {guardrail_status} = 'Applied') / distinct_count({agent_id}))
+    * 100
+  Name: ai_guardrail_pct
+- DataSetIdentifier: ai_agents
+  Expression: distinct_countIf({agent_id}, {iam_role_status} = 'Assigned')
+  Name: ai_iam_ok
+- DataSetIdentifier: ai_agents
+  Expression: (distinct_countIf({agent_id}, {iam_role_status} = 'Assigned') / distinct_count({agent_id}))
+    * 100
+  Name: ai_iam_pct
+- DataSetIdentifier: ai_agents
+  Expression: distinct_countIf({agent_id}, {network_mode} = 'Private')
+  Name: ai_network_ok
+- DataSetIdentifier: ai_agents
+  Expression: (distinct_countIf({agent_id}, {network_mode} = 'Private') / distinct_count({agent_id}))
+    * 100
+  Name: ai_network_pct
+- DataSetIdentifier: ai_agents
+  Expression: distinct_countIf({agent_id}, {tracing_enabled} = 'Enabled')
+  Name: ai_tracing_ok
+- DataSetIdentifier: ai_agents
+  Expression: (distinct_countIf({agent_id}, {tracing_enabled} = 'Enabled') / distinct_count({agent_id}))
+    * 100
+  Name: ai_tracing_pct
+- DataSetIdentifier: ai_compliance
+  Expression: (countIf({compliance_type}, {compliance_type} = 'COMPLIANT') / count({compliance_type}))
+    * 100
+  Name: ai_compliance_pct
+- DataSetIdentifier: ai_compliance
+  Expression: distinct_count({ai_compliant_resource}) / (distinct_count({ai_compliant_resource})
+    + distinct_count({ai_non_compliant_resource}))
+  Name: ai_compliance_score
+- DataSetIdentifier: ai_compliance
+  Expression: ifelse({compliance_type} = 'COMPLIANT', {target_resource_id}, NULL)
+  Name: ai_compliant_resource
+- DataSetIdentifier: ai_compliance
+  Expression: ifelse({compliance_type} = 'COMPLIANT', {config_rule_name}, NULL)
+  Name: ai_compliant_rule
+- DataSetIdentifier: ai_compliance
+  Expression: ifelse({compliance_type} = 'NON_COMPLIANT', {target_resource_id}, NULL)
+  Name: ai_non_compliant_resource
+- DataSetIdentifier: ai_compliance
+  Expression: ifelse({compliance_type} = 'NON_COMPLIANT', {config_rule_name}, NULL)
+  Name: ai_non_compliant_rule
+- DataSetIdentifier: ai_compliance
+  Expression: distinct_count({target_resource_id})
+  Name: ai_total_resources
+- DataSetIdentifier: ai_compliance
+  Expression: '1'
+  Name: compliance_count
+- DataSetIdentifier: ai_compliance
+  Expression: truncDate('MM', {snapshot_date})
+  Name: snapshot_month
+- DataSetIdentifier: ai_inventory
+  Expression: ifelse(isNull({encryption_key}), 'Not encrypted', 'KMS encrypted')
+  Name: estate_encryption
+- DataSetIdentifier: ai_remediation
+  Expression: avg(min(ifelse({finding_status} = 'Resolved', {days_open}, NULL), [resourceid]))
+  Name: ai_avg_days_to_resolve
+- DataSetIdentifier: ai_remediation
+  Expression: max(ifelse({finding_status} = 'Open', {days_open}, NULL))
+  Name: ai_oldest_open_days
+- DataSetIdentifier: ai_remediation
+  Expression: ifelse({finding_status} = 'Open', resourceid, NULL)
+  Name: ai_open_finding
+- DataSetIdentifier: ai_remediation
+  Expression: ifelse({finding_status} = 'Open' AND priority = 'High', resourceid,
+    NULL)
+  Name: ai_open_high_finding
+- DataSetIdentifier: ai_agents
+  Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
+    accountid))
+  Name: account-name-id
+- DataSetIdentifier: ai_compliance
+  Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
+    accountid))
+  Name: account-name-id
+- DataSetIdentifier: ai_inventory
+  Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
+    accountid))
+  Name: account-name-id
+- DataSetIdentifier: ai_relationships
+  Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
+    accountid))
+  Name: account-name-id
+- DataSetIdentifier: ai_remediation
+  Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
+    accountid))
+  Name: account-name-id
+- DataSetIdentifier: ai_compliance
+  Expression: '''AI Governance'''
+  Name: ai-classification-lv1
+- DataSetIdentifier: ai_compliance
+  Expression: "ifelse(\n  contains({config_rule_name}, 'guardrail', CASE_INSENSITIVE),\
+    \ 'Guardrails',\n  contains({config_rule_name}, 'encryption', CASE_INSENSITIVE)\n\
+    \    OR contains({config_rule_name}, 'kms', CASE_INSENSITIVE), 'Encryption',\n\
+    \  contains({config_rule_name}, 'network', CASE_INSENSITIVE)\n    OR contains({config_rule_name},\
+    \ 'private', CASE_INSENSITIVE), 'Network',\n  contains({config_rule_name}, 'iam',\
+    \ CASE_INSENSITIVE)\n    OR contains({config_rule_name}, 'authorizer', CASE_INSENSITIVE),\
+    \ 'Identity',\n  contains({config_rule_name}, 'tracing', CASE_INSENSITIVE)\n \
+    \   OR contains({config_rule_name}, 'observability', CASE_INSENSITIVE),\n    'Observability',\n\
+    \  'Other')"
+  Name: ai-classification-lv2
+- DataSetIdentifier: ai_remediation
+  Expression: '''AI Governance'''
+  Name: ai-classification-lv1
+- DataSetIdentifier: ai_remediation
+  Expression: "ifelse(\n  contains({config_rule_name}, 'guardrail', CASE_INSENSITIVE),\
+    \ 'Guardrails',\n  contains({config_rule_name}, 'encryption', CASE_INSENSITIVE)\n\
+    \    OR contains({config_rule_name}, 'kms', CASE_INSENSITIVE), 'Encryption',\n\
+    \  contains({config_rule_name}, 'network', CASE_INSENSITIVE)\n    OR contains({config_rule_name},\
+    \ 'private', CASE_INSENSITIVE), 'Network',\n  contains({config_rule_name}, 'iam',\
+    \ CASE_INSENSITIVE)\n    OR contains({config_rule_name}, 'authorizer', CASE_INSENSITIVE),\
+    \ 'Identity',\n  contains({config_rule_name}, 'tracing', CASE_INSENSITIVE)\n \
+    \   OR contains({config_rule_name}, 'observability', CASE_INSENSITIVE),\n    'Observability',\n\
+    \  'Other')"
+  Name: ai-classification-lv2
+- DataSetIdentifier: ai_remediation
+  Expression: "ifelse(\n  {days_open} <= 7, '1. 0-7 days',\n  {days_open} <= 30, '2.\
+    \ 8-30 days',\n  {days_open} <= 90, '3. 31-90 days',\n  '4. 90+ days')"
+  Name: ai-finding-age-band
+- DataSetIdentifier: ai_agents
+  Expression: 'ifelse({guardrail_status} = ''Applied'', 0, 1)
+
+    + ifelse({iam_role_status} = ''Assigned'', 0, 1)
+
+    + ifelse({network_compliance} = ''Compliant'', 0, 1)
+
+    + ifelse({tracing_enabled} = ''Enabled'', 0, 1)'
+  Name: ai_control_gaps
+- DataSetIdentifier: ai_agents
+  Expression: "ifelse(\n  {ai_control_gaps} = 0, '0. All four controls pass',\n  {ai_control_gaps}\
+    \ = 1, '1. One control gap',\n  {ai_control_gaps} = 2, '2. Two control gaps',\n\
+    \  '3. Three or more gaps')"
+  Name: ai_risk_band
 ColumnConfigurations:
 - ColorsConfiguration:
     CustomColors:
@@ -255,6 +405,16 @@ DataSetIdentifierDeclarations:
   Identifier: config_inventory_lambda
 - DataSetArn: arn:aws:quicksight:::dataset/5c060ba7-4f02-4b10-8f55-a8672eb6eab0
   Identifier: config_event_rule_evaluation
+- DataSetArn: arn:aws:quicksight:::dataset/ai-governance-agents
+  Identifier: ai_agents
+- DataSetArn: arn:aws:quicksight:::dataset/ai-governance-compliance
+  Identifier: ai_compliance
+- DataSetArn: arn:aws:quicksight:::dataset/ai-governance-inventory
+  Identifier: ai_inventory
+- DataSetArn: arn:aws:quicksight:::dataset/ai-governance-relationships
+  Identifier: ai_relationships
+- DataSetArn: arn:aws:quicksight:::dataset/ai-governance-remediation
+  Identifier: ai_remediation
 FilterGroups:
 - CrossDataset: SINGLE_DATASET
   FilterGroupId: efbda0dd-47df-4d51-8272-d2bc75597e29
@@ -6418,6 +6578,690 @@ FilterGroups:
         VisualIds:
         - bafa647e-2d7b-4fbb-9a90-46f5b762d3de
   Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-gov-date
+  Filters:
+  - TimeRangeFilter:
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_compliance
+      FilterId: ai-f-gov-date
+      IncludeMaximum: true
+      IncludeMinimum: true
+      NullOption: NON_NULLS_ONLY
+      RangeMaximumValue:
+        RollingDate:
+          Expression: truncDate('DD', now())
+      RangeMinimumValue:
+        RollingDate:
+          Expression: addDateTime(-180, 'DD', truncDate('DD', now()))
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-gov-compliance
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliance_type
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-gov-compliance
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-gov-rule
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: config_rule_name
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-gov-rule
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-gov-restype
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: target_resource_type
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-gov-restype
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-date
+  Filters:
+  - TimeRangeFilter:
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_agents
+      FilterId: ai-f-agent-date
+      IncludeMaximum: true
+      IncludeMinimum: true
+      NullOption: NON_NULLS_ONLY
+      RangeMaximumValue:
+        RollingDate:
+          Expression: truncDate('DD', now())
+      RangeMinimumValue:
+        RollingDate:
+          Expression: addDateTime(-180, 'DD', truncDate('DD', now()))
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-guardrail
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: guardrail_status
+        DataSetIdentifier: ai_agents
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-agent-guardrail
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-iam
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: iam_role_status
+        DataSetIdentifier: ai_agents
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-agent-iam
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-network
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: network_mode
+        DataSetIdentifier: ai_agents
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-agent-network
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-model
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: model_id
+        DataSetIdentifier: ai_agents
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-agent-model
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-rem-date
+  Filters:
+  - TimeRangeFilter:
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_remediation
+      FilterId: ai-f-rem-date
+      IncludeMaximum: true
+      IncludeMinimum: true
+      NullOption: NON_NULLS_ONLY
+      RangeMaximumValue:
+        RollingDate:
+          Expression: truncDate('DD', now())
+      RangeMinimumValue:
+        RollingDate:
+          Expression: addDateTime(-180, 'DD', truncDate('DD', now()))
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-rem-priority
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: priority
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-rem-priority
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-rem-rule
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: config_rule_name
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-rem-rule
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-rem-restype
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: resource_type_extracted
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-rem-restype
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-area-noncompliant
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: compliance_type
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        CustomFilterConfiguration:
+          CategoryValue: NON_COMPLIANT
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+      FilterId: ai-f-area-nc
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-governance-overview
+        VisualIds:
+        - ai-area-by-service
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-tracker-latest
+  Filters:
+  - TopBottomFilter:
+      AggregationSortConfigurations:
+      - AggregationFunction:
+          DateAggregationFunction: MAX
+        Column:
+          ColumnName: snapshot_date
+          DataSetIdentifier: ai_compliance
+        SortDirection: DESC
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_compliance
+      FilterId: ai-f-tracker-latest
+      Limit: 1
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-governance-overview
+        VisualIds:
+        - ai-table-tracker
+        - ai-table-resources
+        - ai-donut-current
+        - ai-gauge-compliance
+        - ai-kpi-total
+        - ai-kpi-noncompliant
+        - ai-bar-by-service
+        - ai-heatmap-noncompliant-account-region
+        - ai-bar-top-failing
+        - ai-sankey-flow
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-tracker-ctl-ai-tracker-resource
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: target_resource_id
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-ai-tracker-resource
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-governance-overview
+        VisualIds:
+        - ai-donut-current
+        - ai-table-resources
+        - ai-table-tracker
+        - ai-heatmap-noncompliant-account-region
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-tracker-ctl-ai-tracker-restype
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: target_resource_type
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-ai-tracker-restype
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-governance-overview
+        VisualIds:
+        - ai-donut-current
+        - ai-table-resources
+        - ai-table-tracker
+        - ai-heatmap-noncompliant-account-region
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-tracker-ctl-ai-tracker-rule
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: config_rule_name
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-ai-tracker-rule
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-governance-overview
+        VisualIds:
+        - ai-donut-current
+        - ai-table-resources
+        - ai-table-tracker
+        - ai-heatmap-noncompliant-account-region
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agents-latest
+  Filters:
+  - TopBottomFilter:
+      AggregationSortConfigurations:
+      - AggregationFunction:
+          DateAggregationFunction: MAX
+        Column:
+          ColumnName: snapshot_date
+          DataSetIdentifier: ai_agents
+        SortDirection: DESC
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_agents
+      FilterId: ai-f-agents-latest
+      Limit: 1
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-agent-inventory
+        VisualIds:
+        - ai-kpi-agents-total
+        - ai-kpi-agents-governed
+        - ai-kpi-agents-gaps
+        - ai-gauge-guardrail
+        - ai-gauge-iam
+        - ai-gauge-network
+        - ai-gauge-tracing
+        - ai-bar-model-guardrail
+        - ai-table-roster
+        - ai-bar-guardrail-coverage-by-account
+        - ai-bar-compound-risk
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-inventory-latest
+  Filters:
+  - TopBottomFilter:
+      AggregationSortConfigurations:
+      - AggregationFunction:
+          DateAggregationFunction: MAX
+        Column:
+          ColumnName: snapshot_date
+          DataSetIdentifier: ai_inventory
+        SortDirection: DESC
+      Column:
+        ColumnName: snapshot_date
+        DataSetIdentifier: ai_inventory
+      FilterId: ai-f-inventory-latest
+      Limit: 1
+      TimeGranularity: DAY
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-agent-inventory
+        VisualIds:
+        - ai-bar-estate
+        - ai-table-estate
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-agent-tracing
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: tracing_enabled
+        DataSetIdentifier: ai_agents
+      Configuration:
+        FilterListConfiguration:
+          MatchOperator: CONTAINS
+          NullOption: NON_NULLS_ONLY
+          SelectAllOptions: FILTER_ALL_VALUES
+      FilterId: ai-f-agent-tracing
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-aging-open
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: finding_status
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        CustomFilterConfiguration:
+          CategoryValue: Open
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+      FilterId: ai-f-aging-open
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-remediation
+        VisualIds:
+        - ai-table-aging
+        - ai-bar-finding-age-bands
+        - ai-bar-remediation
+  Status: ENABLED
+- CrossDataset: SINGLE_DATASET
+  FilterGroupId: ai-fg-velocity-resolved
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: finding_status
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        CustomFilterConfiguration:
+          CategoryValue: Resolved
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+      FilterId: ai-f-velocity-resolved
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: SELECTED_VISUALS
+        SheetId: ai-remediation
+        VisualIds:
+        - ai-bar-velocity
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-governance-overview-fg-accountid
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: accountid
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiGovAccountID
+      FilterId: ai-governance-overview-flt-accountid
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-governance-overview-fg-accountname
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: account_name
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiGovAccountName
+      FilterId: ai-governance-overview-flt-accountname
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-governance-overview-fg-region
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: region
+        DataSetIdentifier: ai_compliance
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiGovRegion
+      FilterId: ai-governance-overview-flt-region
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-governance-overview
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-agent-inventory-fg-accountid
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: accountid
+        DataSetIdentifier: ai_agents
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiInvAccountID
+      FilterId: ai-agent-inventory-flt-accountid
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-agent-inventory-fg-accountname
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: account_name
+        DataSetIdentifier: ai_agents
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiInvAccountName
+      FilterId: ai-agent-inventory-flt-accountname
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-agent-inventory-fg-region
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: region
+        DataSetIdentifier: ai_agents
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiInvRegion
+      FilterId: ai-agent-inventory-flt-region
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-agent-inventory
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-remediation-fg-accountid
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: accountid
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiRemAccountID
+      FilterId: ai-remediation-flt-accountid
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-remediation-fg-accountname
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: account_name
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiRemAccountName
+      FilterId: ai-remediation-flt-accountname
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
+- CrossDataset: ALL_DATASETS
+  FilterGroupId: ai-remediation-fg-region
+  Filters:
+  - CategoryFilter:
+      Column:
+        ColumnName: region
+        DataSetIdentifier: ai_remediation
+      Configuration:
+        CustomFilterConfiguration:
+          MatchOperator: EQUALS
+          NullOption: NON_NULLS_ONLY
+          ParameterName: aiRemRegion
+      FilterId: ai-remediation-flt-region
+  ScopeConfiguration:
+    SelectedSheets:
+      SheetVisualScopingConfigurations:
+      - Scope: ALL_VISUALS
+        SheetId: ai-remediation
+  Status: ENABLED
 Options: {}
 ParameterDeclarations:
 - IntegerParameterDeclaration:
@@ -6755,6 +7599,60 @@ ParameterDeclarations:
       StaticValues: []
     Name: evCaptureTime
     TimeGranularity: DAY
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiGovAccountID
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiGovAccountName
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiGovRegion
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiInvAccountID
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiInvAccountName
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiInvRegion
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiRemAccountID
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiRemAccountName
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
+- StringParameterDeclaration:
+    DefaultValues: {}
+    Name: aiRemRegion
+    ParameterValueType: MULTI_VALUED
+    ValueWhenUnset:
+      ValueWhenUnsetOption: RECOMMENDED_VALUE
 Sheets:
 - ContentType: INTERACTIVE
   Layouts:
@@ -21956,6 +22854,4652 @@ Sheets:
         Visibility: HIDDEN
       VisualId: 6231d26d-a549-4fc0-a7d8-6c31a0c3ecf9
 - ContentType: INTERACTIVE
+  FilterControls:
+  - DateTimePicker:
+      DisplayOptions:
+        DateTimeFormat: YYYY-MM-DD
+        InfoIconLabelOptions:
+          InfoIconText: Trend visuals cover the selected range; posture KPIs show
+            the state at the end of it.
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-date
+      SourceFilterId: ai-f-gov-date
+      Title: Date Range
+      Type: DATE_RANGE
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter by evaluation result across the charts above.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-compliance
+      SourceFilterId: ai-f-gov-compliance
+      Title: Compliance Status
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Limit every chart on this sheet to selected Config rules.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-rule
+      SourceFilterId: ai-f-gov-rule
+      Title: Config Rule
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Limit to a specific AI service, e.g. Bedrock or SageMaker.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-restype
+      SourceFilterId: ai-f-gov-restype
+      Title: AI Service
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filters the tracker section only, not the charts above.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-tracker-ai-tracker-resource
+      SourceFilterId: ai-f-ai-tracker-resource
+      Title: Resource
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filters the tracker section only, not the charts above.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-tracker-ai-tracker-restype
+      SourceFilterId: ai-f-ai-tracker-restype
+      Title: AI Resource Type
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filters the tracker section only, not the charts above.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-tracker-ai-tracker-rule
+      SourceFilterId: ai-f-ai-tracker-rule
+      Title: AI Config Rule
+      Type: MULTI_SELECT
+  Layouts:
+  - Configuration:
+      GridLayout:
+        CanvasSizeOptions:
+          ScreenCanvasSizeOptions:
+            OptimizedViewPortWidth: 1600px
+            ResizeOption: FIXED
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-gov-header
+          ElementType: TEXT_BOX
+          RowIndex: 0
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-gauge-compliance
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 0
+          ColumnSpan: 9
+          ElementId: ai-kpi-total
+          ElementType: VISUAL
+          RowIndex: 9
+          RowSpan: 3
+        - ColumnIndex: 9
+          ColumnSpan: 9
+          ElementId: ai-kpi-noncompliant
+          ElementType: VISUAL
+          RowIndex: 9
+          RowSpan: 3
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-bar-by-service
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-sankey-flow
+          ElementType: VISUAL
+          RowIndex: 22
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-line-trend
+          ElementType: VISUAL
+          RowIndex: 32
+          RowSpan: 10
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-area-by-service
+          ElementType: VISUAL
+          RowIndex: 32
+          RowSpan: 10
+        - ColumnIndex: 18
+          ColumnSpan: 9
+          ElementId: ai-kpi-rules-compliant
+          ElementType: VISUAL
+          RowIndex: 9
+          RowSpan: 3
+        - ColumnIndex: 27
+          ColumnSpan: 9
+          ElementId: ai-kpi-rules-noncompliant
+          ElementType: VISUAL
+          RowIndex: 9
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-bar-top-failing
+          ElementType: VISUAL
+          RowIndex: 12
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-table-tracker
+          ElementType: VISUAL
+          RowIndex: 68
+          RowSpan: 14
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-tracker-header
+          ElementType: TEXT_BOX
+          RowIndex: 42
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-table-resources
+          ElementType: VISUAL
+          RowIndex: 60
+          RowSpan: 8
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-donut-current
+          ElementType: VISUAL
+          RowIndex: 12
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 12
+          ElementId: ai-fc-tracker-ai-tracker-resource
+          ElementType: FILTER_CONTROL
+          RowIndex: 45
+          RowSpan: 3
+        - ColumnIndex: 12
+          ColumnSpan: 12
+          ElementId: ai-fc-tracker-ai-tracker-restype
+          ElementType: FILTER_CONTROL
+          RowIndex: 45
+          RowSpan: 3
+        - ColumnIndex: 24
+          ColumnSpan: 12
+          ElementId: ai-fc-tracker-ai-tracker-rule
+          ElementType: FILTER_CONTROL
+          RowIndex: 45
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-heatmap-noncompliant-account-region
+          ElementType: VISUAL
+          RowIndex: 48
+          RowSpan: 12
+  Name: AI Governance
+  ParameterControls:
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: account_name
+            DataSetIdentifier: ai_compliance
+          SourceSheetControlId: ai-governance-overview-ctrl-accountname
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS account. Cascades with Account Name.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-governance-overview-ctrl-accountid
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: accountid
+          DataSetIdentifier: ai_compliance
+      SourceParameterName: aiGovAccountID
+      Title: Account ID
+      Type: MULTI_SELECT
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: accountid
+            DataSetIdentifier: ai_compliance
+          SourceSheetControlId: ai-governance-overview-ctrl-accountid
+      CommitMode: AUTO
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by account name. Cascades with Account ID.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-governance-overview-ctrl-accountname
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: account_name
+          DataSetIdentifier: ai_compliance
+      SourceParameterName: aiGovAccountName
+      Title: Account Name
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS Region.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-governance-overview-ctrl-region
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: region
+          DataSetIdentifier: ai_compliance
+      SourceParameterName: aiGovRegion
+      Title: Region
+      Type: MULTI_SELECT
+  SheetControlLayouts:
+  - Configuration:
+      GridLayout:
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 4
+          ElementId: ai-fc-date
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 4
+          ColumnSpan: 2
+          ElementId: ai-fc-compliance
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 4
+          ElementId: ai-fc-rule
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 10
+          ColumnSpan: 2
+          ElementId: ai-fc-restype
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 0
+          ColumnSpan: 3
+          ElementId: ai-governance-overview-ctrl-accountid
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+        - ColumnIndex: 3
+          ColumnSpan: 3
+          ElementId: ai-governance-overview-ctrl-accountname
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 3
+          ElementId: ai-governance-overview-ctrl-region
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+  SheetId: ai-governance-overview
+  TextBoxes:
+  - Content: "<text-box>\n  <inline font-size=\"36px\">\n    <b>AI Governance Posture</b>\n\
+      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">Unified\
+      \ compliance view of AI resources across Bedrock, AgentCore, and SageMaker.\
+      \ Source: AWS Config evaluations. Use filters above to scope by date, compliance\
+      \ status, rule, or AI service.</inline>\n</text-box>"
+    SheetTextBoxId: ai-gov-header
+  - Content: "<text-box>\n  <br/>\n  <inline font-size=\"20px\">\n    <b>AI compliance\
+      \ tracker</b>\n  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"\
+      14px\">Track compliance of individual AI resources and AWS Config rules, based\
+      \ on the latest configuration snapshot. Filter by date, compliance status, rule\
+      \ and AI service at the top. Use the controls below (or click on any visual)\
+      \ to apply additional filters to this section.</inline>\n</text-box>"
+    SheetTextBoxId: ai-tracker-header
+  Visuals:
+  - GaugeChartVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_compliance_pct
+                DataSetIdentifier: ai_compliance
+              FieldId: aigauge-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+                    Suffix: '%'
+        GaugeChartOptions:
+          Arc:
+            ArcAngle: 180.0
+            ArcThickness: MEDIUM
+          ArcAxis:
+            Range:
+              Max: 100.0
+              Min: 0.0
+            ReserveRange: 0
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontSize:
+              Relative: LARGE
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: '{ai_compliance_pct} >= 90'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: '{ai_compliance_pct} >= 70'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#B32728'
+                Expression: '{ai_compliance_pct} >= 0'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Percentage of\
+            \ rule evaluations passing in the latest configuration snapshot.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">AI governance compliance\
+            \ rate</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-gauge-compliance
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_total_resources
+                DataSetIdentifier: ai_compliance
+              FieldId: aikpi-total
+        KPIOptions:
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Governed AI resources</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-total
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_non_compliant_resource
+                DataSetIdentifier: ai_compliance
+              FieldId: aikpi-nc
+        KPIOptions:
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">AI resources with\
+            \ gaps</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-noncompliant
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bs-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: target_resource_type
+                DataSetIdentifier: ai_compliance
+              FieldId: aibs-cat
+            CustomLabel: Resource Type
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aibs-cat
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliance_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aibs-col
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_compliance
+                FieldId: aibs-val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: INCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aibs-val
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibs-cat
+                Label: Resource Type
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibs-col
+                Label: Compliance
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibs-val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_compliance
+              FieldId: aibs-val
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: aibs-col
+              FieldValue: COMPLIANT
+          - Color: '#B32728'
+            Element:
+              FieldId: aibs-col
+              FieldValue: NON_COMPLIANT
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Compliant vs non-compliant\
+            \ resources per AI service. Click to filter.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Compliance by AI\
+            \ service</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-by-service
+  - SankeyDiagramVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-sankey-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          SankeyDiagramAggregatedFieldWells:
+            Destination:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: config_rule_name
+                  DataSetIdentifier: ai_compliance
+                FieldId: aisk-dst
+            Source:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aisk-src
+            Weight:
+            - NumericalMeasureField:
+                AggregationFunction:
+                  SimpleNumericalAggregation: SUM
+                Column:
+                  ColumnName: compliance_count
+                  DataSetIdentifier: ai_compliance
+                FieldId: aisk-wgt
+        SortConfiguration:
+          DestinationItemsLimit:
+            ItemsLimit: 12
+          SourceItemsLimit:
+            ItemsLimit: 12
+          WeightSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aisk-wgt
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Width = evaluation\
+            \ volume. Shows which governance rules apply to which AI services.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Governance coverage:\
+            \ AI Service \u2192 Config Rule</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-sankey-flow
+  - LineChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-line-trend-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        FieldWells:
+          LineChartAggregatedFieldWells:
+            Category:
+            - DateDimensionField:
+                Column:
+                  ColumnName: snapshot_date
+                  DataSetIdentifier: ai_compliance
+                DateGranularity: WEEK
+                FieldId: ailt1
+                HierarchyId: ai-line-date-hier
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliance_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: ailt1c
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_compliance
+                FieldId: ailt1v
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        PrimaryYAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_compliance
+              FieldId: ailt1v
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        SortConfiguration: {}
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ailt1
+                Label: Date
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ailt1c
+                Label: Compliance
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ailt1v
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        Type: LINE
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: ailt1c
+              FieldValue: COMPLIANT
+          - Color: '#B32728'
+            Element:
+              FieldId: ailt1c
+              FieldValue: NON_COMPLIANT
+        XAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_compliance
+              FieldId: ailt1
+            CustomLabel: Date
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-line-date-hier
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Weekly distinct\
+            \ resource count by compliance status. Green rising = improving posture.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Compliance trend</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-line-trend
+  - LineChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-area-by-service-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        FieldWells:
+          LineChartAggregatedFieldWells:
+            Category:
+            - DateDimensionField:
+                Column:
+                  ColumnName: snapshot_date
+                  DataSetIdentifier: ai_compliance
+                DateGranularity: WEEK
+                FieldId: aiarea-cat
+                HierarchyId: ai-area-date-hier
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aiarea-col
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_compliance
+                FieldId: aiarea-val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        PrimaryYAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_compliance
+              FieldId: aiarea-val
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        SortConfiguration: {}
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aiarea-cat
+                Label: Date
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aiarea-col
+                Label: Resource Type
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aiarea-val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        Type: STACKED_AREA
+        XAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_compliance
+              FieldId: aiarea-cat
+            CustomLabel: Date
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-area-date-hier
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Declining area\
+            \ = governance gaps being closed. Identifies which services improve fastest.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Non-compliant trend\
+            \ by AI service</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-area-by-service
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_compliance
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rules-compliant-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rules-compliant-hier
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_compliant_resource
+                DataSetIdentifier: ai_compliance
+              FieldId: ai-kpi-rules-compliant-val
+        KPIOptions:
+          PrimaryValueDisplayType: COMPARISON
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          ProgressBar:
+            Visibility: VISIBLE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: CLASSIC
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rules-compliant-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rules-compliant-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_compliant_resource}),[DISTINCT_COUNT({ai_compliant_resource})
+                  DESC],1,[]) > 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_compliant_resource}),[DISTINCT_COUNT({ai_compliant_resource})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_compliant_resource}),[DISTINCT_COUNT({ai_compliant_resource})
+                  DESC],1,[]) > 0
+                IconOptions:
+                  Icon: CARET_UP
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_compliant_resource}),[DISTINCT_COUNT({ai_compliant_resource})
+                  DESC],1,[]) < 0
+                IconOptions:
+                  Icon: CARET_DOWN
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"14px\">Trend of number\
+            \ of\_</inline>\n  COMPLIANT\n  <inline font-size=\"14px\">\_AI resources</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rules-compliant
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_compliance
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rules-noncompliant-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rules-noncompliant-hier
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_non_compliant_resource
+                DataSetIdentifier: ai_compliance
+              FieldId: ai-kpi-rules-noncompliant-val
+        KPIOptions:
+          PrimaryValueDisplayType: COMPARISON
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          ProgressBar:
+            Visibility: HIDDEN
+          SecondaryValue:
+            Visibility: VISIBLE
+          SecondaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: CLASSIC
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rules-noncompliant-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rules-noncompliant-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_non_compliant_resource}),[DISTINCT_COUNT({ai_non_compliant_resource})
+                  DESC],1,[]) > 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_non_compliant_resource}),[DISTINCT_COUNT({ai_non_compliant_resource})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_non_compliant_resource}),[DISTINCT_COUNT({ai_non_compliant_resource})
+                  DESC],1,[]) > 0
+                IconOptions:
+                  Icon: CARET_UP
+        - ComparisonValue:
+            Icon:
+              CustomCondition:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_non_compliant_resource}),[DISTINCT_COUNT({ai_non_compliant_resource})
+                  DESC],1,[]) < 0
+                IconOptions:
+                  Icon: CARET_DOWN
+      Subtitle:
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"14px\">Trend of number\
+            \ of\_</inline>\n  NON_COMPLIANT\n  <inline font-size=\"14px\">\_AI resources</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rules-noncompliant
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-top-failing-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: CLUSTERED
+        CategoryAxis:
+          ScrollbarOptions:
+            Visibility: HIDDEN
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: config_rule_name
+                DataSetIdentifier: ai_compliance
+              FieldId: aibar-tf-cat
+            CustomLabel: Config rule
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: config_rule_name
+                  DataSetIdentifier: ai_compliance
+                FieldId: aibar-tf-cat
+            Colors: []
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: ai_non_compliant_resource
+                  DataSetIdentifier: ai_compliance
+                FieldId: aibar-tf-val
+        Legend:
+          Visibility: HIDDEN
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            ItemsLimit: 5
+            OtherCategories: EXCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aibar-tf-val
+          ColorItemsLimit:
+            OtherCategories: EXCLUDE
+          SmallMultiplesLimitConfiguration:
+            OtherCategories: EXCLUDE
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibar-tf-cat
+                Label: Config Rule
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibar-tf-val
+                Label: Non-compliant Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: ai_non_compliant_resource
+                DataSetIdentifier: ai_compliance
+              FieldId: aibar-tf-val
+            CustomLabel: Non-compliant resources
+        VisualPalette:
+          ChartColor: '#B32728'
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Rules with the\
+            \ most non-compliant resources in the selected period.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Top failing AI Config\
+            \ rules</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-top-failing
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: aitt-accountid
+            Width: 240px
+          - CustomLabel: Account Name
+            FieldId: aitt-accountname
+            Visibility: HIDDEN
+            Width: 200px
+          - CustomLabel: Region
+            FieldId: aitt-region
+            Width: 110px
+          - CustomLabel: Config rule
+            FieldId: aitt-rule
+            Width: 340px
+          - CustomLabel: AI resource type
+            FieldId: aitt-rtype
+            Width: 280px
+          - CustomLabel: Resource ID
+            FieldId: aitt-rid
+            Width: 260px
+          - CustomLabel: Status
+            FieldId: aitt-status
+            Width: 150px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-accountid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account_name
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-accountname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: config_rule_name
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-rule
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-rtype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_id
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-rid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliance_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitt-status
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            Values: []
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+          RowSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aitt-status
+          - FieldSort:
+              Direction: ASC
+              FieldId: aitt-rule
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+          RowAlternateColorOptions:
+            Status: DISABLED
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Cell:
+            FieldId: aitt-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#B32728'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "NON_COMPLIANT"'
+                  IconOptions:
+                    Icon: X
+        - Cell:
+            FieldId: aitt-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "COMPLIANT"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: aitt-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#FFB500'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "INSUFFICIENT_DATA"'
+                  IconOptions:
+                    Icon: FLAG
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every rule evaluation\
+            \ with the exact resource, for remediation follow-up.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>AI Config\
+            \ rules</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-tracker
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: aitr-accountid
+            Width: 250px
+          - CustomLabel: Account Name
+            FieldId: aitr-accountname
+            Visibility: HIDDEN
+            Width: 200px
+          - CustomLabel: Region
+            FieldId: aitr-region
+            Width: 120px
+          - CustomLabel: AI resource type
+            FieldId: aitr-rtype
+            Width: 300px
+          - CustomLabel: Resource ID
+            FieldId: aitr-rid
+            Width: 300px
+          - CustomLabel: Status
+            FieldId: aitr-status
+            Width: 150px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-accountid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account_name
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-accountname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-rtype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_id
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-rid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliance_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aitr-status
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            Values: []
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+          RowSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aitr-status
+          - FieldSort:
+              Direction: ASC
+              FieldId: aitr-rtype
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+          RowAlternateColorOptions:
+            Status: DISABLED
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Cell:
+            FieldId: aitr-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#B32728'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "NON_COMPLIANT"'
+                  IconOptions:
+                    Icon: X
+        - Cell:
+            FieldId: aitr-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "COMPLIANT"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: aitr-status
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#FFB500'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{compliance_type} = "INSUFFICIENT_DATA"'
+                  IconOptions:
+                    Icon: FLAG
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Each AI resource\
+            \ with its worst evaluation status.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>AI resource\
+            \ compliance</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-resources
+  - PieChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-donut-current-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        DataLabels:
+          CategoryLabelVisibility: HIDDEN
+          MeasureLabelVisibility: VISIBLE
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        DonutOptions:
+          ArcOptions:
+            ArcThickness: MEDIUM
+        FieldWells:
+          PieChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: compliance_type
+                  DataSetIdentifier: ai_compliance
+                FieldId: aidc-cat
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: target_resource_id
+                  DataSetIdentifier: ai_compliance
+                FieldId: aidc-val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aidc-val
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aidc-cat
+                Label: Compliance
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aidc-val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: aidc-cat
+              FieldValue: COMPLIANT
+          - Color: '#B32728'
+            Element:
+              FieldId: aidc-cat
+              FieldValue: NON_COMPLIANT
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Rule evaluations\
+            \ in the latest snapshot by result.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Current\
+            \ evaluation results</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-donut-current
+  - HeatMapVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-heatmap-noncompliant-account-region-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        ColorScale:
+          ColorFillType: GRADIENT
+          Colors:
+          - Color: '#BDBDBD'
+          - Color: '#B32728'
+        ColumnLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: region
+                DataSetIdentifier: ai_compliance
+              FieldId: ai-heatmap-noncompliant-account-region.region.2
+            CustomLabel: Region
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          LabelFontConfiguration:
+            FontSize:
+              Relative: LARGE
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          HeatMapAggregatedFieldWells:
+            Columns:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_compliance
+                FieldId: ai-heatmap-noncompliant-account-region.region.2
+            Rows:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_compliance
+                FieldId: ai-heatmap-noncompliant-account-region.account.1
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: ai_non_compliant_resource
+                  DataSetIdentifier: ai_compliance
+                FieldId: ai-heatmap-noncompliant-account-region.noncompliant.3
+        Legend:
+          Visibility: HIDDEN
+        RowLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: account-name-id
+                DataSetIdentifier: ai_compliance
+              FieldId: ai-heatmap-noncompliant-account-region.account.1
+            CustomLabel: Account
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        SortConfiguration:
+          HeatMapColumnSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-heatmap-noncompliant-account-region.region.2
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ai-heatmap-noncompliant-account-region.account.1
+                Label: Account
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-heatmap-noncompliant-account-region.region.2
+                Label: Region
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-heatmap-noncompliant-account-region.noncompliant.3
+                Label: Non-compliant Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Concentration\
+            \ of non-compliant AI resources across accounts and AWS Regions.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Non-compliant\
+            \ AI resources by account and Region</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-heatmap-noncompliant-account-region
+- ContentType: INTERACTIVE
+  FilterControls:
+  - DateTimePicker:
+      DisplayOptions:
+        DateTimeFormat: YYYY-MM-DD
+        InfoIconLabelOptions:
+          InfoIconText: Trend visuals cover the selected range; posture KPIs show
+            the state at the end of it.
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-date
+      SourceFilterId: ai-f-agent-date
+      Title: Date Range
+      Type: DATE_RANGE
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Applied means a guardrail is attached; Missing means unprotected.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-guardrail
+      SourceFilterId: ai-f-agent-guardrail
+      Title: Guardrail Status
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Whether the agent runtime has an execution role.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-iam
+      SourceFilterId: ai-f-agent-iam
+      Title: IAM Role Status
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Private keeps traffic off the public internet; Public does
+            not.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-network
+      SourceFilterId: ai-f-agent-network
+      Title: Network Mode
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter the fleet by the foundation model invoked.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-model
+      SourceFilterId: ai-f-agent-model
+      Title: Foundation Model
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Tracing enabled means agent calls are observable.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-agent-tracing
+      SourceFilterId: ai-f-agent-tracing
+      Title: Tracing
+      Type: MULTI_SELECT
+  Layouts:
+  - Configuration:
+      GridLayout:
+        CanvasSizeOptions:
+          ScreenCanvasSizeOptions:
+            OptimizedViewPortWidth: 1600px
+            ResizeOption: FIXED
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-agents-header
+          ElementType: TEXT_BOX
+          RowIndex: 0
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 12
+          ElementId: ai-kpi-agents-total
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 3
+        - ColumnIndex: 12
+          ColumnSpan: 12
+          ElementId: ai-kpi-agents-governed
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 3
+        - ColumnIndex: 24
+          ColumnSpan: 12
+          ElementId: ai-kpi-agents-gaps
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 9
+          ElementId: ai-gauge-guardrail
+          ElementType: VISUAL
+          RowIndex: 16
+          RowSpan: 8
+        - ColumnIndex: 9
+          ColumnSpan: 9
+          ElementId: ai-gauge-iam
+          ElementType: VISUAL
+          RowIndex: 16
+          RowSpan: 8
+        - ColumnIndex: 18
+          ColumnSpan: 9
+          ElementId: ai-gauge-network
+          ElementType: VISUAL
+          RowIndex: 16
+          RowSpan: 8
+        - ColumnIndex: 27
+          ColumnSpan: 9
+          ElementId: ai-gauge-tracing
+          ElementType: VISUAL
+          RowIndex: 16
+          RowSpan: 8
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-agents-section2
+          ElementType: TEXT_BOX
+          RowIndex: 34
+          RowSpan: 2
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-line-agents
+          ElementType: VISUAL
+          RowIndex: 36
+          RowSpan: 10
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-bar-model-guardrail
+          ElementType: VISUAL
+          RowIndex: 36
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-bar-estate
+          ElementType: VISUAL
+          RowIndex: 46
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-table-roster
+          ElementType: VISUAL
+          RowIndex: 66
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-inv-relationships-header
+          ElementType: TEXT_BOX
+          RowIndex: 78
+          RowSpan: 2
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-sankey-relationships
+          ElementType: VISUAL
+          RowIndex: 80
+          RowSpan: 12
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-table-relationships
+          ElementType: VISUAL
+          RowIndex: 80
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-table-estate
+          ElementType: VISUAL
+          RowIndex: 56
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-bar-guardrail-coverage-by-account
+          ElementType: VISUAL
+          RowIndex: 6
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-bar-compound-risk
+          ElementType: VISUAL
+          RowIndex: 24
+          RowSpan: 10
+  Name: AI Agent Inventory
+  ParameterControls:
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: account_name
+            DataSetIdentifier: ai_agents
+          SourceSheetControlId: ai-agent-inventory-ctrl-accountname
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS account. Cascades with Account Name.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-agent-inventory-ctrl-accountid
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: accountid
+          DataSetIdentifier: ai_agents
+      SourceParameterName: aiInvAccountID
+      Title: Account ID
+      Type: MULTI_SELECT
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: accountid
+            DataSetIdentifier: ai_agents
+          SourceSheetControlId: ai-agent-inventory-ctrl-accountid
+      CommitMode: AUTO
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by account name. Cascades with Account ID.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-agent-inventory-ctrl-accountname
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: account_name
+          DataSetIdentifier: ai_agents
+      SourceParameterName: aiInvAccountName
+      Title: Account Name
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS Region.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-agent-inventory-ctrl-region
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: region
+          DataSetIdentifier: ai_agents
+      SourceParameterName: aiInvRegion
+      Title: Region
+      Type: MULTI_SELECT
+  SheetControlLayouts:
+  - Configuration:
+      GridLayout:
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 4
+          ElementId: ai-fc-agent-date
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 4
+          ColumnSpan: 2
+          ElementId: ai-fc-agent-guardrail
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 2
+          ElementId: ai-fc-agent-iam
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 8
+          ColumnSpan: 2
+          ElementId: ai-fc-agent-network
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 10
+          ColumnSpan: 2
+          ElementId: ai-fc-agent-model
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 0
+          ColumnSpan: 2
+          ElementId: ai-fc-agent-tracing
+          ElementType: FILTER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+        - ColumnIndex: 0
+          ColumnSpan: 3
+          ElementId: ai-agent-inventory-ctrl-accountid
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 2
+          RowSpan: 1
+        - ColumnIndex: 3
+          ColumnSpan: 3
+          ElementId: ai-agent-inventory-ctrl-accountname
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 2
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 3
+          ElementId: ai-agent-inventory-ctrl-region
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 2
+          RowSpan: 1
+  SheetId: ai-agent-inventory
+  TextBoxes:
+  - Content: "<text-box>\n  <inline font-size=\"36px\">\n    <b>AI Agent Inventory</b>\n\
+      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">Agent\
+      \ fleet, foundation models, and the AI platform estate. Gauges score each control:\
+      \ green \u2265 90%, amber \u2265 70%, red below. Click any bar or treemap block\
+      \ to filter all visuals on this sheet.</inline>\n</text-box>"
+    SheetTextBoxId: ai-agents-header
+  - Content: "<text-box>\n  <inline font-size=\"20px\">\n    <b>Fleet Growth &amp;\
+      \ Model Distribution</b>\n  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\"\
+      \ font-size=\"14px\">Agent deployment timeline and foundation model usage across\
+      \ the fleet.</inline>\n</text-box>"
+    SheetTextBoxId: ai-agents-section2
+  - Content: "<text-box>\n  <block align=\"left\">\n    <inline color=\"#f2f2f2\"\
+      \ font-size=\"20px\">Resource Relationships</inline>\n  </block>\n  <br/>\n\
+      \  <block align=\"left\">\n    <inline color=\"#bdbdbd\" font-size=\"14px\"\
+      >Dependency map built from AWS Config configuration data: which guardrail protects\
+      \ which agent, which IAM role and model each agent uses, and what is encrypted\
+      \ with which KMS key.</inline>\n  </block>\n</text-box>"
+    SheetTextBoxId: ai-inv-relationships-header
+  Visuals:
+  - LineChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-line-agents-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        FieldWells:
+          LineChartAggregatedFieldWells:
+            Category:
+            - DateDimensionField:
+                Column:
+                  ColumnName: snapshot_date
+                  DataSetIdentifier: ai_agents
+                DateGranularity: DAY
+                FieldId: aila1
+                HierarchyId: ai-line-agents-hier
+            Colors: []
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: agent_id
+                  DataSetIdentifier: ai_agents
+                FieldId: aila1v
+        Legend:
+          Visibility: HIDDEN
+        PrimaryYAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: agent_id
+                DataSetIdentifier: ai_agents
+              FieldId: aila1v
+            CustomLabel: Agents
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        SortConfiguration: {}
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aila1
+                Label: Date
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aila1v
+                Label: Agents
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        Type: LINE
+        XAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_agents
+              FieldId: aila1
+            CustomLabel: Date
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-line-agents-hier
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Agents deployed\
+            \ over time</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Agent fleet growth</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-line-agents
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: agent_id
+                DataSetIdentifier: ai_agents
+              FieldId: ai-kpi-agents-total-val
+        KPIOptions:
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Total agents</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-agents-total
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_fully_governed_agent
+                DataSetIdentifier: ai_agents
+              FieldId: ai-kpi-agents-governed-val
+        KPIOptions:
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Fully governed agents</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-agents-governed
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups: []
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_agent_with_gap
+                DataSetIdentifier: ai_agents
+              FieldId: ai-kpi-agents-gaps-val
+        KPIOptions:
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration: {}
+      ColumnHierarchies: []
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Agents with governance\
+            \ gaps</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-agents-gaps
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-model-guardrail-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: model_id
+                DataSetIdentifier: ai_agents
+              FieldId: aibmg-cat
+            CustomLabel: Foundation model
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: model_id
+                  DataSetIdentifier: ai_agents
+                FieldId: aibmg-cat
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: guardrail_status
+                  DataSetIdentifier: ai_agents
+                FieldId: aibmg-col
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: agent_id
+                  DataSetIdentifier: ai_agents
+                FieldId: aibmg-val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aibmg-val
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibmg-cat
+                Label: Foundation Model
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibmg-col
+                Label: Guardrail
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibmg-val
+                Label: Agents
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: agent_id
+                DataSetIdentifier: ai_agents
+              FieldId: aibmg-val
+            CustomLabel: Agents
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: aibmg-col
+              FieldValue: Applied
+          - Color: '#B32728'
+            Element:
+              FieldId: aibmg-col
+              FieldValue: Missing
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Which foundation\
+            \ models run without safety controls. Red = agents on that model with\
+            \ no guardrail.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Models by guardrail\
+            \ coverage</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-model-guardrail
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: airt-accountid
+            Width: 240px
+          - CustomLabel: Account Name
+            FieldId: airt-accountname
+            Visibility: HIDDEN
+            Width: 200px
+          - CustomLabel: Region
+            FieldId: airt-region
+            Width: 110px
+          - CustomLabel: Agent
+            FieldId: airt-name
+            Width: 240px
+          - CustomLabel: Foundation model
+            FieldId: airt-model
+            Width: 300px
+          - CustomLabel: Guardrail
+            FieldId: airt-guardrail
+            Width: 130px
+          - CustomLabel: IAM role
+            FieldId: airt-iam
+            Width: 120px
+          - CustomLabel: Network
+            FieldId: airt-network
+            Width: 120px
+          - CustomLabel: Tracing
+            FieldId: airt-tracing
+            Width: 120px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-accountid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account_name
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-accountname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: agent_name
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-name
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: model_id
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-model
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: guardrail_status
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-guardrail
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: iam_role_status
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-iam
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: network_mode
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-network
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: tracing_enabled
+                  DataSetIdentifier: ai_agents
+                FieldId: airt-tracing
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            Values: []
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+          RowSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: airt-guardrail
+          - FieldSort:
+              Direction: ASC
+              FieldId: airt-name
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+          RowAlternateColorOptions:
+            Status: DISABLED
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Cell:
+            FieldId: airt-network
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{network_mode} = "Private"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: airt-network
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#B32728'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{network_mode} = "Public"'
+                  IconOptions:
+                    Icon: X
+        - Cell:
+            FieldId: airt-iam
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{iam_role_status} = "Assigned"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: airt-iam
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#B32728'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{iam_role_status} = "Missing"'
+                  IconOptions:
+                    Icon: X
+        - Cell:
+            FieldId: airt-tracing
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{tracing_enabled} = "Enabled"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: airt-tracing
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#FFB500'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{tracing_enabled} = "Disabled"'
+                  IconOptions:
+                    Icon: FLAG
+        - Cell:
+            FieldId: airt-guardrail
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#0E6C0E'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{guardrail_status} = "Applied"'
+                  IconOptions:
+                    Icon: CHECKMARK
+        - Cell:
+            FieldId: airt-guardrail
+            TextFormat:
+              Icon:
+                CustomCondition:
+                  Color: '#B32728'
+                  DisplayConfiguration:
+                    IconDisplayOption: ICON_ONLY
+                  Expression: '{guardrail_status} = "Missing"'
+                  IconOptions:
+                    Icon: X
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every deployed\
+            \ agent with its governance state, from the latest configuration snapshot.\
+            \ Red X = security control missing. Amber flag = tracing disabled: the\
+            \ agent runs without an audit trail (observability gap, fix before production).</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Agent roster</b>\n\
+            \  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-roster
+  - TreeMapVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-estate-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        ColorLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_inventory
+              FieldId: aibe-color
+            CustomLabel: Resources
+          Visibility: VISIBLE
+        ColorScale:
+          ColorFillType: GRADIENT
+          Colors:
+          - Color: '#37474F'
+          - Color: '#607D8B'
+          - Color: '#B0BEC5'
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          TreeMapAggregatedFieldWells:
+            Colors:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_inventory
+                FieldId: aibe-color
+            Groups:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resourcetype
+                  DataSetIdentifier: ai_inventory
+                FieldId: aibe-cat
+            Sizes:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_inventory
+                FieldId: aibe-val
+        GroupLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourcetype
+                DataSetIdentifier: ai_inventory
+              FieldId: aibe-cat
+            CustomLabel: Resource Type
+          Visibility: VISIBLE
+        Legend:
+          Visibility: HIDDEN
+        SizeLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_inventory
+              FieldId: aibe-val
+            CustomLabel: Resources
+          Visibility: VISIBLE
+        SortConfiguration: {}
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibe-cat
+                Label: Resource Type
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibe-val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Agents are only\
+            \ part of the estate. Knowledge bases, gateways, memories, guardrails\
+            \ and SageMaker resources need governance too. Darker = more resources.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">AI platform estate</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-estate
+  - GaugeChartVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_guardrail_pct
+                DataSetIdentifier: ai_agents
+              FieldId: ai-gauge-guardrail-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+                    Suffix: '%'
+        GaugeChartOptions:
+          Arc:
+            ArcAngle: 180.0
+            ArcThickness: MEDIUM
+          ArcAxis:
+            Range:
+              Max: 100.0
+              Min: 0.0
+            ReserveRange: 0
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontSize:
+              Relative: LARGE
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: '{ai_guardrail_pct} >= 90'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: '{ai_guardrail_pct} >= 70'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#B32728'
+                Expression: '{ai_guardrail_pct} >= 0'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Percentage of\
+            \ agents with a Bedrock Guardrail attached.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Guardrail coverage</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-gauge-guardrail
+  - GaugeChartVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_iam_pct
+                DataSetIdentifier: ai_agents
+              FieldId: ai-gauge-iam-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+                    Suffix: '%'
+        GaugeChartOptions:
+          Arc:
+            ArcAngle: 180.0
+            ArcThickness: MEDIUM
+          ArcAxis:
+            Range:
+              Max: 100.0
+              Min: 0.0
+            ReserveRange: 0
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontSize:
+              Relative: LARGE
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: '{ai_iam_pct} >= 90'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: '{ai_iam_pct} >= 70'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#B32728'
+                Expression: '{ai_iam_pct} >= 0'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Percentage of\
+            \ agents with a dedicated IAM role.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">IAM role assignment</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-gauge-iam
+  - GaugeChartVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_network_pct
+                DataSetIdentifier: ai_agents
+              FieldId: ai-gauge-network-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+                    Suffix: '%'
+        GaugeChartOptions:
+          Arc:
+            ArcAngle: 180.0
+            ArcThickness: MEDIUM
+          ArcAxis:
+            Range:
+              Max: 100.0
+              Min: 0.0
+            ReserveRange: 0
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontSize:
+              Relative: LARGE
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: '{ai_network_pct} >= 90'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: '{ai_network_pct} >= 70'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#B32728'
+                Expression: '{ai_network_pct} >= 0'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Percentage of\
+            \ agents on a private network.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Network security</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-gauge-network
+  - GaugeChartVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_tracing_pct
+                DataSetIdentifier: ai_agents
+              FieldId: ai-gauge-tracing-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+                    Suffix: '%'
+        GaugeChartOptions:
+          Arc:
+            ArcAngle: 180.0
+            ArcThickness: MEDIUM
+          ArcAxis:
+            Range:
+              Max: 100.0
+              Min: 0.0
+            ReserveRange: 0
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontSize:
+              Relative: LARGE
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: '{ai_tracing_pct} >= 90'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: '{ai_tracing_pct} >= 70'
+        - Arc:
+            ForegroundColor:
+              Solid:
+                Color: '#B32728'
+                Expression: '{ai_tracing_pct} >= 0'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Percentage of\
+            \ agents with observability for audit trails.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Tracing enabled</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-gauge-tracing
+  - SankeyDiagramVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-sankey-relationships-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          SankeyDiagramAggregatedFieldWells:
+            Destination:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: relationship
+                  DataSetIdentifier: ai_relationships
+                FieldId: airel-target
+            Source:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: source_type
+                  DataSetIdentifier: ai_relationships
+                FieldId: airel-source
+            Weight:
+            - NumericalMeasureField:
+                AggregationFunction:
+                  SimpleNumericalAggregation: SUM
+                Column:
+                  ColumnName: edge_count
+                  DataSetIdentifier: ai_relationships
+                FieldId: airel-weight
+        SortConfiguration:
+          DestinationItemsLimit:
+            ItemsLimit: 10
+          SourceItemsLimit:
+            ItemsLimit: 10
+          WeightSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: airel-weight
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Relationship flow\
+            \ by resource type. Grouped by type rather than by individual resource\
+            \ so the map stays readable as the estate grows; use the table for per-resource\
+            \ detail.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Resource relationship\
+            \ map</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-sankey-relationships
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: airelt-acct
+            Width: 220px
+          - CustomLabel: Region
+            FieldId: airelt-region
+            Width: 100px
+          - CustomLabel: Source resource
+            FieldId: airelt-sname
+            Width: 200px
+          - CustomLabel: Source type
+            FieldId: airelt-stype
+            Width: 260px
+          - CustomLabel: Relationship
+            FieldId: airelt-rel
+            Width: 180px
+          - CustomLabel: Target resource
+            FieldId: airelt-tname
+            Width: 200px
+          - CustomLabel: Target type
+            FieldId: airelt-ttype
+            Width: 220px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-acct
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: source_name
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-sname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: relationship
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-rel
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_name
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-tname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: source_type
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-stype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_type
+                  DataSetIdentifier: ai_relationships
+                FieldId: airelt-ttype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            Values: []
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every dependency\
+            \ edge discovered from AWS Config configuration data.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Resource relationships</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-relationships
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: aite-acct
+            Width: 230px
+          - CustomLabel: Region
+            FieldId: aite-region
+            Width: 110px
+          - CustomLabel: Resource type
+            FieldId: aite-rtype
+            Width: 280px
+          - CustomLabel: Resource name
+            FieldId: aite-rname
+            Width: 220px
+          - CustomLabel: Resource ID
+            FieldId: aite-rid
+            Width: 210px
+          - CustomLabel: Network
+            FieldId: aite-net
+            Width: 110px
+          - CustomLabel: Encryption
+            FieldId: aite-enc
+            Width: 130px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-acct
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resourcetype
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-rtype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resourcename
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-rname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-rid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: network_mode
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-net
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: estate_encryption
+                  DataSetIdentifier: ai_inventory
+                FieldId: aite-enc
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            Values: []
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+          RowSort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: aite-rtype
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every AI resource\
+            \ AWS Config records in the latest snapshot. This is the detail behind\
+            \ the count cards above: what each resource is, where it lives, and its\
+            \ security posture.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">AI platform estate\
+            \ inventory</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-estate
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-guardrail-coverage-by-account-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+              Visibility: VISIBLE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: account-name-id
+                DataSetIdentifier: ai_agents
+              FieldId: ai-bar-guardrail-coverage-by-account.cat
+            CustomLabel: Account
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_agents
+                FieldId: ai-bar-guardrail-coverage-by-account.cat
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: guardrail_status
+                  DataSetIdentifier: ai_agents
+                FieldId: ai-bar-guardrail-coverage-by-account.grp
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: agent_id
+                  DataSetIdentifier: ai_agents
+                FieldId: ai-bar-guardrail-coverage-by-account.val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: ai-bar-guardrail-coverage-by-account.cat
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ai-bar-guardrail-coverage-by-account.cat
+                Label: Account
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-bar-guardrail-coverage-by-account.grp
+                Label: Guardrail
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-bar-guardrail-coverage-by-account.val
+                Label: Agents
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: agent_id
+                DataSetIdentifier: ai_agents
+              FieldId: ai-bar-guardrail-coverage-by-account.val
+            CustomLabel: Agents
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: ai-bar-guardrail-coverage-by-account.grp
+              FieldValue: Applied
+          - Color: '#B32728'
+            Element:
+              FieldId: ai-bar-guardrail-coverage-by-account.grp
+              FieldValue: Missing
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Agents with a\
+            \ guardrail attached versus agents running unprotected, per account. Replaces\
+            \ four resource counts already shown by the estate treemap.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Agent guardrail\
+            \ coverage by account</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-guardrail-coverage-by-account
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-compound-risk-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: CLUSTERED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: ai_risk_band
+                DataSetIdentifier: ai_agents
+              FieldId: ai-bar-compound-risk.cat
+            CustomLabel: Governance state
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: ai_risk_band
+                  DataSetIdentifier: ai_agents
+                FieldId: ai-bar-compound-risk.cat
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: agent_id
+                  DataSetIdentifier: ai_agents
+                FieldId: ai-bar-compound-risk.val
+        Legend:
+          Visibility: HIDDEN
+        Orientation: VERTICAL
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: ai-bar-compound-risk.cat
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ai-bar-compound-risk.cat
+                Label: Governance state
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-bar-compound-risk.val
+                Label: Agents
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: agent_id
+                DataSetIdentifier: ai_agents
+              FieldId: ai-bar-compound-risk.val
+            CustomLabel: Agents
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#0E6C0E'
+            Element:
+              FieldId: ai-bar-compound-risk.cat
+              FieldValue: 0. All four controls pass
+          - Color: '#FFB500'
+            Element:
+              FieldId: ai-bar-compound-risk.cat
+              FieldValue: 1. One control gap
+          - Color: '#FC850D'
+            Element:
+              FieldId: ai-bar-compound-risk.cat
+              FieldValue: 2. Two control gaps
+          - Color: '#B32728'
+            Element:
+              FieldId: ai-bar-compound-risk.cat
+              FieldValue: 3. Three or more gaps
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Compound risk\
+            \ across all four controls, including tracing. The Fully governed KPI\
+            \ above counts the three security controls only, so it reads higher: agents\
+            \ that are secure but unobservable land in the one-gap band. Click a bar\
+            \ to filter the sheet and see which accounts and agents it covers.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Agents\
+            \ by number of failing controls</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-compound-risk
+- ContentType: INTERACTIVE
+  FilterControls:
+  - DateTimePicker:
+      DisplayOptions:
+        DateTimeFormat: YYYY-MM-DD
+        InfoIconLabelOptions:
+          InfoIconText: Trend visuals cover the selected range; posture KPIs show
+            the state at the end of it.
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-rem-date
+      SourceFilterId: ai-f-rem-date
+      Title: Date Range
+      Type: DATE_RANGE
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: High covers AgentCore; Medium Bedrock and SageMaker.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-rem-priority
+      SourceFilterId: ai-f-rem-priority
+      Title: Priority
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Limit the backlog to selected Config rules.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-rem-rule
+      SourceFilterId: ai-f-rem-rule
+      Title: Config Rule
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Limit the backlog to a resource type.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      FilterControlId: ai-fc-rem-restype
+      SourceFilterId: ai-f-rem-restype
+      Title: Resource Type
+      Type: MULTI_SELECT
+  Layouts:
+  - Configuration:
+      GridLayout:
+        CanvasSizeOptions:
+          ScreenCanvasSizeOptions:
+            OptimizedViewPortWidth: 1600px
+            ResizeOption: FIXED
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-rem-header
+          ElementType: TEXT_BOX
+          RowIndex: 0
+          RowSpan: 3
+        - ColumnIndex: 0
+          ColumnSpan: 9
+          ElementId: ai-kpi-rem-open
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 9
+          ColumnSpan: 9
+          ElementId: ai-kpi-rem-high
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 18
+          ColumnSpan: 9
+          ElementId: ai-kpi-rem-mttr
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 27
+          ColumnSpan: 9
+          ElementId: ai-kpi-rem-oldest
+          ElementType: VISUAL
+          RowIndex: 3
+          RowSpan: 6
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-bar-remediation
+          ElementType: VISUAL
+          RowIndex: 9
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-rem-section2
+          ElementType: TEXT_BOX
+          RowIndex: 19
+          RowSpan: 2
+        - ColumnIndex: 0
+          ColumnSpan: 18
+          ElementId: ai-area-remediation
+          ElementType: VISUAL
+          RowIndex: 21
+          RowSpan: 10
+        - ColumnIndex: 18
+          ColumnSpan: 18
+          ElementId: ai-bar-velocity
+          ElementType: VISUAL
+          RowIndex: 21
+          RowSpan: 10
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-table-aging
+          ElementType: VISUAL
+          RowIndex: 41
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 36
+          ElementId: ai-bar-finding-age-bands
+          ElementType: VISUAL
+          RowIndex: 31
+          RowSpan: 10
+  Name: AI Remediation Activity
+  ParameterControls:
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: account_name
+            DataSetIdentifier: ai_remediation
+          SourceSheetControlId: ai-remediation-ctrl-accountname
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS account. Cascades with Account Name.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-remediation-ctrl-accountid
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: accountid
+          DataSetIdentifier: ai_remediation
+      SourceParameterName: aiRemAccountID
+      Title: Account ID
+      Type: MULTI_SELECT
+  - Dropdown:
+      CascadingControlConfiguration:
+        SourceControls:
+        - ColumnToMatch:
+            ColumnName: accountid
+            DataSetIdentifier: ai_remediation
+          SourceSheetControlId: ai-remediation-ctrl-accountid
+      CommitMode: AUTO
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by account name. Cascades with Account ID.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-remediation-ctrl-accountname
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: account_name
+          DataSetIdentifier: ai_remediation
+      SourceParameterName: aiRemAccountName
+      Title: Account Name
+      Type: MULTI_SELECT
+  - Dropdown:
+      DisplayOptions:
+        InfoIconLabelOptions:
+          InfoIconText: Filter this tab by AWS Region.
+          Visibility: VISIBLE
+        SelectAllOptions:
+          Visibility: VISIBLE
+        TitleOptions:
+          FontConfiguration:
+            FontSize:
+              Relative: MEDIUM
+          Visibility: VISIBLE
+      ParameterControlId: ai-remediation-ctrl-region
+      SelectableValues:
+        LinkToDataSetColumn:
+          ColumnName: region
+          DataSetIdentifier: ai_remediation
+      SourceParameterName: aiRemRegion
+      Title: Region
+      Type: MULTI_SELECT
+  SheetControlLayouts:
+  - Configuration:
+      GridLayout:
+        Elements:
+        - ColumnIndex: 0
+          ColumnSpan: 4
+          ElementId: ai-fc-rem-date
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 4
+          ColumnSpan: 2
+          ElementId: ai-fc-rem-priority
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 4
+          ElementId: ai-fc-rem-rule
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 10
+          ColumnSpan: 2
+          ElementId: ai-fc-rem-restype
+          ElementType: FILTER_CONTROL
+          RowIndex: 0
+          RowSpan: 1
+        - ColumnIndex: 0
+          ColumnSpan: 3
+          ElementId: ai-remediation-ctrl-accountid
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+        - ColumnIndex: 3
+          ColumnSpan: 3
+          ElementId: ai-remediation-ctrl-accountname
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+        - ColumnIndex: 6
+          ColumnSpan: 3
+          ElementId: ai-remediation-ctrl-region
+          ElementType: PARAMETER_CONTROL
+          RowIndex: 1
+          RowSpan: 1
+  SheetId: ai-remediation
+  TextBoxes:
+  - Content: "<text-box>\n  <inline font-size=\"36px\">\n    <b>AI Remediation Activity</b>\n\
+      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"16px\">Finding\
+      \ backlog, resolution speed, and remediation progress over time. Priority: High\
+      \ (AgentCore), Medium (Bedrock/SageMaker).</inline>\n</text-box>"
+    SheetTextBoxId: ai-rem-header
+  - Content: "<text-box>\n  <inline font-size=\"20px\">\n    <b>Remediation Progress</b>\n\
+      \  </inline>\n  <br/>\n  <inline color=\"#bdbdbd\" font-size=\"14px\">Declining\
+      \ trend = successful governance. Velocity shows whether the remediation program\
+      \ keeps up with new findings.</inline>\n</text-box>"
+    SheetTextBoxId: ai-rem-section2
+  Visuals:
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-brem-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: config_rule_name
+                DataSetIdentifier: ai_remediation
+              FieldId: aibrem1
+            CustomLabel: Config Rule
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: config_rule_name
+                  DataSetIdentifier: ai_remediation
+                FieldId: aibrem1
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: priority
+                  DataSetIdentifier: ai_remediation
+                FieldId: aibrem1c
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_remediation
+                FieldId: aibrem1v
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        Orientation: HORIZONTAL
+        SortConfiguration:
+          CategoryItemsLimit:
+            OtherCategories: INCLUDE
+          CategorySort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aibrem1v
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibrem1
+                Label: Config Rule
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibrem1c
+                Label: Priority
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibrem1v
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_remediation
+              FieldId: aibrem1v
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#B32728'
+            Element:
+              FieldId: aibrem1c
+              FieldValue: High
+          - Color: '#FC850D'
+            Element:
+              FieldId: aibrem1c
+              FieldValue: Medium
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Open findings\
+            \ per AWS Config rule, coloured by priority: red is High (AgentCore),\
+            \ orange is Medium (Bedrock and SageMaker). Click a bar to filter the\
+            \ sheet.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Findings\
+            \ by Config rule</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-remediation
+  - LineChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-area-remediation-xfilter
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        FieldWells:
+          LineChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: dt
+                  DataSetIdentifier: ai_remediation
+                FieldId: ailr1
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resource_type_extracted
+                  DataSetIdentifier: ai_remediation
+                FieldId: ailr1c
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_remediation
+                FieldId: ailr1v
+        Legend:
+          Position: RIGHT
+          Visibility: VISIBLE
+        PrimaryYAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_remediation
+              FieldId: ailr1v
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        SortConfiguration: {}
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ailr1
+                Label: Date
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ailr1c
+                Label: Resource Type
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ailr1v
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        Type: LINE
+        XAxisLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: dt
+                DataSetIdentifier: ai_remediation
+              FieldId: ailr1
+            CustomLabel: Date
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Non-compliant\
+            \ findings declining over time</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Remediation trend\
+            \ by resource type</inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-area-remediation
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_remediation
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rem-open-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rem-open-hier
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_open_finding
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-kpi-rem-open-val
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rem-open-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rem-open-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_open_finding}),[DISTINCT_COUNT({ai_open_finding})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: difference(DISTINCT_COUNT({ai_open_finding}),[DISTINCT_COUNT({ai_open_finding})
+                  DESC],1,[]) = 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_open_finding}),[DISTINCT_COUNT({ai_open_finding})
+                  DESC],1,[]) > 0
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Open findings</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rem-open
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_remediation
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rem-high-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rem-high-hier
+          Values:
+          - CategoricalMeasureField:
+              AggregationFunction: DISTINCT_COUNT
+              Column:
+                ColumnName: ai_open_high_finding
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-kpi-rem-high-val
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rem-high-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rem-high-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference(DISTINCT_COUNT({ai_open_high_finding}),[DISTINCT_COUNT({ai_open_high_finding})
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: difference(DISTINCT_COUNT({ai_open_high_finding}),[DISTINCT_COUNT({ai_open_high_finding})
+                  DESC],1,[]) = 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference(DISTINCT_COUNT({ai_open_high_finding}),[DISTINCT_COUNT({ai_open_high_finding})
+                  DESC],1,[]) > 0
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">High priority open</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rem-high
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_remediation
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rem-mttr-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rem-mttr-hier
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_avg_days_to_resolve
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-kpi-rem-mttr-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rem-mttr-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rem-mttr-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference({ai_avg_days_to_resolve},[{ai_avg_days_to_resolve}
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: difference({ai_avg_days_to_resolve},[{ai_avg_days_to_resolve}
+                  DESC],1,[]) = 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference({ai_avg_days_to_resolve},[{ai_avg_days_to_resolve}
+                  DESC],1,[]) > 0
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Avg days to resolve</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rem-mttr
+  - KPIVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldWells:
+          TargetValues: []
+          TrendGroups:
+          - DateDimensionField:
+              Column:
+                ColumnName: snapshot_date
+                DataSetIdentifier: ai_remediation
+              DateGranularity: MONTH
+              FieldId: ai-kpi-rem-oldest-trend
+              FormatConfiguration:
+                DateTimeFormat: MMM YYYY
+                NullValueFormatConfiguration:
+                  NullString: 'null'
+              HierarchyId: ai-kpi-rem-oldest-hier
+          Values:
+          - NumericalMeasureField:
+              Column:
+                ColumnName: ai_oldest_open_days
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-kpi-rem-oldest-val
+              FormatConfiguration:
+                FormatConfiguration:
+                  NumberDisplayFormatConfiguration:
+                    DecimalPlacesConfiguration:
+                      DecimalPlaces: 0
+                    NumberScale: NONE
+        KPIOptions:
+          Comparison:
+            ComparisonMethod: DIFFERENCE
+          PrimaryValueDisplayType: ACTUAL
+          PrimaryValueFontConfiguration:
+            FontColor: '#DFE3E4'
+            FontSize:
+              Relative: EXTRA_LARGE
+          SecondaryValueFontConfiguration:
+            FontSize:
+              Relative: EXTRA_LARGE
+          Sparkline:
+            TooltipVisibility: HIDDEN
+            Type: AREA
+            Visibility: VISIBLE
+          VisualLayoutOptions:
+            StandardLayout:
+              Type: VERTICAL
+        SortConfiguration:
+          TrendGroupSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: ai-kpi-rem-oldest-trend
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: ai-kpi-rem-oldest-hier
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#2CAD00'
+                Expression: difference({ai_oldest_open_days},[{ai_oldest_open_days}
+                  DESC],1,[]) < 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#FFB500'
+                Expression: difference({ai_oldest_open_days},[{ai_oldest_open_days}
+                  DESC],1,[]) = 0
+        - ComparisonValue:
+            TextColor:
+              Solid:
+                Color: '#DE3B00'
+                Expression: difference({ai_oldest_open_days},[{ai_oldest_open_days}
+                  DESC],1,[]) > 0
+      Subtitle:
+        Visibility: HIDDEN
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Oldest open finding</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-kpi-rem-oldest
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-velocity-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: CLUSTERED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: last_seen
+                DataSetIdentifier: ai_remediation
+              FieldId: aibv-cat
+            CustomLabel: Week resolved
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          Visibility: HIDDEN
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - DateDimensionField:
+                Column:
+                  ColumnName: last_seen
+                  DataSetIdentifier: ai_remediation
+                DateGranularity: WEEK
+                FieldId: aibv-cat
+                HierarchyId: aibv-hier
+            Colors: []
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: resourceid
+                  DataSetIdentifier: ai_remediation
+                FieldId: aibv-val
+        Legend:
+          Visibility: HIDDEN
+        Orientation: VERTICAL
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: aibv-cat
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: aibv-cat
+                Label: Last Seen
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: aibv-val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: resourceid
+                DataSetIdentifier: ai_remediation
+              FieldId: aibv-val
+            CustomLabel: Findings resolved
+        VisualPalette:
+          ChartColor: '#0E6C0E'
+      ColumnHierarchies:
+      - DateTimeHierarchy:
+          DrillDownFilters: []
+          HierarchyId: aibv-hier
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Findings resolved\
+            \ per week. Steady bars = the program keeps up with new findings.</inline>\n\
+            </visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">Remediation velocity</inline>\n\
+            </visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-velocity
+  - TableVisual:
+      Actions: []
+      ChartConfiguration:
+        FieldOptions:
+          SelectedFieldOptions:
+          - CustomLabel: Account
+            FieldId: aita-accountid
+            Width: 230px
+          - CustomLabel: Account Name
+            FieldId: aita-accountname
+            Visibility: HIDDEN
+            Width: 200px
+          - CustomLabel: Region
+            FieldId: aita-region
+            Width: 110px
+          - CustomLabel: Config rule
+            FieldId: aita-rule
+            Width: 300px
+          - CustomLabel: AI resource type
+            FieldId: aita-rtype
+            Width: 230px
+          - CustomLabel: Resource
+            FieldId: aita-rid
+            Width: 210px
+          - CustomLabel: Priority
+            FieldId: aita-prio
+            Width: 110px
+          - CustomLabel: First seen
+            FieldId: aita-first
+            Width: 140px
+          - CustomLabel: Days open
+            FieldId: aita-days
+            Width: 110px
+        FieldWells:
+          TableAggregatedFieldWells:
+            GroupBy:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account-name-id
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-accountid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: account_name
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-accountname
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: region
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-region
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: config_rule_name
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-rule
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: resource_type_extracted
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-rtype
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: target_resource_id
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-rid
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: priority
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-prio
+                FormatConfiguration:
+                  NullValueFormatConfiguration:
+                    NullString: '-'
+            - DateDimensionField:
+                Column:
+                  ColumnName: first_seen
+                  DataSetIdentifier: ai_remediation
+                DateGranularity: DAY
+                FieldId: aita-first
+                FormatConfiguration:
+                  DateTimeFormat: YYYY-MM-DD
+            Values:
+            - NumericalMeasureField:
+                AggregationFunction:
+                  SimpleNumericalAggregation: MAX
+                Column:
+                  ColumnName: days_open
+                  DataSetIdentifier: ai_remediation
+                FieldId: aita-days
+        SortConfiguration:
+          PaginationConfiguration:
+            PageNumber: 1
+            PageSize: 500
+          RowSort:
+          - FieldSort:
+              Direction: DESC
+              FieldId: aita-days
+        TableOptions:
+          CellStyle:
+            Height: 25
+          HeaderStyle:
+            FontConfiguration:
+              FontSize:
+                Relative: LARGE
+            Height: 25
+            TextWrap: WRAP
+            Visibility: VISIBLE
+          RowAlternateColorOptions:
+            Status: DISABLED
+      ConditionalFormatting:
+        ConditionalFormattingOptions:
+        - Cell:
+            FieldId: aita-prio
+            TextFormat:
+              TextColor:
+                Solid:
+                  Color: '#B32728'
+                  Expression: '{priority} = "High"'
+        - Cell:
+            FieldId: aita-prio
+            TextFormat:
+              TextColor:
+                Solid:
+                  Color: '#FC850D'
+                  Expression: '{priority} = "Medium"'
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">Every open finding,\
+            \ oldest first. Anything over 30 days is an SLA conversation. Red = High\
+            \ priority (AgentCore).</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Open finding\
+            \ backlog by age</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-table-aging
+  - BarChartVisual:
+      Actions:
+      - ActionOperations:
+        - FilterOperation:
+            SelectedFieldsConfiguration:
+              SelectedFieldOptions: ALL_FIELDS
+            TargetVisualsConfiguration:
+              SameSheetTargetVisualConfiguration:
+                TargetVisualOptions: ALL_VISUALS
+        CustomActionId: ai-bar-finding-age-bands-action
+        Name: Filter
+        Status: ENABLED
+        Trigger: DATA_POINT_CLICK
+      ChartConfiguration:
+        BarsArrangement: STACKED
+        CategoryAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        CategoryLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: ai-finding-age-band
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-bar-finding-age-bands.cat
+            CustomLabel: Finding Age
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        DataLabels:
+          Overlap: DISABLE_OVERLAP
+          TotalsVisibility: VISIBLE
+          Visibility: VISIBLE
+        FieldWells:
+          BarChartAggregatedFieldWells:
+            Category:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: ai-finding-age-band
+                  DataSetIdentifier: ai_remediation
+                FieldId: ai-bar-finding-age-bands.cat
+            Colors:
+            - CategoricalDimensionField:
+                Column:
+                  ColumnName: priority
+                  DataSetIdentifier: ai_remediation
+                FieldId: ai-bar-finding-age-bands.grp
+            Values:
+            - CategoricalMeasureField:
+                AggregationFunction: DISTINCT_COUNT
+                Column:
+                  ColumnName: target_resource_id
+                  DataSetIdentifier: ai_remediation
+                FieldId: ai-bar-finding-age-bands.val
+        Legend:
+          Position: BOTTOM
+          Visibility: VISIBLE
+        Orientation: VERTICAL
+        SortConfiguration:
+          CategorySort:
+          - FieldSort:
+              Direction: ASC
+              FieldId: ai-bar-finding-age-bands.cat
+        Tooltip:
+          FieldBasedTooltip:
+            AggregationVisibility: HIDDEN
+            TooltipFields:
+            - FieldTooltipItem:
+                FieldId: ai-bar-finding-age-bands.cat
+                Label: Finding Age
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-bar-finding-age-bands.grp
+                Label: Priority
+                Visibility: VISIBLE
+            - FieldTooltipItem:
+                FieldId: ai-bar-finding-age-bands.val
+                Label: Resources
+                Visibility: VISIBLE
+            TooltipTitleType: PRIMARY_VALUE
+          SelectedTooltipType: DETAILED
+          TooltipVisibility: VISIBLE
+        ValueAxis:
+          TickLabelOptions:
+            LabelOptions:
+              FontConfiguration:
+                FontSize:
+                  Relative: LARGE
+        ValueLabelOptions:
+          AxisLabelOptions:
+          - ApplyTo:
+              Column:
+                ColumnName: target_resource_id
+                DataSetIdentifier: ai_remediation
+              FieldId: ai-bar-finding-age-bands.val
+            CustomLabel: Resources
+          SortIconVisibility: HIDDEN
+          Visibility: VISIBLE
+        VisualPalette:
+          ColorMap:
+          - Color: '#B32728'
+            Element:
+              FieldId: ai-bar-finding-age-bands.grp
+              FieldValue: High
+          - Color: '#FFB500'
+            Element:
+              FieldId: ai-bar-finding-age-bands.grp
+              FieldValue: Medium
+      ColumnHierarchies: []
+      Subtitle:
+        FormatText:
+          RichText: "<visual-subtitle>\n  <inline color=\"#bdbdbd\">How long open\
+            \ findings have been outstanding, split by priority. An average resolution\
+            \ time hides a stale backlog; this does not.</inline>\n</visual-subtitle>"
+        Visibility: VISIBLE
+      Title:
+        FormatText:
+          RichText: "<visual-title>\n  <inline font-size=\"16px\">\n    <b>Open findings\
+            \ by age band</b>\n  </inline>\n</visual-title>"
+        Visibility: VISIBLE
+      VisualId: ai-bar-finding-age-bands
+- ContentType: INTERACTIVE
   Layouts:
   - Configuration:
       GridLayout:
@@ -21997,7 +27541,7 @@ Sheets:
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
       \ font-size=\"32px\">\n      <b>AWS Config Resource Compliance Dashboard\_</b>\n\
       \    </inline>\n  </block>\n  <br/>\n  <block align=\"center\">\n    <inline\
-      \ font-size=\"32px\">\n      <b>v5.0.0</b>\n    </inline>\n  </block>\n  <br/>\n\
+      \ font-size=\"32px\">\n      <b>v5.1.0</b>\n    </inline>\n  </block>\n  <br/>\n\
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n\
       \  <block align=\"center\"/>\n  <br/>\n  <block align=\"center\">\n    <inline\
       \ color=\"#2f8ee7\" font-size=\"24px\">\n      <a href=\"https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html\"\
@@ -22014,7 +27558,7 @@ Sheets:
       >\_</inline>\n  </block>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n  <block\
       \ align=\"center\"/>\n  <br/>\n  <block align=\"center\"/>\n  <br/>\n  <block\
       \ align=\"center\"/>\n  <br/>\n  <br/>\n  <block align=\"right\">\n    <inline\
-      \ color=\"#bdbdbd\" font-size=\"18px\">Built by: Luca Casarini\_</inline>\n\
+      \ color=\"#bdbdbd\" font-size=\"18px\">Built by: Luca Casarini, Matej Macek\_</inline>\n\
       \  </block>\n  <br/>\n  <block align=\"right\">\n    <inline color=\"#bdbdbd\"\
       \ font-size=\"18px\">Learn more about AWS Cloud Intelligence Dashboards (CID)\
       \ on</inline>\n    <inline font-size=\"18px\">\_</inline>\n    <inline color=\"\
