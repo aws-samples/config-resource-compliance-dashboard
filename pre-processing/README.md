@@ -19,11 +19,17 @@ Key design decisions:
 
 ## Architecture
 
-```
-S3 (Log Archive)  -->  S3 Event  -->  Producer Lambda  -->  Fargate Task  -->  S3 (Dashboard Bucket)
-                                            |                     |
-                                      DynamoDB (STARTED)    DynamoDB (COMPLETED)
-```
+
+![CRCD Preprocessing Architecture](../images/pre-processing-architecture.png "AWS Config Dashboard, Preprocessing Architecture")
+
+The flow of data is as follows:
+1. **New Config record** lands in the source S3 bucket, the AWS Config Logs bucket.
+2. **S3 event notification** triggers the Preprocessing Producer Lambda.
+3. **Producer Lambda** checks the compressed file size:
+   - **Below threshold** (< 300 KB): copies the file directly to the Dashboard Bucket.
+   - **Above threshold** (>= 300 KB): launches a Fargate task.
+4. **Fargate task** streams the large file, splits it into files of 500 `configurationItems` each, and writes them to the Dashboard Bucket.
+5. **DynamoDB** tracks job status (STARTED → COMPLETED/FAILED) for both paths.
 
 ---
 
