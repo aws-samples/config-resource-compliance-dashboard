@@ -10,12 +10,15 @@ AWS Athena has a hard limit of 32 MB per row of data. When a Config file exceeds
 
 This preprocessing pipeline automatically splits large AWS Config files into smaller files that stay well within Athena's 32 MB limit. It runs as a serverless Fargate task triggered by S3 events whenever a new Config file is delivered to the Log Archive bucket.
 
+> [!IMPORTANT]
+> The CRCD Preprocessing pipeline must be installed before installing the CloudFormation template of the CRCD Dashboard. Preprocessing will create an S3 bucket that will not contain oversized files. This bucket will be the source of data for your dashboard installation.
+
 Key design decisions:
 - **Streaming processing** - Uses `ijson` to parse files incrementally, holding only one batch in memory at a time. Memory usage stays constant regardless of input file size.
 - **Batched output** - Each output file contains up to 500 configuration items, maintaining the same JSON structure as the original file (`fileVersion`, `configSnapshotId`, `configurationItems`).
 - **Filename correlation** - Output files preserve the account ID, region, type, and timestamp from the source file, making it easy to trace output back to input.
 - **Zero data loss** - Items are processed sequentially and written atomically to S3. The job tracks progress in DynamoDB.
-- **Fully automated deployment** - A single CloudFormation template creates all resources. No Docker builds, no manual steps.
+- **Fully automated deployment** - A single CloudFormation template creates all resources without manual steps.
 
 ## Architecture
 
@@ -30,6 +33,22 @@ The flow of data is as follows:
    - **Above threshold** (>= 300 KB): launches a Fargate task.
 4. **Fargate task** streams the large file, splits it into files of 500 `configurationItems` each, and writes them to the Dashboard Bucket.
 5. **DynamoDB** tracks job status (STARTED → COMPLETED/FAILED) for both paths.
+
+
+## End-to-End Deployment Architectures
+
+### AWS Config Account
+
+![CRCD Preprocessing Architecture](../images/config-account-preprocessing-deployment.png "AWS Config Dashboard, Preprocessing Architecture")
+
+In your AWS Config account:
+1. Deploy the proprocessing resources. Note down the name of the Dashboard bucket.
+1. Deploy the CRCD pipeline resources, use the Dashboard bucket as input for the files of your dashboard.
+1. Deploy the Dashboard on Quicksight.
+
+### Dashboard Account
+
+TODO
 
 ---
 
