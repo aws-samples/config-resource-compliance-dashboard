@@ -9,10 +9,22 @@ This guide walks you through testing the CRCD preprocessing script locally again
 - AWS CLI configured (to download files from S3)
 - Enough disk space for the input file and output files
 
+## Download these files
+
+Download the following files from this folder and save them to a local directory called `crcd-local-test-pre-processing`:
+
+| File | Description |
+|------|-------------|
+| [`test_local.py`](./test_local.py) | The preprocessing script you will run locally |
+| [`requirements.txt`](./requirements.txt) | Python dependencies needed by the script |
+
+
+
+
 ## Step 1: Install dependencies
 
 ```bash
-cd local-test-pre-processing
+cd crcd-local-test-pre-processing
 pip install -r requirements.txt
 ```
 
@@ -49,10 +61,16 @@ aws s3api list-objects-v2 \
   --output table
 ```
 
-Create the local folder to store your source files:
+Create a folder under `crcd-local-test-pre-processing` to store your source files:
 
+**macOS/Linux:**
 ```bash
 mkdir -p ./source-files
+```
+
+**Windows (PowerShell):**
+```powershell
+mkdir source-files
 ```
 
 Download one to your local machine:
@@ -92,6 +110,7 @@ Done:
 
 Verify the output:
 
+**macOS/Linux:**
 ```bash
 # Count output files
 ls ./output-files/*.json.gz | wc -l
@@ -101,6 +120,18 @@ ls -lh ./output-files/
 
 # Inspect one file to verify it has the correct structure
 gunzip -c ./output-files/<any-file>.json.gz | python -m json.tool | head -20
+```
+
+**Windows (PowerShell):**
+```powershell
+# Count output files
+(Get-ChildItem ./output-files/*.json.gz).Count
+
+# Check the size of output files (should all be well under 32MB uncompressed)
+Get-ChildItem ./output-files/ | Format-Table Name, Length
+
+# Inspect one file to verify it has the correct structure
+python -c "import gzip, json, sys; data=json.loads(gzip.open(sys.argv[1],'rt').read()); print(json.dumps(data, indent=4)[:2000])" ./output-files/<any-file>.json.gz
 ```
 
 Each output file should have this structure:
@@ -119,6 +150,7 @@ The `configurationItems` array should contain up to 500 items per file.
 
 Compare the total number of items in the original file against the sum of items across all output files:
 
+**macOS/Linux:**
 ```bash
 # Count items in original file (this may take a while for large files)
 gunzip -c ./source-files/<filename>.json.gz | python -c "
@@ -138,6 +170,15 @@ for line in sys.stdin:
         total += len(data['configurationItems'])
     except: pass
 print(f'Output items: {total}')"
+```
+
+**Windows (PowerShell):**
+```powershell
+# Count items in original file (this may take a while for large files)
+python -c "import gzip, json; data=json.loads(gzip.open('./source-files/<filename>.json.gz','rt').read()); print(f'Original items: {len(data[\"configurationItems\"])}')"
+
+# Count items across all output files
+python -c "import gzip, json, glob; total=sum(len(json.loads(gzip.open(f,'rt').read())['configurationItems']) for f in glob.glob('./output-files/*.json.gz')); print(f'Output items: {total}')"
 ```
 
 Both numbers must match exactly.
