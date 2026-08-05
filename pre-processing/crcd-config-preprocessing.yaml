@@ -12,7 +12,7 @@ Metadata:
         Label:
           default: "AWS Config logging - the source of data for the pre-processing job, where your AWS Config files are delivered"
         Parameters:
-          - LogArchiveBucketName
+          - ConfigBucketName
       -
         Label: 
           default: "Pre-processing job configuration"
@@ -32,10 +32,12 @@ Metadata:
           - PreProcessingLambdaProducerName
           - DynamoDBJobTrackingTableName
           - LambdaSupportJobTriggerConfigurationName
+          - LambdaSupportScriptUploaderName
+          - LambdaSupportECSServiceRoleName
     
     ParameterLabels:
-      LogArchiveBucketName:
-        default: "Log Archive bucket"
+      ConfigBucketName:
+        default: "AWS Config Logs bucket"
       DashboardBucketNamePrefix:
         default: "Dashboard bucket (prefix)"
       DynamoDBJobTrackingTableName:
@@ -50,20 +52,24 @@ Metadata:
         default: "Subnet IDs for Fargate tasks"
       FargateSecurityGroupIds:
         default: "Security Group IDs for Fargate tasks"
+      LambdaSupportScriptUploaderName:
+        default: "Name of the Lambda function that uploads the preprocessing script to S3"
+      LambdaSupportECSServiceRoleName:
+        default: "Name of the Lambda function that ensures the ECS service-linked role exists"
 
 
 Parameters:
-  LogArchiveBucketName:
+  ConfigBucketName:
     Type: String
     Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)."
     MinLength: 1
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
-    ConstraintDescription: "Log Archive bucket name is missing or does not satisfy the Amazon S3 naming convention."
+    ConstraintDescription: "AWS Config Logs bucket name is missing or does not satisfy the Amazon S3 naming convention."
 
   DashboardBucketNamePrefix:
     Type: String
     Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This can be used as source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and regions will be added automatically (Required)."
-    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
+    AllowedPattern: '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$'
     MinLength: 1
     Default: 'crcd-dashboard-bucket' 
     ConstraintDescription: "Dashboard bucket prefix name is missing or does not satisfy the Amazon S3 naming convention."
@@ -85,7 +91,7 @@ Parameters:
 
   ConfigureS3EventNotificationToLambdaJobProducer:
     Type: "String"
-    Description:  "Select 'yes' to configure event notifications that will trigger the pre-processing job whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the Log Archive bucket. In this case, you must configure S3 event notifications manually."
+    Description:  "Select 'yes' to configure event notifications that will trigger the pre-processing job whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket. In this case, you must configure S3 event notifications manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
@@ -93,8 +99,22 @@ Parameters:
     Type: "String"
     Default: "crcd-support-configure-s3-notification-preprocessing-job"
     MinLength: 1
-    ConstraintDescription: "Required: AWS Lambda function that configures S3 notifications on the Log Archive bucket."
-    Description: "Name of the AWS Lambda function that configures S3 notifications on the Log Archive bucket (Required)."
+    ConstraintDescription: "Required: AWS Lambda function that configures S3 notifications on the AWS Config Logs bucket."
+    Description: "Name of the AWS Lambda function that configures S3 notifications on the AWS Config Logs bucket (Required)."
+
+  LambdaSupportScriptUploaderName:
+    Type: "String"
+    Default: "crcd-support-upload-preprocessing-script"
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Lambda function that uploads the preprocessing script to S3."
+    Description: "Name of the AWS Lambda function that uploads the preprocessing script to S3 (Required)."
+
+  LambdaSupportECSServiceRoleName:
+    Type: "String"
+    Default: "crcd-support-ensure-ecs-service-role"
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Lambda function that ensures the ECS service-linked role exists."
+    Description: "Name of the AWS Lambda function that ensures the ECS service-linked role exists (Required)."
 
   FargateSubnetIds:
     Type: "List<AWS::EC2::Subnet::Id>"
@@ -108,18 +128,18 @@ Parameters:
 
 Conditions:
   IsConfigureS3EventNotificationToLambdaJobProducer:
-    # some customers may already have S3 notifications out of the Log Archive bucket
+    # some customers may already have S3 notifications out of the AWS Config Logs bucket
     # we must not override that - and users will have to do that manually later
     !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
 
 Rules:
-  MandatoryLogArchiveBucketName:
+  MandatoryConfigBucketName:
     Assertions:
       - Assert: !Not
          - !Equals
-          - !Ref LogArchiveBucketName
+          - !Ref ConfigBucketName
           - ''
-        AssertDescription: "Log Archive bucket name is required"
+        AssertDescription: "AWS Config Logs bucket name is required"
 
   MandatoryDashboardBucketNamePrefix:
     Assertions:
@@ -154,7 +174,7 @@ Rules:
         - !Equals
           - !Ref ConfigureS3EventNotificationToLambdaJobProducer
           - '<select>'
-        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the pre-processing job when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the Log Archive bucket and want to configure this manually."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the pre-processing job when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the AWS Config Logs bucket and want to configure this manually."
 
 
 
@@ -168,7 +188,7 @@ Resources:
   # *************************************************************************************************************************
 
   # S3 notifications to trigger the Lambda Job Producer function - only if user selected that
-  # S3 Bucket Permission for Lambda - Log Archive bucket to trigger this Lambda on each new object
+  # S3 Bucket Permission for Lambda - AWS Config Logs bucket to trigger this Lambda on each new object
   LambdaInvocationPermissionPreprocessingJobProducer:
     Type: AWS::Lambda::Permission
     Condition: IsConfigureS3EventNotificationToLambdaJobProducer
@@ -179,7 +199,7 @@ Resources:
       FunctionName: !Ref ConfigFilePreprocessingProducerLambda # Lambda to trigger
       Principal: s3.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
-      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+      SourceArn: !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
 
 
   ConfigBucketNotificationConfigurationLambdaJobProducerTrigger:
@@ -189,7 +209,7 @@ Resources:
     - LambdaInvocationPermissionPreprocessingJobProducer
     Properties:
       ServiceToken: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducer.Arn
-      Bucket: !Ref LogArchiveBucketName
+      Bucket: !Ref ConfigBucketName
       # this is needed so that the Lambda function deletes only S3 notification configurations if they have this name
       # passing it here and as part of NotificationConfiguration so that I do not have to hard-code this string on the Lambda code 
       EventNotificationName: "CRCDPreprocessingJobTrigger"
@@ -222,9 +242,9 @@ Resources:
                 Action:
                   - 's3:PutBucketNotification'
                   - 's3:GetBucketNotification'
-                Resource: !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
 
-  # Lambda triggered by CloudFormation to configure bucket notification on AWS Config Log Archive bucket
+  # Lambda triggered by CloudFormation to configure bucket notification on AWS Config AWS Config Logs bucket
   ConfigBucketNotificationConfigurationLambdaJobProducer:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
@@ -235,7 +255,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${LambdaSupportJobTriggerConfigurationName}"
-      Description: "CRCD Dashboard - Configures the Log Archive bucket S3 event notification to trigger the CRCD Lambda Preprocessing Job Producer function (one-time execution)"
+      Description: "CRCD Dashboard - Configures the AWS Config Logs bucket S3 event notification to trigger the CRCD Lambda Preprocessing Job Producer function (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducerRole.Arn
       Timeout: 300
@@ -431,7 +451,7 @@ Resources:
 
   # *************************************************************************************************************************
   # *************************************************************************************************************************
-  # Lambda that triggers the Fargate task for every new AWS Config file on Log Archive bucket
+  # Lambda that triggers the Fargate task for every new AWS Config file on AWS Config Logs bucket
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
@@ -460,6 +480,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - dynamodb:PutItem
+                  - dynamodb:UpdateItem
                 Resource: !GetAtt CRCDJobTrackingTable.Arn
               - Effect: Allow
                 Action:
@@ -471,6 +492,14 @@ Resources:
                 Resource:
                   - !GetAtt PreProcessingTaskExecutionRole.Arn
                   - !GetAtt PreProcessingTaskRole.Arn
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                Resource: !Sub '${DashboardBucket.Arn}/*'
 
   # Lambda Function that triggers Fargate tasks
   ConfigFilePreprocessingProducerLambda:
@@ -508,15 +537,19 @@ Resources:
           SUBNETS: !Join [",", !Ref FargateSubnetIds]
           SECURITY_GROUPS: !Join [",", !Ref FargateSecurityGroupIds]
           TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
+          CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "300000"
       Code:
         ZipFile: |
           import boto3
           import json
+          import urllib.parse
           from datetime import datetime
           import os
           import re
 
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
+
+          DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD = 300000
 
           def lambda_handler(event, context):
               table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
@@ -530,15 +563,24 @@ Resources:
               security_groups = os.environ["SECURITY_GROUPS"].split(",")
               tracking_table = os.environ["TRACKING_TABLE_NAME"]
 
+              size_threshold = DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD
+              size_threshold_parameter = os.environ.get("CONFIG_OBJECT_SIZE_THRESHOLD_BYTES", "")
+              try:
+                  size_threshold = int(size_threshold_parameter) if size_threshold_parameter.strip() else DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD
+              except ValueError:
+                  print(f"Warning: CONFIG_OBJECT_SIZE_THRESHOLD_BYTES '{size_threshold_parameter}' is not a valid integer. Using default value of {DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD} bytes.")
+
               records = event['Records']
               for record in records:
                   bucket = record['s3']['bucket']['name']
-                  key = record['s3']['object']['key']
+                  key = urllib.parse.unquote_plus(record['s3']['object']['key'])
 
                   match = re.match(PATTERN, key)
                   if not match:
                       print(f'SKIPPING: Cannot match {key} as AWS Config file, skipping.')
                       continue
+
+                  object_size = record['s3']['object']['size']
 
                   filename = os.path.basename(key)
                   filename = filename.replace('.json.gz', '')
@@ -551,47 +593,92 @@ Resources:
 
                   run_id = timestamp_and_random
 
-                  dynamodb.put_item(
-                      Item={
-                          'source_file': key,
-                          'job_run_id': run_id,
-                          'status': 'STARTED',
-                          'start_time': datetime.now().isoformat(),
-                          'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))
-                      }
-                  )
-
-                  try:
-                      response = ecs.run_task(
-                          cluster=cluster_arn,
-                          taskDefinition=task_definition,
-                          launchType='FARGATE',
-                          networkConfiguration={
-                              'awsvpcConfiguration': {
-                                  'subnets': subnets,
-                                  'securityGroups': security_groups,
-                                  'assignPublicIp': 'ENABLED'
+                  if object_size < size_threshold:
+                      print(f"Object size {object_size} bytes is below threshold of {size_threshold} bytes. Copying directly to destination bucket.")
+                      s3_client = boto3.client('s3')
+                      try:
+                          s3_client.copy_object(
+                              CopySource={'Bucket': bucket, 'Key': key},
+                              Bucket=dashboard_bucket_name,
+                              Key=key
+                          )
+                          dynamodb.put_item(
+                              Item={
+                                  'source_file': key,
+                                  'job_run_id': run_id,
+                                  'status': 'COMPLETED',
+                                  'start_time': datetime.now().isoformat(),
+                                  'end_time': datetime.now().isoformat(),
+                                  'object_size': object_size,
+                                  'processing_method': 'DIRECT_COPY',
+                                  'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))
                               }
-                          },
-                          overrides={
-                              'containerOverrides': [{
-                                  'name': 'crcd-preprocessing',
-                                  'environment': [
-                                      {'name': 'SOURCE_PATH', 'value': f's3://{bucket}/{key}'},
-                                      {'name': 'DESTINATION_BUCKET', 'value': dashboard_bucket_name},
-                                      {'name': 'TRACKING_TABLE_NAME', 'value': tracking_table},
-                                      {'name': 'JOB_RUN_ID', 'value': run_id}
-                                  ]
-                              }]
+                          )
+                          print(f"Successfully copied {key} to {dashboard_bucket_name}/{key}")
+                      except Exception as e:
+                          print(f"Error copying object {key}: {str(e)}")
+                          dynamodb.put_item(
+                              Item={
+                                  'source_file': key,
+                                  'job_run_id': run_id,
+                                  'status': 'FAILED',
+                                  'start_time': datetime.now().isoformat(),
+                                  'object_size': object_size,
+                                  'error_message': str(e),
+                                  'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))
+                              }
+                          )
+                          raise
+                  else:
+                      dynamodb.put_item(
+                          Item={
+                              'source_file': key,
+                              'job_run_id': run_id,
+                              'status': 'STARTED',
+                              'start_time': datetime.now().isoformat(),
+                              'object_size': object_size,
+                              'processing_method': 'FARGATE',
+                              'ttl': int((datetime.now().timestamp()) + (90 * 24 * 60 * 60))
                           }
                       )
 
-                      task_arn = response['tasks'][0]['taskArn'] if response['tasks'] else 'UNKNOWN'
-                      print(f"Started Fargate task {task_arn} for {key} with run ID: {run_id}")
+                      try:
+                          response = ecs.run_task(
+                              cluster=cluster_arn,
+                              taskDefinition=task_definition,
+                              launchType='FARGATE',
+                              networkConfiguration={
+                                  'awsvpcConfiguration': {
+                                      'subnets': subnets,
+                                      'securityGroups': security_groups,
+                                      'assignPublicIp': 'ENABLED'
+                                  }
+                              },
+                              overrides={
+                                  'containerOverrides': [{
+                                      'name': 'crcd-preprocessing',
+                                      'environment': [
+                                          {'name': 'SOURCE_PATH', 'value': f's3://{bucket}/{key}'},
+                                          {'name': 'DESTINATION_BUCKET', 'value': dashboard_bucket_name},
+                                          {'name': 'TRACKING_TABLE_NAME', 'value': tracking_table},
+                                          {'name': 'JOB_RUN_ID', 'value': run_id}
+                                      ]
+                                  }]
+                              }
+                          )
 
-                  except Exception as e:
-                      print(f"Error starting Fargate task for {key}: {str(e)}")
-                      raise
+                          task_arn = response['tasks'][0]['taskArn'] if response['tasks'] else 'UNKNOWN'
+                          print(f"Started Fargate task {task_arn} for {key} with run ID: {run_id}")
+
+                      except Exception as e:
+                          print(f"Error starting Fargate task for {key}: {str(e)}")
+                          dynamodb.update_item(
+                              Key={'source_file': key, 'job_run_id': run_id},
+                              UpdateExpression="SET #status = :s, error_message = :e",
+                              ExpressionAttributeNames={'#status': 'status'},
+                              ExpressionAttributeValues={':s': 'FAILED', ':e': str(e)}
+                          )
+                          raise
 
               return {
                   'statusCode': 200,
@@ -683,7 +770,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: "crcd-support-ensure-ecs-service-role"
+      FunctionName: !Sub "${LambdaSupportECSServiceRoleName}"
       Description: "CRCD Dashboard - Creates ECS service-linked role if it does not already exist (one-time execution)"
       Runtime: python3.12
       Timeout: 30
@@ -721,7 +808,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      LogGroupName: "/aws/lambda/crcd-support-ensure-ecs-service-role"
+      LogGroupName: !Sub "/aws/lambda/${LambdaSupportECSServiceRoleName}"
       RetentionInDays: 14
     Metadata:
       cfn_nag:
@@ -772,7 +859,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       RoleName: "crcd-preprocessing-task-role"
-      Description: "CRCD Dashboard - Allows the preprocessing container to read from Log Archive, write to Dashboard bucket, and update DynamoDB"
+      Description: "CRCD Dashboard - Allows the preprocessing container to read from the AWS Config Logs bucket, write to Dashboard bucket, and update DynamoDB"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -789,7 +876,7 @@ Resources:
                 Action:
                   - s3:GetObject
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}/*"
+                  - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
                   - !Sub '${DashboardBucket.Arn}/crcd-scripts/*'
               - Effect: Allow
                 Action:
@@ -800,7 +887,7 @@ Resources:
                 Action:
                   - s3:ListBucket
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:s3:::${LogArchiveBucketName}"
+                  - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
                   - !GetAtt DashboardBucket.Arn
               - Effect: Allow
                 Action:
@@ -857,7 +944,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      FunctionName: "crcd-support-upload-preprocessing-script"
+      FunctionName: !Sub "${LambdaSupportScriptUploaderName}"
       Description: "CRCD Dashboard - Uploads the preprocessing Python script to S3 (one-time execution)"
       Runtime: python3.12
       Timeout: 120
@@ -906,7 +993,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      LogGroupName: "/aws/lambda/crcd-support-upload-preprocessing-script"
+      LogGroupName: !Sub "/aws/lambda/${LambdaSupportScriptUploaderName}"
       RetentionInDays: 14
     Metadata:
       cfn_nag:
@@ -920,7 +1007,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt ScriptUploaderLambda.Arn
       Bucket: !Ref DashboardBucket
-      Key: "crcd-scripts/config_stream_splitter.py"
+      Key: "crcd-scripts/crcd_preprocessing_task.py"
       Content: |
         import gzip
         import io
@@ -1232,8 +1319,8 @@ Resources:
             - -c
             - !Sub |
               pip install --quiet ijson boto3 &&
-              python -c "import boto3; boto3.client('s3').download_file('${DashboardBucket}', 'crcd-scripts/config_stream_splitter.py', '/tmp/config_stream_splitter.py')" &&
-              python /tmp/config_stream_splitter.py
+              python -c "import boto3; boto3.client('s3').download_file('${DashboardBucket}', 'crcd-scripts/crcd_preprocessing_task.py', '/tmp/crcd_preprocessing_task.py')" &&
+              python /tmp/crcd_preprocessing_task.py
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -1244,7 +1331,7 @@ Resources:
 
 Outputs:
   DashboardBucketName:
-    Description: Use this bucket as Log Archive bucked when deploying the AWS Config Resource Compliance dashboard
+    Description: Use this bucket as data source when deploying the AWS Config Resource Compliance dashboard
     Value: !Ref DashboardBucket
 
   DynamoDBTableName:
