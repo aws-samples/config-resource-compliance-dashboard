@@ -12,3 +12,6 @@ temp/
 
 # created by cid-cmd when deploying the dashboard
 cid.log
+
+# Support development of features
+pre-processing/payload-files/
