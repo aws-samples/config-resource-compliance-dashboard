@@ -218,7 +218,7 @@ The script handles both AWS Config file types:
 
 ## Step 6: Upload output files to S3 and verify with Athena
 
-Upload the output files to the S3 bucket where your CRCD dashboard reads AWS Config data. Preferably use a test environment where you have the CRCD dashboard deployed. If you do not have a test environment for the dashboard, use a made up account ID in `<YOUR-CONFIG-BUCKET>`, for example `111222333444`, in the command below. The files will be indexed under that account ID and you can easily remove the entire folder afterwards.
+Upload the output files to the S3 bucket where your CRCD dashboard reads AWS Config data. Preferably use a test environment where you have the CRCD dashboard deployed. If you do not have a test environment for the dashboard, use a made-up account ID in `<YOUR-CONFIG-BUCKET>`, for example `111222333444`, in the command below. The files will be indexed under that account ID and you can easily remove the entire folder afterwards.
 
 S3 creates intermediate folders automatically — you don't need to create the prefix path beforehand.
 
@@ -284,7 +284,7 @@ If these queries return results without errors, the preprocessing worked correct
 
 ## Step 7: Cleanup
 
-If you uploaded the output files to a made up account (e.g. `111222333444`):
+If you uploaded the output files to a made-up account (e.g. `111222333444`):
 
 Delete the prefix from the S3 bucket:
 
