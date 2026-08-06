@@ -3023,8 +3023,8 @@ views:
       views:
       - v_ai_governance_inventory
     data: "CREATE OR REPLACE VIEW \"${athena_database_name}\".v_ai_governance_relationships AS\nWITH\n \
-      \ inv AS (\n   SELECT *\n   FROM\n     awsconfig.v_ai_governance_inventory\n   WHERE (dt = (SELECT\
-      \ max(dt)\nFROM\n  awsconfig.v_ai_governance_inventory\n))\n) \nSELECT\n  a.accountid\n, a.region\n\
+      \ inv AS (\n   SELECT *\n   FROM\n     \"${athena_database_name}\".v_ai_governance_inventory\n   WHERE (dt = (SELECT\
+      \ max(dt)\nFROM\n  \"${athena_database_name}\".v_ai_governance_inventory\n))\n) \nSELECT\n  a.accountid\n, a.region\n\
       , a.resourcetype source_type\n, a.resourceid source_id\n, COALESCE(a.resourcename, a.resourceid) source_name\n\
       , (CASE WHEN (a.guardrail_id IS NOT NULL) THEN 'Protected by guardrail' ELSE 'No guardrail attached'\
       \ END) relationship\n, 'AWS::Bedrock::Guardrail' target_type\n, COALESCE(a.guardrail_id, 'NONE') target_id\n\
