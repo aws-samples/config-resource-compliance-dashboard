@@ -70,7 +70,7 @@ The conformance packs support all parameters exposed by standard AWS Config rule
    - `Accounts to exclude` A comma-separated list of accounts that will not receive the organization conformance pack (leave empty to deploy to all accounts). **Make sure you add here any account ID where AWS Config is not enabled, otherwise the entire stack will fail**. This parameter is used only when deployment mode is `AWS Organizations`.
    - `Deployment Regions` Enter a comma-separated list of Regions where AWS Config is enabled and the conformance pack should be deployed. **Make sure you specify only AWS Regions where AWS Config is enabled in the accounts in scope, otherwise the entire stack will fail**.
 1. Specify the parameters to the custom AWS Config rules in the following CloudFormation parameters:
-   - `Root Account Not Used Regularly rule: root account usage threshold (days)` Custom rule `crcd-ia-iam-iam-root-not-used-regularly` checks that the root user is not used regularly by looking when it was used last. This parameter specifies the number of days to look back for root account usage. If root was used within this threshold, the rule is marked NON_COMPLIANT.
+   - `Root Account Not Used Regularly rule: root account usage threshold (days)` Custom rule `sire-ia-iam-iam-root-not-used-regularly` checks that the root user is not used regularly by looking when it was used last. This parameter specifies the number of days to look back for root account usage. If root was used within this threshold, the rule is marked NON_COMPLIANT.
 1. Specify the parameters to the standard AWS Config rules in the following CloudFormation parameters. Follow the provided links for documentation of what these parameters are:
    - Parameter of rule [S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED](https://docs.aws.amazon.com/config/latest/developerguide/s3-bucket-level-public-access-prohibited.html):
      - `S3 Bucket-Level Public Access Prohibited rule: excluded public buckets`
@@ -93,6 +93,15 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 
 To update the parameters of the AWS Config rules of the template open the CloudFormation stack in the main Region and update the stack. Changes propagate automatically to all accounts and Regions.
 
+# Recommended Security Monitoring (Optional)
+
+This solution creates an S3 bucket that stores the conformance pack template, along with Lambda functions and IAM roles. These resources are protected by least-privilege permissions, and the S3 bucket has versioning enabled so any overwrite of the template is recoverable. As defense-in-depth, we recommend enabling the following detective controls in your account to alert on unexpected changes to these resources:
+
+- **CloudTrail S3 data events**: By default, CloudTrail does not log object-level (read/write) access to S3. To capture modifications to the conformance pack template, add the solution's S3 bucket (`sire-conformance-pack-templates-*`) to the data event selectors of an existing [CloudTrail trail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html). Using your existing organization or account trail avoids duplicate logging and cost. Note that after deployment the solution does not modify the template object, so no data events are expected during normal operation and no additional CloudTrail cost is anticipated — any recorded write to this object indicates an out-of-band change worth investigating.
+- **CloudFormation drift detection**: Direct, out-of-band changes to the deployed Lambda code or IAM roles will not go through a stack update and can diverge from this template. Enable the AWS Config managed rule [`cloudformation-stack-drift-detection-check`](https://docs.aws.amazon.com/config/latest/developerguide/cloudformation-stack-drift-detection-check.html), or run [drift detection](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html) on the stack and StackSets periodically, to detect this drift.
+- **Alerting**: Route the findings from the controls above to your security operations tooling (for example, an [Amazon EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) rule targeting Amazon SNS or your ticketing system) so that detected changes trigger a response rather than a silent log entry.
+
+These controls are account-level and operate outside this template, so they are not created by the stack. Enabling them is optional but recommended for environments where tamper detection of the deployed resources is required.
 
 # References
 - [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/).

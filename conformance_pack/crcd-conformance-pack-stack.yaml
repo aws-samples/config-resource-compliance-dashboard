@@ -2,9 +2,17 @@
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard - Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
+Description: 'CRCD Dashboard Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
 
 Metadata:
+  # W1030 is raised on the empty TargetOrganizationalUnitIds default resolving into the
+  # org-mode DeploymentTargets branch. It is safe to ignore: the OrgModeRequiresTargetOUs
+  # rule blocks an empty value at deploy time in AWS Organizations mode, and the branch is
+  # unused in Standalone mode.
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W1030
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -207,6 +215,20 @@ Parameters:
       - 'true'
       - 'false'
 
+Rules:
+  # cfn-lint W1030 hardening: in AWS Organizations mode a deployment target
+  # (root OU 'r-xxxx' or a list of 'ou-xxxx-xxxxxxxx') must be supplied. Blocks the empty default
+  # from flowing into the organization StackSet DeploymentTargets.
+  OrgModeRequiresTargetOUs:
+    RuleCondition: !Equals [!Ref DeploymentMode, 'AWS Organizations']
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - !Ref TargetOrganizationalUnitIds
+                - ''
+        AssertDescription: "When Deployment mode is 'AWS Organizations', TargetOrganizationalUnitIds must contain the root OU ID (r-xxxx) or a comma-separated list of Organizational Unit IDs (ou-xxxx-xxxxxxxx); it cannot be left empty."
+
 Conditions:
   IsDelegatedAdminAccount: !Equals [!Ref DeploymentAccount, 'Delegated Admin']
   HasExcludedAccounts: !Not [!Equals [!Join [',', !Ref ExcludedAccountsIDs], '']]
@@ -238,10 +260,13 @@ Resources:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
-      AccessControl: BucketOwnerFullControl
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+      # Enable versioning so a malicious/accidental overwrite of the conformance-pack
+      # template is recoverable
+      VersioningConfiguration:
+        Status: Enabled
       # BSC12 risk mitigation
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
@@ -262,9 +287,7 @@ Resources:
       guard:
         SuppressedRules:
           - S3_BUCKET_LOGGING_ENABLED
-          - S3_BUCKET_VERSIONING_ENABLED
   
-  # This is CRCD only
   CrcdConformancePackUploaderLambdaRole:
     Type: AWS::IAM::Role
     DeletionPolicy: "Delete"
@@ -281,6 +304,8 @@ Resources:
             Action: sts:AssumeRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        # TracingConfig is Active on the uploader Lambda; grant X-Ray write
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
       Policies:
         - PolicyName: S3UtilityBucketAccess
           PolicyDocument:
@@ -297,7 +322,6 @@ Resources:
                   - !Sub '${CrcdConfPackTemplateBucket.Arn}/*'
                   - !GetAtt CrcdConfPackTemplateBucket.Arn
   
-  # This is CRCD only
   TemplateUploaderLambda:
   # checkov:skip=CKV_AWS_115: This lambda is called once at deployment time. No need for reserved concurrency.
   # checkov:skip=CKV_AWS_116: No DQL needed.
@@ -307,7 +331,7 @@ Resources:
     Properties:
       FunctionName: 'sire-conf-pack-support-uploader'
       Description: "CRCD Dashboard - Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
-      Runtime: python3.12
+      Runtime: python3.14
       Timeout: 120
       MemorySize: 128
       Architectures:
@@ -341,7 +365,7 @@ Resources:
                           Bucket=bucket,
                           Key=key,
                           Body=content,
-                          ContentType='text/x-python' # TODO this is a YAML file
+                          ContentType='text/yaml'
                       )
                       
                       response_data = {
@@ -747,6 +771,10 @@ Resources:
             Principal:
               Service: cloudformation.amazonaws.com
             Action: sts:AssumeRole
+            # Restrict the service principal to this account (confused-deputy)
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref 'AWS::AccountId'
       Policies:
         - PolicyName: AssumeRole-AWSCloudFormationStackSetExecutionRole
           PolicyDocument:
@@ -772,8 +800,126 @@ Resources:
             Principal:
               AWS: !GetAtt StackSetAdministrationRole.Arn
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+      # Removed administrator access
+      # ManagedPolicyArns:
+      #   - !Sub arn:${AWS::Partition}:iam::aws:policy/AdministratorAccess
+      Policies:
+        - PolicyName: StackSetExecutionPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # CloudFormation needs to manage stacks created by the StackSet
+              # scoped from cloudformation:* on '*'
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:GetTemplate
+                  - cloudformation:ListStacks
+                  - cloudformation:TagResource
+                  - cloudformation:UntagResource
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:cloudformation:*:${AWS::AccountId}:stack/StackSet-*'
+              # AWS Config conformance packs and rules
+              - Effect: Allow
+                Action:
+                  - config:PutConformancePack
+                  - config:DeleteConformancePack
+                  - config:DescribeConformancePacks
+                  - config:DescribeConformancePackStatus
+                  - config:PutOrganizationConformancePack
+                  - config:DeleteOrganizationConformancePack
+                  - config:DescribeOrganizationConformancePacks
+                  - config:DescribeOrganizationConformancePackStatuses
+                  - config:PutConfigRule
+                  - config:DeleteConfigRule
+                  - config:DescribeConfigRules
+                Resource: '*'
+              # S3 read access for conformance pack template
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetBucketLocation
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::sire-conformance-pack-templates-*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::sire-conformance-pack-templates-*/*'
+              # IAM role management for Lambda execution roles created by the StackSet
+              # AttachRolePolicy/PassRole split out and constrained below
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:GetRole
+                  - iam:PutRolePolicy      # inline policies are authored by this template only
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDConfPack*'
+              # Only allow attaching the specific AWS-managed policy the Lambdas need,
+              # never an arbitrary policy such as AdministratorAccess
+              - Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDConfPack*'
+                Condition:
+                  ArnEquals:
+                    iam:PolicyARN:
+                      - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+              # PassRole restricted to Lambda so a passed role cannot be handed to another service
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/CRCDConfPack*'
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: lambda.amazonaws.com
+              # Service-linked role creation for AWS Config conformance packs
+              - Effect: Allow
+                Action:
+                  - iam:CreateServiceLinkedRole
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/config-conforms.amazonaws.com/*'
+              # Lambda function management
+              - Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:GetPolicy
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:lambda:*:${AWS::AccountId}:function:sire-*'
+              # CloudWatch Logs management
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:DescribeLogGroups
+                  - logs:TagLogGroup
+                  - logs:UntagLogGroup
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:ListTagsForResource
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:*:${AWS::AccountId}:log-group:/aws/lambda/sire-*'
 
   # This stack set iterates through the specified regions of the current account
   CRCDConfPackStackSet:
@@ -783,7 +929,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       StackSetName: !Sub '${ConformancePackName}-org-stackset'
-      Description: Deploys SIRE conformance pack rules
+      Description: Deploys CRCD conformance pack rules
       PermissionModel: SELF_MANAGED # Runs on this account only
       AdministrationRoleARN: 
         !GetAtt StackSetAdministrationRole.Arn
@@ -1091,7 +1237,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'SIREConfPackRuleRootNotUsedRegularly'
+              RoleName: 'CRCDConfPackRuleRootNotUsedRegularly'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1132,7 +1278,7 @@ Resources:
             DeletionPolicy: Delete
             UpdateReplacePolicy: Delete
             Properties:
-              RoleName: 'SIREConfPackRuleUserAccessKeyCheck'
+              RoleName: 'CRCDConfPackRuleUserAccessKeyCheck'
               AssumeRolePolicyDocument:
                 Version: '2012-10-17'
                 Statement:
@@ -1216,7 +1362,7 @@ Resources:
             Properties:
               FunctionName: 'sire-root-not-used-regularly'
               Description: Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - Root account not used regularly
-              Runtime: python3.11
+              Runtime: python3.14
               Handler: index.lambda_handler
               Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
               Timeout: 420
@@ -1262,7 +1408,7 @@ Resources:
                   import json
                   import logging
                   import os
-                  from datetime import datetime, timedelta
+                  from datetime import datetime, timedelta, timezone
                   import boto3
                   from botocore.exceptions import ClientError
                   
@@ -1309,22 +1455,39 @@ Resources:
                               - resource_id: AWS account ID
                       """
                       global AWS_CONFIG_CLIENT
-                  
-                      logger.info(f"Received event: {json.dumps(event)}")
-                      
+
+                      # Safe defaults so the final put_evaluations can always run,
+                      # even if an exception is raised before these are otherwise assigned.
+                      resource_type = 'AWS::::Account'
+                      account_id = event.get('accountId') if isinstance(event, dict) else None
+                      annotation = 'Unable to determine root account usage'
+                      compliance_type = 'INSUFFICIENT_DATA'
+                      invoking_event = {}
+                      ordering_timestamp = datetime.now(timezone.utc)
+
+                      # Initialize the Config client before validation so the
+                      # reporting block below can always run. If even this fails we cannot
+                      # report, so leave AWS_CONFIG_CLIENT unset and guard the call.
+                      AWS_CONFIG_CLIENT = None
+                      try:
+                          AWS_CONFIG_CLIENT = get_client('config', event)
+                      except Exception as e:
+                          logger.error(f"CRCD-ConfPack: could not initialize Config client: {e}")
+
+                      # Event payloads may contain identifiers; log at DEBUG only
+                      logger.debug(f"Received event: {json.dumps(event)}")
+
                       try:
                           # Validate event structure
                           if 'configRuleId' not in event:
                               raise ValueError("Missing required field: configRuleId")
-                  
+
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug('SIRE-ConfPack: Received invoking event: ' + json.dumps(invoking_event))
-                  
-                          AWS_CONFIG_CLIENT = get_client('config', event)
-                  
+                          logger.debug('CRCD-ConfPack: Received invoking event: ' + json.dumps(invoking_event))
+
                           # This rule supports only periodic evaluation
                           if invoking_event['messageType'] != 'ScheduledNotification':
-                              logger.logError('SIRE-ConfPack: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
+                              logger.error('CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: ' + invoking_event['messageType'])
                               raise ValueError("Invalid message type: " + str(invoking_event['messageType']))
                   
                           # Extract Config rule parameters
@@ -1383,17 +1546,22 @@ Resources:
                           compliance_type = 'INSUFFICIENT_DATA'
                   
                       # returns result to AWS Config
-                      AWS_CONFIG_CLIENT.put_evaluations(
-                          Evaluations=[
-                              {
-                                  'ComplianceResourceType': resource_type,
-                                  'ComplianceResourceId': account_id,
-                                  'ComplianceType': compliance_type,
-                                  'Annotation': annotation, 
-                                  'OrderingTimestamp': invoking_event['notificationCreationTime']
-                              },
-                          ],
-                          ResultToken=event['resultToken'])
+                      # A partial failure still reports and never raises here
+                      ordering_timestamp = invoking_event.get('notificationCreationTime', ordering_timestamp)
+                      if AWS_CONFIG_CLIENT and account_id and isinstance(event, dict) and event.get('resultToken'):
+                          AWS_CONFIG_CLIENT.put_evaluations(
+                              Evaluations=[
+                                  {
+                                      'ComplianceResourceType': resource_type,
+                                      'ComplianceResourceId': account_id,
+                                      'ComplianceType': compliance_type,
+                                      'Annotation': annotation,
+                                      'OrderingTimestamp': ordering_timestamp
+                                  },
+                              ],
+                              ResultToken=event['resultToken'])
+                      else:
+                          logger.error('CRCD-ConfPack: cannot report to Config (missing accountId or resultToken)')
                   
                   def evaluate_root_usage(account_id, root_usage_threshold_days):
                       """
@@ -1465,14 +1633,14 @@ Resources:
                           logger.info(f"Found root account entry in credential report")
                           
                           # Check last usage dates
-                          threshold_date = datetime.now() - timedelta(days=root_usage_threshold_days)
+                          threshold_date = datetime.now(timezone.utc) - timedelta(days=root_usage_threshold_days)
                           last_used_date = None
                           
                           # Check password last used
                           password_last_used = root_entry.get('password_last_used')
                           if password_last_used and password_last_used != 'N/A' and password_last_used != 'no_information':
                               try:
-                                  password_date = datetime.strptime(password_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                                  password_date = datetime.strptime(password_last_used, '%Y-%m-%dT%H:%M:%S+00:00').replace(tzinfo=timezone.utc)
                                   if last_used_date is None or password_date > last_used_date:
                                       last_used_date = password_date
                                   logger.info(f"Root password last used: {password_last_used}")
@@ -1483,7 +1651,7 @@ Resources:
                           access_key_1_last_used = root_entry.get('access_key_1_last_used_date')
                           if access_key_1_last_used and access_key_1_last_used != 'N/A' and access_key_1_last_used != 'no_information':
                               try:
-                                  key1_date = datetime.strptime(access_key_1_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                                  key1_date = datetime.strptime(access_key_1_last_used, '%Y-%m-%dT%H:%M:%S+00:00').replace(tzinfo=timezone.utc)
                                   if last_used_date is None or key1_date > last_used_date:
                                       last_used_date = key1_date
                                   logger.info(f"Root access key 1 last used: {access_key_1_last_used}")
@@ -1494,7 +1662,7 @@ Resources:
                           access_key_2_last_used = root_entry.get('access_key_2_last_used_date')
                           if access_key_2_last_used and access_key_2_last_used != 'N/A' and access_key_2_last_used != 'no_information':
                               try:
-                                  key2_date = datetime.strptime(access_key_2_last_used, '%Y-%m-%dT%H:%M:%S+00:00')
+                                  key2_date = datetime.strptime(access_key_2_last_used, '%Y-%m-%dT%H:%M:%S+00:00').replace(tzinfo=timezone.utc)
                                   if last_used_date is None or key2_date > last_used_date:
                                       last_used_date = key2_date
                                   logger.info(f"Root access key 2 last used: {access_key_2_last_used}")
@@ -1546,7 +1714,7 @@ Resources:
                               return f'Root account has not been used (no usage recorded)'
                       elif compliance_type == 'NON_COMPLIANT':
                           if last_used_date:
-                              days_ago = (datetime.now() - last_used_date).days
+                              days_ago = (datetime.now(timezone.utc) - last_used_date).days
                               return (
                                   f'Root account was used {days_ago} days ago on {last_used_date.strftime("%Y-%m-%d")}, '
                                   f'within the {root_usage_threshold_days}-day threshold'
@@ -1604,7 +1772,7 @@ Resources:
             Properties:
               FunctionName: 'sire-user-access-key-check'
               Description: Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - IAM users access key check
-              Runtime: python3.11
+              Runtime: python3.14
               Handler: index.lambda_handler
               Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
               Timeout: 60
@@ -1622,7 +1790,7 @@ Resources:
                   import json
                   import logging
                   import os
-                  from datetime import datetime, timedelta
+                  from datetime import datetime, timedelta, timezone
                   import boto3
                   from botocore.exceptions import ClientError
                   import botocore
@@ -1662,7 +1830,7 @@ Resources:
                       compliance_type = None
                   
                       global AWS_CONFIG_CLIENT
-                      logger.info(f"SIRE-ConfPack: Received event: {json.dumps(event)}")
+                      logger.debug(f"CRCD-ConfPack: Received event: {json.dumps(event)}")
                   
                       try:
                           check_defined(event, 'event')
@@ -1671,7 +1839,7 @@ Resources:
                               raise ValueError("Missing required field: configRuleId")
                           
                           invoking_event = json.loads(event['invokingEvent'])
-                          logger.debug(f"SIRE-ConfPack: Received invoking event: {json.dumps(invoking_event)}")
+                          logger.debug(f"CRCD-ConfPack: Received invoking event: {json.dumps(invoking_event)}")
                   
                           rule_parameters = {}
                           if 'ruleParameters' in event:
@@ -1683,7 +1851,7 @@ Resources:
                           if invoking_event['messageType'] == 'ScheduledNotification':
                               evaluate_periodic_compliance(rule_parameters, event)
                           else:
-                              logger.error(f"SIRE-ConfPack: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
+                              logger.error(f"CRCD-ConfPack: This rule accepts only periodic evaluation. Invalid message type: {invoking_event['messageType']}")
                               raise ValueError(f"Invalid message type: {invoking_event['messageType']}")
                   
                       except ClientError as e:
@@ -1713,15 +1881,17 @@ Resources:
                           annotation = f'Evaluation error: {str(e)}'
                   
                       finally:
-                          if compliance_type is not None and annotation is not None:
+                          # Only fires on the error paths above (compliance_type/annotation set).
+                          # Report at account scope; do not reference the undefined config_item/invoking_event.
+                          if compliance_type is not None and annotation is not None and isinstance(event, dict) and event.get('resultToken'):
                               AWS_CONFIG_CLIENT.put_evaluations(
                                   Evaluations=[
                                       {
-                                          'ComplianceResourceType': 'AWS::IAM::User',
-                                          'ComplianceResourceId': config_item.get('resourceId', 'unknown') if 'config_item' in locals() else 'unknown',
+                                          'ComplianceResourceType': 'AWS::::Account',
+                                          'ComplianceResourceId': event.get('accountId', 'unknown'),
                                           'ComplianceType': compliance_type,
-                                          'Annotation': annotation, 
-                                          'OrderingTimestamp': invoking_event['notificationCreationTime']
+                                          'Annotation': annotation,
+                                          'OrderingTimestamp': datetime.now(timezone.utc)
                                       },
                                   ],
                                   ResultToken=event['resultToken'])
@@ -1776,20 +1946,20 @@ Resources:
                               for user in page['Users']:
                                   user_name = user['UserName']
                                   user_id = user['UserId']
-                                  logger.info(f"SIRE-ConfPack: periodic compliance, checking IAM user {user_name} (id {user_id})")
+                                  logger.info(f"CRCD-ConfPack: periodic compliance, checking IAM user {user_name} (id {user_id})")
                                   compliance_type, annotation = evaluate_user_compliance(user_name, iam_client)
                   
-                                  logger.info(f"SIRE-ConfPack: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
+                                  logger.info(f"CRCD-ConfPack: compliance decision for {user_name}: {compliance_type} - annotation: {annotation}")
                   
                                   evaluations.append({
                                       'ComplianceResourceType': 'AWS::IAM::User',
                                       'ComplianceResourceId': user_id, 
                                       'ComplianceType': compliance_type,
                                       'Annotation': annotation,
-                                      'OrderingTimestamp': datetime.utcnow()
+                                      'OrderingTimestamp': datetime.now(timezone.utc)
                                   })
                       except Exception as e:
-                          logger.error(f'SIRE-ConfPack: Error during periodic evaluation: {str(e)}')
+                          logger.error(f'CRCD-ConfPack: Error during periodic evaluation: {str(e)}')
                       
                       if evaluations:
                           AWS_CONFIG_CLIENT.put_evaluations(
@@ -1799,7 +1969,7 @@ Resources:
                   
                   def evaluate_user_compliance(user_name, iam_client):
                       """Evaluate a single IAM user's compliance"""
-                      logger.info(f"SIRE-ConfPack: checking IAM user {user_name}")
+                      logger.info(f"CRCD-ConfPack: checking IAM user {user_name}")
                       
                       try:
                           response = iam_client.list_access_keys(UserName=user_name)
@@ -1807,7 +1977,7 @@ Resources:
                           
                           # Check for active access keys only
                           active_keys = [key for key in access_keys if key['Status'] == 'Active']
-                          logger.info(f"SIRE-ConfPack: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
+                          logger.info(f"CRCD-ConfPack: Access keys found: {len(access_keys)}, Active keys: {len(active_keys)}")
                   
                           compliance_type = 'INSUFFICIENT_DATA'
                           if active_keys:
@@ -1825,7 +1995,7 @@ Resources:
                           return compliance_type, annotation
                   
                       except Exception as exc:
-                          logger.error(f"SIRE-ConfPack: Error evaluating IAM user {user_name}: {exc}")
+                          logger.error(f"CRCD-ConfPack: Error evaluating IAM user {user_name}: {exc}")
                           return 'INSUFFICIENT_DATA', f"Error evaluating IAM user {user_name}: {exc}"
                   
                   
@@ -1845,9 +2015,10 @@ Resources:
                       if compliance_type == 'COMPLIANT':
                           return f'IAM user {user_name} does not have active access keys'
                       elif compliance_type == 'NON_COMPLIANT':
-                          key_list = ', '.join(access_key_ids) if access_key_ids else 'unknown'
+                          # Do not place AccessKeyIds into Config annotations and logs
+                          # Just returning the number of keys
                           return (
-                              f'IAM user {user_name} has {access_key_count} active access key(s): {key_list}.'
+                              f'IAM user {user_name} has {access_key_count} active access key(s).'
                           )
                       else:
                           return f'Unable to evaluate access keys for user {user_name}'
