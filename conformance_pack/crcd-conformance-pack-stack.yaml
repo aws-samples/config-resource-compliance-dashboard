@@ -840,6 +840,11 @@ Resources:
                   - config:DeleteConfigRule
                   - config:DescribeConfigRules
                 Resource: '*'
+              # Required for OrganizationConformancePack to verify delegated admin status
+              - Effect: Allow
+                Action:
+                  - organizations:ListDelegatedAdministrators
+                Resource: '*'
               # S3 read access for conformance pack template
               - Effect: Allow
                 Action:
