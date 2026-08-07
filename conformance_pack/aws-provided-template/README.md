@@ -6,15 +6,15 @@ This conformance pack contains a focused set of AWS Config rules recommended by 
 
 Unlike larger conformance packs that may contain 50+ rules mapped to a compliance framework, this pack is intentionally small and focused. It is designed for customers who are new to AWS Config and security monitoring and want to start with the highest-impact checks without the cost and complexity of deploying dozens of rules. Additionally, any customer can deploy this conformance pack to perform fundamental security posture checks on their AWS environment, regardless of their experience level. Each rule in this pack addresses a specific misconfiguration that is known to be actively exploited by threat actors.
 
-The rules are classified according to the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/), which is based on [MITRE ATT&CK®](https://attack.mitre.org/). The catalog identifies and categorizes threat actor behaviors observed by AWS.
+The rules are organized using categories from the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/), which is in turn based on [MITRE ATT&CK®](https://attack.mitre.org/). This grouping is intended to help you reason about *why* a misconfiguration matters in terms of attacker behavior — it is not a claim that the pack fully covers, maps to, or conforms to the catalog or MITRE ATT&CK.
 
 ### Why this pack
 
 - **Curated by incident responders**: Rules are selected based on multi-year experience supporting AWS customers during active security incidents — not from a theoretical compliance checklist.
 - **Low cost, high impact**: A small number of rules keeps AWS Config costs low while covering the misconfigurations most frequently exploited in real attacks.
 - **Accessible to beginners**: Customers who are new to AWS security can deploy this pack to immediately gain visibility into their most critical exposures without needing deep security expertise.
-- **Threat-informed**: Rules are organized by attack technique rather than AWS service, helping customers understand *why* a misconfiguration matters in terms of what an attacker would do with it.
-- **Dashboard integration**: This conformance pack can optionally be visualized in the [AWS Config Resource Compliance Dashboard (CRCD)](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html), which provides a QuickSight-based view of compliance status classified by threat technique.
+- **Threat-informed**: Rules are organized by threat-oriented category rather than by AWS service, helping customers understand *why* a misconfiguration matters in terms of what an attacker would do with it.
+- **Dashboard integration**: This conformance pack can optionally be visualized in the [AWS Config Resource Compliance Dashboard (CRCD)](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html), which provides a QuickSight-based view of compliance status classified by threat-technique categories.
 
 **Note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
@@ -36,13 +36,15 @@ All rules follow the format: `sire-<lv1>-<lv2>-<rule-name>`
 | Component | Description | Examples |
 |-----------|-------------|----------|
 | `sire-` | Fixed prefix for the conformance pack rules, stands for "Security Incident Response Engineering" | - |
-| `lv1` | Level 1 classification (attack tactic) | `ia`, `p`, `pe` |
+| `lv1` | Level 1 classification (threat-oriented category, related to the attack tactics) | `ia`, `p`, `pe` |
 | `lv2` | Level 2 classification (protection domain) | `s3`, `iam`, `ec2` |
 | `rule-name` | Descriptive rule name in kebab-case | `root-account-mfa-enabled` |
 
-#### Level 1 Classification (Attack Tactics)
+The level names below borrow terminology from MITRE ATT&CK and the Threat Technique Catalog for AWS to make the intent of each grouping recognizable. They are organizational labels for this pack, not a formal classification against those frameworks.
 
-This version of the conformance pack is called Fundamental because it covers Initial Access classification only.
+#### Level 1 Classification (Threat-Oriented Categories)
+
+This version of the conformance pack is called Fundamental because it covers the Initial Access grouping only.
 
 | Abbreviation | Name | Description |
 |--------------|------|-------------|
@@ -133,37 +135,100 @@ The extended version includes all rules from the base template and adds IAM prot
 
 ## Input Parameters
 
-All parameters are optional. Default values are provided for a security-first posture.
+All parameters are optional unless marked otherwise. Default values are provided for a security-first posture.
+
+**Note on data types:** In the CloudFormation templates every parameter is declared as `Type: String`, so all values — including booleans and integers — must be supplied as strings (for example `true`, not the unquoted boolean, and `5`, not the unquoted number). The **Type** column below describes the *logical* type and accepted format.
 
 ### S3 Protection Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets` | _(empty)_ | Comma-separated list of known allowed public S3 bucket names to exclude from evaluation. |
-| `S3AccessPointPublicAccessBlocksExcludedAccessPoints` | _(empty)_ | Comma-separated list of S3 access point names to exclude from public access evaluation. |
-| `S3AccountLevelPublicAccessIgnorePublicAcls` | `true` | Whether to enforce the `IgnorePublicAcls` setting at the account level. |
-| `S3AccountLevelPublicAccessBlockPublicPolicy` | `true` | Whether to enforce the `BlockPublicPolicy` setting at the account level. |
-| `S3AccountLevelPublicAccessBlockPublicAcls` | `true` | Whether to enforce the `BlockPublicAcls` setting at the account level. |
-| `S3AccountLevelPublicAccessRestrictPublicBuckets` | `true` | Whether to enforce the `RestrictPublicBuckets` setting at the account level. |
+| Parameter | Type | Default | Example | Description |
+|-----------|------|---------|---------|-------------|
+| `S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets` | Comma-separated list of bucket names | _(empty)_ | `my-public-site,shared-logs-bucket` | Known allowed public S3 bucket names to exclude from evaluation. |
+| `S3AccessPointPublicAccessBlocksExcludedAccessPoints` | Comma-separated list of access point names | _(empty)_ | `my-access-point,vpc-access-point` | S3 access point names to exclude from public access evaluation. |
+| `S3AccountLevelPublicAccessIgnorePublicAcls` | Boolean (`true` / `false`) | `true` | `false` | Whether to enforce the `IgnorePublicAcls` setting at the account level. |
+| `S3AccountLevelPublicAccessBlockPublicPolicy` | Boolean (`true` / `false`) | `true` | `false` | Whether to enforce the `BlockPublicPolicy` setting at the account level. |
+| `S3AccountLevelPublicAccessBlockPublicAcls` | Boolean (`true` / `false`) | `true` | `false` | Whether to enforce the `BlockPublicAcls` setting at the account level. |
+| `S3AccountLevelPublicAccessRestrictPublicBuckets` | Boolean (`true` / `false`) | `true` | `false` | Whether to enforce the `RestrictPublicBuckets` setting at the account level. |
 
 ### Resource Access Protection Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `VPCSecurityGroupPortRestrictionRestrictedPorts` | `22,3389` | Comma-separated list of ports that should not be open to unrestricted inbound traffic (0.0.0.0/0 or ::/0). |
-| `VPCSecurityGroupPortRestrictionProtocolType` | `ALL` | Protocol type to evaluate. Valid values: `TCP`, `UDP`, `ALL`. |
-| `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups` | `true` | Whether to exclude external security groups from evaluation. |
-| `VPCSecurityGroupPortRestrictionIpType` | `ALL` | IP version to evaluate. Valid values: `IPv4`, `IPv6`, `ALL`. |
+| Parameter | Type | Default | Example | Description |
+|-----------|------|---------|---------|-------------|
+| `VPCSecurityGroupPortRestrictionRestrictedPorts` | Comma-separated list of port numbers | `22,3389` | `22,3389,23` | Ports that should not be open to unrestricted inbound traffic (0.0.0.0/0 or ::/0). |
+| `VPCSecurityGroupPortRestrictionProtocolType` | Enum: `TCP` \| `UDP` \| `ALL` | `ALL` | `TCP` | Protocol type to evaluate. |
+| `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups` | Boolean (`true` / `false`) | `true` | `false` | Whether to exclude external security groups from evaluation. |
+| `VPCSecurityGroupPortRestrictionIpType` | Enum: `IPv4` \| `IPv6` \| `ALL` | `ALL` | `IPv4` | IP version to evaluate. |
 
 ### Extended Version Parameters
 
 In addition to the base parameters, the extended version requires:
 
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `RootNotUsedRegularlyLambdaArn` | Yes | ARN of the Lambda function for the root usage check. Obtained from the prerequisites template output. |
-| `UserAccessKeyCheckLambdaArn` | Yes | ARN of the Lambda function for the access key check. Obtained from the prerequisites template output. |
-| `RootUsageThresholdDays` | No (default: `5`) | Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT. |
+| Parameter | Type | Required | Example | Description |
+|-----------|------|----------|---------|-------------|
+| `RootNotUsedRegularlyLambdaArn` | Lambda function ARN | Yes | `arn:aws:lambda:us-east-1:111122223333:function:sire-root-not-used-regularly` | ARN of the Lambda function for the root usage check. Obtained from the prerequisites template output. |
+| `UserAccessKeyCheckLambdaArn` | Lambda function ARN | Yes | `arn:aws:lambda:us-east-1:111122223333:function:sire-user-access-key-check` | ARN of the Lambda function for the access key check. Obtained from the prerequisites template output. |
+| `RootUsageThresholdDays` | Integer (as string) | No (default: `5`) | `7` | Number of days to look back for root account usage. If root was used within this threshold, the account is marked NON_COMPLIANT. |
+
+### Rule-to-Parameter Mapping
+
+Only the rules listed below consume input parameters; all other rules in the pack take no parameters.
+
+| Rule | Parameters consumed |
+|------|---------------------|
+| `sire-ia-s3-s3-bucket-level-public-access-prohibited` | `S3BucketLevelPublicAccessProhibitedExcludedPublicBuckets` |
+| `sire-ia-s3-s3-access-point-public-access-blocks` | `S3AccessPointPublicAccessBlocksExcludedAccessPoints` |
+| `sire-ia-s3-s3-account-level-public-access-blocks-periodic` | `S3AccountLevelPublicAccessIgnorePublicAcls`, `S3AccountLevelPublicAccessBlockPublicPolicy`, `S3AccountLevelPublicAccessBlockPublicAcls`, `S3AccountLevelPublicAccessRestrictPublicBuckets` |
+| `sire-ia-ra-vpc-sg-port-restriction-check` | `VPCSecurityGroupPortRestrictionRestrictedPorts`, `VPCSecurityGroupPortRestrictionProtocolType`, `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups`, `VPCSecurityGroupPortRestrictionIpType` |
+| `sire-ia-iam-iam-root-not-used-regularly` (extended) | `RootNotUsedRegularlyLambdaArn`, `RootUsageThresholdDays` |
+| `sire-ia-iam-iam-user-access-key-check` (extended) | `UserAccessKeyCheckLambdaArn` |
+
+
+## Remediation
+
+**This conformance pack is detection-only.** It ships no `RemediationConfiguration` blocks — the rules evaluate resources and report compliance, but they do not modify any resource. Nothing in this pack changes your environment automatically.
+
+You have two ways to fix a resource that a rule reports as `NON_COMPLIANT`:
+
+1. **Manual remediation** — make the corrective configuration change yourself (steps per rule below).
+2. **Automatic remediation (optional, self-configured)** — for the subset of rules that have an AWS-provided [Systems Manager Automation remediation runbook](https://docs.aws.amazon.com/config/latest/developerguide/remediation.html), you can attach a `RemediationConfiguration` to the deployed rule (via the AWS Config console or `put-remediation-configurations`) to remediate manually or automatically. These runbooks are **not** included or pre-wired by this pack; you opt in and take on the associated IAM permissions and operational risk. See [Remediating Noncompliant Resources](https://docs.aws.amazon.com/config/latest/developerguide/remediation.html).
+
+The table below lists the manual fix for each rule and, where one exists, the AWS-provided remediation runbook you could attach.
+
+### S3 Protection
+
+| Rule | Manual remediation | AWS remediation runbook |
+|------|--------------------|-------------------------|
+| `sire-ia-s3-s3-bucket-public-read-prohibited` | Remove public read grants from the bucket ACL and policy, and enable S3 Block Public Access on the bucket. | `AWS-DisableS3BucketPublicReadWrite` |
+| `sire-ia-s3-s3-bucket-public-write-prohibited` | Remove public write grants from the bucket ACL and policy, and enable S3 Block Public Access on the bucket. | `AWS-DisableS3BucketPublicReadWrite` |
+| `sire-ia-s3-s3-bucket-level-public-access-prohibited` | Enable all four Block Public Access settings on the bucket. | `AWSConfigRemediation-ConfigureS3BucketPublicAccessBlock` |
+| `sire-ia-s3-s3-account-level-public-access-blocks-periodic` | Enable the account-level Block Public Access settings for the account. | `AWSConfigRemediation-ConfigureS3PublicAccessBlock` |
+| `sire-ia-s3-s3-access-point-in-vpc-only` | Recreate the access point with a VPC network origin, or restrict it to a VPC. Access point network origin is immutable, so the access point must be replaced. | _None — manual only_ |
+| `sire-ia-s3-s3-access-point-public-access-blocks` | Enable Block Public Access settings on the access point. | _None — manual only_ |
+
+### EC2 Security (IMDSv2)
+
+| Rule | Manual remediation | AWS remediation runbook |
+|------|--------------------|-------------------------|
+| `sire-ia-ec2-ec2-imdsv2-check` | Set the instance metadata options to require IMDSv2 (`HttpTokens=required`) using `modify-instance-metadata-options`. | `AWSConfigRemediation-EnforceEC2InstanceIMDSv2` |
+| `sire-ia-ec2-ec2-launch-template-imdsv2-check` | Create a new launch template version with `MetadataOptions.HttpTokens=required` and set it as the default version. | _None — manual only_ |
+| `sire-ia-ec2-autoscaling-launchconfig-requires-imdsv2` | Launch configurations are immutable. Create a replacement launch configuration (or migrate to a launch template) with `HttpTokens=required`, then update the Auto Scaling group to use it. | _None — manual only_ |
+
+### Resource Access Protection (Security Groups)
+
+| Rule | Manual remediation | AWS remediation runbook |
+|------|--------------------|-------------------------|
+| `sire-ia-ra-vpc-sg-port-restriction-check` | Edit the security group to remove or narrow the offending inbound rule so the restricted ports (default `22`, `3389`) are not open to `0.0.0.0/0` or `::/0`. Scope the source to specific CIDRs or security groups. | _None designated for this rule — manual only_ |
+
+### IAM Protection (extended template)
+
+| Rule | Manual remediation | AWS remediation runbook |
+|------|--------------------|-------------------------|
+| `sire-ia-iam-root-account-mfa-enabled` | Sign in as the root user and enable an MFA device for the root account. | _None — manual only_ |
+| `sire-ia-iam-iam-root-access-key-check` | Sign in as the root user and delete the root access key(s). Root should not have access keys. | _None — manual only_ |
+| `sire-ia-iam-iam-user-mfa-enabled` | Assign an MFA device to each IAM user flagged. | _None — manual only_ |
+| `sire-ia-iam-mfa-enabled-for-iam-console-access` | Assign an MFA device to each IAM user that has a console password. | _None — manual only_ |
+| `sire-ia-iam-iam-root-not-used-regularly` (custom) | Investigate why the root user was used within the threshold window. If the usage was not expected, treat it as a potential compromise and follow your incident response process (rotate root credentials, review CloudTrail). If it was legitimate, migrate the task to an IAM principal so root is not used routinely. | _None — manual only_ |
+| `sire-ia-iam-iam-user-access-key-check` (custom) | Review each flagged IAM user's active access keys. Remove keys that are unnecessary, and for keys that are required, rotate them and prefer short-lived credentials (IAM roles) where possible. | _None — manual only_ |
 
 
 ## Regional Availability
@@ -324,7 +389,7 @@ If you already have a comprehensive conformance pack (e.g., CIS, NIST), the rule
 
 **Q: Why do rule names have the `sire-` prefix?**
 
-The rule naming convention (`sire-ia-{category}-{rule}`) encodes the threat tactic and category, enabling automated classification and visualization on security dashboards. The prefix `sire` stands for **S**ecurity **I**ncident **R**esponse **E**ngineering. `ia` refers to the MITRE ATT&CK tactic "Initial Access."
+The rule naming convention (`sire-ia-{category}-{rule}`) encodes a threat-oriented category, which enables grouping and visualization on security dashboards. The prefix `sire` stands for **S**ecurity **I**ncident **R**esponse **E**ngineering. `ia` corresponds to "Initial Access" from MITRE ATT&CK; it indicates the intent behind the grouping rather than a formal mapping to the ATT&CK framework.
 
 **Q: Can I deploy this pack alongside other conformance packs?**
 
