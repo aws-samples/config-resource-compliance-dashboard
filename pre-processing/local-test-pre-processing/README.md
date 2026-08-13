@@ -90,11 +90,11 @@ python test_local.py ./source-files/<filename>.json.gz ./output-files
 The script will print progress as it processes:
 
 ```
-Input: ./source-files/058264555211_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_6292fd47-f519-4323-9b79-6c3cbebe1b2e.json.gz
+Input: ./source-files/123456789012_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_6292fd47-f519-4d23-9b79-6c8cbesd1b2e.json.gz
 Output dir: ./output-files
 Input size: 45.2 MB (compressed)
 Batch size: 500 items per file
-Source: account=058264555211, region=eu-central-1, timestamp=20260801T083010Z
+Source: account=123456789012, region=eu-central-1, timestamp=20260801T083010Z
 Progress: 5000 items read, 10 files written
 Progress: 10000 items read, 20 files written
 ...
@@ -191,10 +191,16 @@ Output files follow this naming convention:
 <account-id>_Config_<region>_<type>_<timestamp>_<sequence>_<random>.json.gz
 ```
 
-For example:
+For example, from the Config record:
+
 ```
-058264555211_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_00001_a3f8b2c1d4e5.json.gz
-058264555211_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_00002_7b9e1f3a2c8d.json.gz
+123456789012_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_6292fd47-f519-4d23-9b79-6c8cbesd1b2e.json.gz
+```
+
+These files will be created in the destination bucket:
+```
+123456789012_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_00001_a3f8b2c1d4e5.json.gz
+123456789012_Config_eu-central-1_ConfigSnapshot_20260801T083010Z_00002_7b9e1f3a2c8d.json.gz
 ```
 
 The account ID, region, type, and timestamp are preserved from the source file so you can correlate input and output.
