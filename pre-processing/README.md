@@ -34,6 +34,9 @@ aws s3api list-objects-v2 \
 
 If the query returns data, you have to deploy this solution before installing the dashboard.
 
+You can test locally this solution on your files by following [this guide](./local-test-pre-processing/README.md).
+
+
 ## Solution
 
 This preprocessing pipeline automatically splits large AWS Config files into smaller files that stay well within Athena's 32 MB limit. It runs as a serverless Fargate task triggered by S3 events whenever a new Config file is delivered to the Log Archive bucket.
