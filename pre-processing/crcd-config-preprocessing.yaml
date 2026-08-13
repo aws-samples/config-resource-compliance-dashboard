@@ -537,7 +537,7 @@ Resources:
           SUBNETS: !Join [",", !Ref FargateSubnetIds]
           SECURITY_GROUPS: !Join [",", !Ref FargateSecurityGroupIds]
           TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
-          CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "300000"
+          CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "200000"
       Code:
         ZipFile: |
           import boto3
@@ -549,7 +549,7 @@ Resources:
 
           PATTERN = r'^(?P<org_id>[\w-]+)?/?AWSLogs/(?P<account_id>\d+)/Config/(?P<region>[\w-]+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<type>ConfigSnapshot|ConfigHistory)/[^//]+$'
 
-          DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD = 300000
+          DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD = 200000
 
           def lambda_handler(event, context):
               table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]

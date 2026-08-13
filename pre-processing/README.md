@@ -1,7 +1,7 @@
 # AWS Config Resource Compliance Dashboard - Preprocessing
 
 
-AWS Config generates snapshot files that contain all tracked resource configurations for an AWS account and region in a single line of a JSON file. In large environments, these files can contain tens or hundreds of thousands of Configuration Items (CI) and result in a file that is several MB in size.
+AWS Config generates snapshot files that contain all tracked resource configurations for an AWS account and Region in a single line of a JSON file. In large environments, these files can contain tens or hundreds of thousands of Configuration Items (CI) and result in a file that is several MB in size.
 
 AWS Athena has a **hard limit of 32 MB** for each row of data it can process. Because AWS Config can produce snapshot files where a single configuration item exceeds Athena's 32 MB per-row hard limit, Athena queries will fail.
 
@@ -16,9 +16,9 @@ Before installing the dashboard, follow this to find the largest files in your b
 1. Run the CLI command below, replace:
    - `<YOUR-CONFIG-BUCKET>` with the name of your S3 bucket where AWS Config records are delivered.
    - `<YOUR-S3-PREFIX>` with the S3 prefix where you know large Config files exist. Be as narrow as possible — the more specific the prefix, the faster the query returns. A broad prefix (e.g. AWSLogs/) will scan every object under it and can take a very long time on buckets with millions of objects. Examples:
-     - Standalone account, specific region and day: `AWSLogs/123456789012/Config/eu-central-1/2026/8/2/ConfigHistory/`
-     - Organization, specific account and region: `o-abc123def4/AWSLogs/123456789012/Config/eu-central-1/`
-     - Organization, specific account (all regions): o-abc123def4/AWSLogs/123456789012/Config/
+     - Standalone account, specific Region and day: `AWSLogs/123456789012/Config/eu-central-1/2026/8/2/ConfigHistory/`
+     - Organization, specific account and Region: `o-abc123def4/AWSLogs/123456789012/Config/eu-central-1/`
+     - Organization, specific account (all Regions): o-abc123def4/AWSLogs/123456789012/Config/
    - `<YYYY-MM-DD>` with a recent date. Yesterday should be enough and return files quickly. You can always use an earlier date if you don't find files, but don't go too far in the past or the command will take a long time.
    - `<SIZE-IN-BYTES>` with the minimum compressed file size to filter on. The Size field in S3 is the gzip-compressed size — the uncompressed JSON will be much larger. As a reference, a compressed file of just 500 KB can expand to over 45 MB uncompressed, which already exceeds Athena's 32 MB limit. Adjust this value based on your needs:
      - Use a low threshold (e.g. 300000 = ~300 KB) to find files that are just barely over the Athena limit.
@@ -43,7 +43,7 @@ This preprocessing pipeline automatically splits large AWS Config files into sma
 
 Key design decisions:
 - **Batched output** - Each output file contains up to 500 configuration items, maintaining the same JSON structure as the original file (`fileVersion`, `configSnapshotId`, `configurationItems`).
-- **Filename correlation** - Output files preserve the account ID, region, type, and timestamp from the source file, making it easy to trace output back to input.
+- **Filename correlation** - Output files preserve the account ID, Region, type, and timestamp from the source file, making it easy to trace output back to input.
 - **Zero data loss** - Items are processed sequentially and written atomically to S3. The job tracks progress in DynamoDB.
 - **Fully automated deployment** - A single CloudFormation template creates all resources without manual steps.
 
@@ -56,8 +56,8 @@ The flow of data is as follows:
 1. **New Config record** lands in the source S3 bucket, the AWS Config Logs bucket.
 2. **S3 event notification** triggers the Preprocessing Producer Lambda.
 3. **Producer Lambda** checks the compressed file size:
-   - **Below threshold** (< 300 KB): copies the file directly to the Dashboard Bucket.
-   - **Above threshold** (>= 300 KB): launches a Fargate task.
+   - **Below threshold** (< 200 KB): copies the file directly to the Dashboard Bucket.
+   - **Above threshold** (>= 200 KB): launches a Fargate task.
 4. **Fargate task** streams the large file, splits it into files of 500 `configurationItems` each, and writes them to the Dashboard Bucket.
 5. **DynamoDB** tracks job status (STARTED → COMPLETED/FAILED) for both paths.
 
@@ -69,17 +69,17 @@ The flow of data is as follows:
 ![CRCD Preprocessing Architecture](../images/config-account-preprocessing-deployment.png "AWS Config Dashboard, Preprocessing Architecture")
 
 In your AWS Config account:
-1. Deploy the proprocessing resources. Note down the name of the Dashboard bucket.
+1. Deploy the preprocessing resources. Note down the name of the Dashboard bucket.
 1. Deploy the CRCD pipeline resources, use the Dashboard bucket as input for the files of your dashboard.
 1. Deploy the Dashboard on Quicksight.
 
 ### Dashboard Account
 
-TODO
+Coming soon...
 
 # Deployment
 
-TODO
+Coming soon...
 
 ---
 
@@ -136,7 +136,7 @@ When AWS Config generates a snapshot file, it creates one single YAML row contai
 ### Notes
 
 - The file is a single-line JSON (no pretty-printing), which is typical for Config snapshot deliveries to S3.
-- The `configuration` field is polymorphic — its shape depends entirely on the `resourceType`. It will contain every `resourceType` supported by AWS Config that is also a real resource on the AWS account and region where the snapshot is generated.
+- The `configuration` field is polymorphic — its shape depends entirely on the `resourceType`. It will contain every `resourceType` supported by AWS Config that is also a real resource on the AWS account and Region where the snapshot is generated.
 - Resource types found in the sample file include:
   - `AWS::Cassandra::Keyspace`
   - `AWS::AppConfig::DeploymentStrategy`
