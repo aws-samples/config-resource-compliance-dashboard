@@ -1698,7 +1698,10 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') 
+            AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) 
+            OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) 
+                AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
          GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
       )
       , resource_compliance AS (
@@ -1717,7 +1720,7 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
       )
       SELECT
@@ -1764,7 +1767,7 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)))
          GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
       )
       , resource_compliance AS (
@@ -1783,7 +1786,7 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
       )
       SELECT
@@ -1828,7 +1831,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "accountId", "region", "dt", "configurationItem"."resourceId"
       )
       SELECT
@@ -1867,7 +1870,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "accountId", "region", "dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
       )
       SELECT
@@ -2022,7 +2025,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceId"
       )
       SELECT
@@ -2084,7 +2087,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Volume') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Volume') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT
@@ -2161,7 +2164,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Instance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Instance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "configurationItem"."resourceId"
       )
       , ssm_info AS (
@@ -2252,7 +2255,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Lambda::Function') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Lambda::Function') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "accountId", "region", "configurationItem"."resourceId"
       )
       SELECT
@@ -2332,7 +2335,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::RDS::DBInstance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::RDS::DBInstance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT
@@ -2401,7 +2404,7 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::S3::Bucket') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::S3::Bucket') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT

@@ -1,5 +1,11 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+# [5.X.X] - TBC
+## Added
+
+## Changed
+- Support data refresh more frequently than 24 hours.
+
 # [5.0.0] - 2026-06-30
 ## Added
 
