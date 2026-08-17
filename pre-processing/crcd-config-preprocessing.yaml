@@ -243,10 +243,13 @@ Resources:
 
   # Lambda triggered by CloudFormation to configure bucket notification on AWS Config AWS Config Logs bucket
   ConfigBucketNotificationConfigurationLambdaJobProducer:
+  # NOTE: we intentionally do NOT declare a CloudWatch LogGroup for this function in CloudFormation.
+  # It is a support Lambda that is called once, and it runs on stack DELETE (its Delete handler).
+  # Its async log writes re-create the /aws/lambda/... group after CloudFormation deletes it,
+  # leaving an orphan the Lambda service owns (which then blocks a later re-deploy).
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
-    DependsOn: ConfigBucketNotificationConfigurationLambdaJobProducerLogGroup
     Condition: IsConfigureS3EventNotificationToLambdaJobProducer
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -397,21 +400,6 @@ Resources:
           - id: W92
             reason: "This function does not need reserved concurrent executions"
 
-
-  ConfigBucketNotificationConfigurationLambdaJobProducerLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed
-    Type: AWS::Logs::LogGroup
-    Condition: IsConfigureS3EventNotificationToLambdaJobProducer
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${LambdaSupportJobTriggerConfigurationName}"
-      RetentionInDays: 14
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W84
-            reason: "No KMS encryption needed"
 
   # KMS key that encrypts the Dashboard bucket, created only when the AWS Config Logs bucket is
   # KMS-encrypted. The pre-processing components (producer Lambda, script uploader, Fargate task)
@@ -987,10 +975,13 @@ Resources:
                 Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/ecs.amazonaws.com/*"
 
   ECSServiceLinkedRoleLambda:
+  # NOTE: we intentionally do NOT declare a CloudWatch LogGroup for this function in CloudFormation.
+  # It is a support Lambda that is called once, and it runs on stack DELETE (its Delete handler).
+  # Its async log writes re-create the /aws/lambda/... group after CloudFormation deletes it,
+  # leaving an orphan the Lambda service owns (which then blocks a later re-deploy).
   # checkov:skip=CKV_AWS_115: One-time execution
   # checkov:skip=CKV_AWS_116: No DLQ needed
     Type: AWS::Lambda::Function
-    DependsOn: ECSServiceLinkedRoleLambdaLogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1062,20 +1053,6 @@ Resources:
         rules_to_suppress:
           - id: W92
             reason: "This function does not need reserved concurrent executions"
-
-  ECSServiceLinkedRoleLambdaLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${LambdaSupportECSServiceRoleName}"
-      RetentionInDays: 14
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W84
-            reason: "No KMS encryption needed"
 
   EnsureECSServiceLinkedRole:
     Type: Custom::ECSServiceLinkedRole
@@ -1225,10 +1202,13 @@ Resources:
                 - !Ref "AWS::NoValue"
 
   ScriptUploaderLambda:
+  # NOTE: we intentionally do NOT declare a CloudWatch LogGroup for this function in CloudFormation.
+  # It is a support Lambda that is called once, and it runs on stack DELETE (its Delete handler).
+  # Its async log writes re-create the /aws/lambda/... group after CloudFormation deletes it,
+  # leaving an orphan the Lambda service owns (which then blocks a later re-deploy).
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
-    DependsOn: ScriptUploaderLambdaLogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1274,20 +1254,6 @@ Resources:
         rules_to_suppress:
           - id: W92
             reason: "This function does not need reserved concurrent executions"
-
-  ScriptUploaderLambdaLogGroup:
-  # checkov:skip=CKV_AWS_158: No KMS encryption needed
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${LambdaSupportScriptUploaderName}"
-      RetentionInDays: 14
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W84
-            reason: "No KMS encryption needed"
 
   # Custom Resource that triggers the script upload
   PreProcessingScript:
