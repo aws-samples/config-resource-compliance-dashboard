@@ -514,10 +514,9 @@ Resources:
           DYNAMODB_TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
           DASHBOARD_BUCKET_NAME: !Ref DashboardBucket
           ECS_CLUSTER_ARN: !GetAtt PreProcessingECSCluster.Arn
-          TASK_DEFINITION_ARN: !Ref PreProcessingTaskDefinition
-          SUBNETS: !Join [",", [!Ref PreProcessingPublicSubnet1, !Ref PreProcessingPublicSubnet2]]
-          SECURITY_GROUPS: !Ref PreProcessingFargateSecurityGroup
-          TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
+          ECS_TASK_DEFINITION_ARN: !Ref PreProcessingTaskDefinition
+          ECS_TASK_SUBNETS: !Join [",", [!Ref PreProcessingPublicSubnet1, !Ref PreProcessingPublicSubnet2]]
+          ECS_TASK_SECURITY_GROUPS: !Ref PreProcessingFargateSecurityGroup
           CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "200000"
       Code:
         ZipFile: |
@@ -533,16 +532,15 @@ Resources:
           DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD = 200000
 
           def lambda_handler(event, context):
-              table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
-              dynamodb = boto3.resource('dynamodb').Table(table_name)
+              tracking_table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
+              dynamodb = boto3.resource('dynamodb').Table(tracking_table_name)
               dashboard_bucket_name = os.environ["DASHBOARD_BUCKET_NAME"]
 
               ecs = boto3.client('ecs')
               cluster_arn = os.environ["ECS_CLUSTER_ARN"]
-              task_definition = os.environ["TASK_DEFINITION_ARN"]
-              subnets = os.environ["SUBNETS"].split(",")
-              security_groups = os.environ["SECURITY_GROUPS"].split(",")
-              tracking_table = os.environ["TRACKING_TABLE_NAME"]
+              task_definition = os.environ["ECS_TASK_DEFINITION_ARN"]
+              subnets = os.environ["ECS_TASK_SUBNETS"].split(",")
+              security_groups = os.environ["ECS_TASK_SECURITY_GROUPS"].split(",")
 
               size_threshold = DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD
               size_threshold_parameter = os.environ.get("CONFIG_OBJECT_SIZE_THRESHOLD_BYTES", "")
@@ -641,7 +639,7 @@ Resources:
                                       'environment': [
                                           {'name': 'SOURCE_PATH', 'value': f's3://{bucket}/{key}'},
                                           {'name': 'DESTINATION_BUCKET', 'value': dashboard_bucket_name},
-                                          {'name': 'TRACKING_TABLE_NAME', 'value': tracking_table},
+                                          {'name': 'TRACKING_TABLE_NAME', 'value': tracking_table_name},
                                           {'name': 'JOB_RUN_ID', 'value': run_id}
                                       ]
                                   }]
@@ -941,8 +939,8 @@ Resources:
         Variables:
           # Exponential backoff configuration for confirming the ECS service-linked role
           # has propagated (IAM is eventually consistent). Both values are configurable.
-          SLR_MAX_ATTEMPTS: "5"
-          SLR_BASE_DELAY_SECONDS: "2"
+          ECS_SERVICE_LINKED_ROLE_MAX_ATTEMPTS: "5"
+          ECS_SERVICE_LINKED_ROLE_BASE_DELAY_SECONDS: "3"
       Code:
         ZipFile: |
           import boto3
@@ -955,8 +953,8 @@ Resources:
                   if event['RequestType'] in ['Create', 'Update']:
                       iam = boto3.client('iam')
                       role_name = 'AWSServiceRoleForECS'
-                      max_attempts = int(os.environ.get('SLR_MAX_ATTEMPTS', '5'))
-                      base_delay = float(os.environ.get('SLR_BASE_DELAY_SECONDS', '3'))
+                      max_attempts = int(os.environ.get('ECS_SERVICE_LINKED_ROLE_MAX_ATTEMPTS', '5'))
+                      base_delay = float(os.environ.get('ECS_SERVICE_LINKED_ROLE_BASE_DELAY_SECONDS', '3'))
 
                       created = False
                       try:
