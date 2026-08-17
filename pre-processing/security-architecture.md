@@ -30,6 +30,45 @@ The core principle behind the design: **the only component that transports AWS C
 hardening is concentrated. Everything else either handles metadata only or moves data
 server-side within AWS.
 
+
+## Detailed Architecture
+
+![CRCD Preprocessing Detailed Architecture](../images/pre-processing-full-architecture.png "AWS Config Dashboard, Preprocessing Detailed Architecture")
+
+> [!NOTE]
+> The IP ranges shown on the route table icon are illustrative only and do not represent the
+> actual CIDR ranges used by the solution. The VPC uses `10.0.0.0/24`, with two `/25` subnets
+> (`10.0.0.0/25` and `10.0.0.128/25`).
+
+The diagram above shows the complete set of components the preprocessing feature deploys and how
+data flows between them. At a high level, the feature is **fully self-contained**: it provisions
+its own isolated networking and never reads or modifies your existing VPCs, subnets, or route
+tables. The network path that carries AWS Config file contents stays on the AWS private network,
+and the only traffic that reaches the public internet is the Fargate task downloading its
+container image and Python dependencies.
+
+The feature installs the following components, each described in detail in the sections below:
+
+- **S3 event notification** on your AWS Config Logs bucket, which triggers the pipeline whenever
+  a new Config file is delivered (configured by this template unless you already manage the
+  bucket's notifications yourself).
+- **Preprocessing Producer Lambda**, which decides how each new file is handled based on its size.
+- **A dedicated VPC** with two public subnets in different Availability Zones, an Internet Gateway,
+  and a route table — isolated from the rest of your environment.
+- **An ECS Fargate job** that splits large Config files. AWS Fargate decides which Availability
+  Zone (and therefore which subnet) runs each job.
+- **The Dashboard bucket**, an S3 bucket that receives the processed files and serves as the data
+  source for the dashboard.
+- **A DynamoDB table** that tracks the execution and status of each job.
+- **S3 and DynamoDB Gateway Endpoints.** All traffic from the Fargate job to the S3 buckets and the
+  DynamoDB table flows through these endpoints over the AWS private network rather than the public
+  internet. Their endpoint policies restrict access to only those specific resources.
+- **A security group for the Fargate job** that allows outbound HTTPS (443) only and has no inbound
+  rules.
+- **Internet access** through the Internet Gateway, required so the Fargate task can pull its
+  container image from public ECR and install its Python (PyPI) packages. No AWS Config data
+  traverses this path.
+
 ---
 
 ## 1. Producer Lambda function
