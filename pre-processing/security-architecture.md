@@ -68,6 +68,10 @@ The feature installs the following components, each described in detail in the s
 - **Internet access** through the Internet Gateway, required so the Fargate task can pull its
   container image from public ECR and install its Python (PyPI) packages. No AWS Config data
   traverses this path.
+- **CloudWatch Logs** for the Producer Lambda and the Fargate job. The log groups are
+  account/Region-scoped resources (outside the VPC), and log delivery uses the public AWS
+  service path rather than a VPC endpoint. See the [CloudWatch Logs](#cloudwatch-logs) section
+  for the rationale and the encryption details.
 
 ---
 
