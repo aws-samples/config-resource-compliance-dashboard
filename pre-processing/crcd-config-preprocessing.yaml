@@ -22,12 +22,6 @@ Metadata:
           - DashboardBucketNamePrefix
       -
         Label:
-          default: "Fargate networking"
-        Parameters:
-          - VpcId
-          - FargateSubnetIds
-      -
-        Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
           - PreProcessingLambdaProducerName
@@ -49,10 +43,6 @@ Metadata:
         default: "Name of the Lambda function that performs supporting configurations: S3 object notification"
       PreProcessingLambdaProducerName:
         default: "Name of the Lambda function that triggers the pre-processing job"
-      VpcId:
-        default: "VPC for Fargate tasks"
-      FargateSubnetIds:
-        default: "Subnet IDs for Fargate tasks"
       LambdaSupportScriptUploaderName:
         default: "Name of the Lambda function that uploads the preprocessing script to S3"
       LambdaSupportECSServiceRoleName:
@@ -116,16 +106,6 @@ Parameters:
     MinLength: 1
     ConstraintDescription: "Required: AWS Lambda function that ensures the ECS service-linked role exists."
     Description: "Name of the AWS Lambda function that ensures the ECS service-linked role exists (Required)."
-
-  VpcId:
-    Type: "AWS::EC2::VPC::Id"
-    Description: "ID of the VPC where the Fargate task runs. The template creates the task's security group in this VPC (Required)."
-
-  FargateSubnetIds:
-    Type: "List<AWS::EC2::Subnet::Id>"
-    Description: "Subnet IDs (in the VPC above) where Fargate tasks will run. Must have internet access (public subnet with auto-assign public IP, or private subnet with NAT gateway) to pull the container image and reach S3 and DynamoDB (Required)."
-
-
 
 Conditions:
   IsConfigureS3EventNotificationToLambdaJobProducer:
@@ -535,7 +515,7 @@ Resources:
           DASHBOARD_BUCKET_NAME: !Ref DashboardBucket
           ECS_CLUSTER_ARN: !GetAtt PreProcessingECSCluster.Arn
           TASK_DEFINITION_ARN: !Ref PreProcessingTaskDefinition
-          SUBNETS: !Join [",", !Ref FargateSubnetIds]
+          SUBNETS: !Join [",", [!Ref PreProcessingPublicSubnet1, !Ref PreProcessingPublicSubnet2]]
           SECURITY_GROUPS: !Ref PreProcessingFargateSecurityGroup
           TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
           CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "200000"
@@ -739,6 +719,99 @@ Resources:
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
+  # -----------------------------------------------------------------------------------------------------------------------
+  # Dedicated VPC for the pre-processing Fargate task.
+  # The stack creates its own isolated VPC so it never touches the customer's existing networking:
+  #   - No customer VPC/subnet/route-table inputs are required.
+  #   - The gateway endpoints attach only to our route table, so their scoped policies cannot affect any
+  #     other workload in the account.
+  # This is a PUBLIC VPC: the task gets a public IP and egresses via the Internet Gateway to pull its
+  # public container image (public ECR) and PyPI packages, while S3 and DynamoDB traffic (the sensitive
+  # Config-data path) stays on the AWS private network via the gateway endpoints below.
+  # -----------------------------------------------------------------------------------------------------------------------
+  PreProcessingVPC:
+  # checkov:skip=CKV2_AWS_11: VPC flow logs not required for this isolated, single-purpose preprocessing VPC
+    Type: AWS::EC2::VPC
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      CidrBlock: 10.0.0.0/24
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-vpc
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W60
+            reason: "Flow logs are not required for this isolated, single-purpose preprocessing VPC"
+
+  PreProcessingInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-igw
+
+  PreProcessingVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      InternetGatewayId: !Ref PreProcessingInternetGateway
+
+  PreProcessingPublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      CidrBlock: 10.0.0.0/25
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-public-subnet-1
+
+  PreProcessingPublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      CidrBlock: 10.0.0.128/25
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-public-subnet-2
+
+  PreProcessingPublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-public-rtb
+
+  PreProcessingDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: PreProcessingVPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PreProcessingPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref PreProcessingInternetGateway
+
+  PreProcessingPublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PreProcessingPublicSubnet1
+      RouteTableId: !Ref PreProcessingPublicRouteTable
+
+  PreProcessingPublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PreProcessingPublicSubnet2
+      RouteTableId: !Ref PreProcessingPublicRouteTable
+
   # Security group for the Fargate task. Egress only, restricted to HTTPS (443). No ingress rules
   # (the task never accepts inbound connections). Outbound 443 is required so the task can pull its
   # public container image (public ECR), install Python dependencies (PyPI), and reach the AWS
@@ -749,7 +822,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       GroupDescription: "CRCD preprocessing Fargate task - outbound HTTPS (443) only, no inbound"
-      VpcId: !Ref VpcId
+      VpcId: !Ref PreProcessingVPC
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 443
@@ -766,6 +839,62 @@ Resources:
             reason: "The Fargate task requires outbound internet access to pull its public container image and PyPI packages; egress is intentionally restricted to TCP port 443"
           - id: W40
             reason: "Egress is intentionally restricted to a single protocol/port (TCP 443) rather than all protocols"
+
+  # -----------------------------------------------------------------------------------------------------------------------
+  # Gateway VPC endpoints for S3 and DynamoDB (both free).
+  # These keep the Fargate task's S3 (Config file content) and DynamoDB (job tracking) traffic on the
+  # AWS private network instead of egressing via the internet gateway to the public service endpoints.
+  # They attach only to our dedicated route table, so their scoped policies never affect other workloads.
+  # -----------------------------------------------------------------------------------------------------------------------
+
+  # Gateway endpoint for S3 (free). Carries the Fargate task's Config file reads and split-output writes.
+  # The endpoint policy restricts access through this endpoint to only the source AWS Config Logs bucket
+  # and the Dashboard bucket (and their objects).
+  PreProcessingS3GatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PreProcessingPublicRouteTable
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowCRCDConfigDataAccess"
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - "s3:GetObject"
+              - "s3:PutObject"
+              - "s3:ListBucket"
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
+              - !GetAtt DashboardBucket.Arn
+              - !Sub "${DashboardBucket.Arn}/*"
+
+  # Gateway endpoint for DynamoDB (free). Carries the Fargate task's job tracking table updates.
+  # The endpoint policy restricts access through this endpoint to only the CRCD job tracking table.
+  PreProcessingDynamoDBGatewayEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref PreProcessingVPC
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.dynamodb"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PreProcessingPublicRouteTable
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowCRCDJobTrackingTableAccess"
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - "dynamodb:GetItem"
+              - "dynamodb:UpdateItem"
+            Resource:
+              - !GetAtt CRCDJobTrackingTable.Arn
 
   ECSServiceLinkedRoleLambdaRole:
     Type: AWS::IAM::Role

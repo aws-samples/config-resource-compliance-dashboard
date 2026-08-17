@@ -49,20 +49,14 @@ Key design decisions:
 - **Filename correlation** - Output files preserve the account ID, Region, type, and timestamp from the source file, making it easy to trace output back to input.
 - **Zero data loss** - Items are processed sequentially and written atomically to S3. The job tracks progress in DynamoDB.
 - **Fully automated deployment** - A single CloudFormation template creates all resources without manual steps.
+- **Fully self-contained and secured** - The solution creates its own dedicated, isolated networking (VPC, subnets, route table, Internet Gateway) and does not read or modify any of the customer's existing networking. The Fargate task runs behind a locked-down security group, and its S3 and DynamoDB traffic is kept on the AWS private network through scoped gateway endpoints. See [security-architecture.md](./security-architecture.md) for the full design decisions and rationale.
+
+> [!NOTE]
+> The solution consumes 1 VPC and 1 Internet Gateway from your account's regional quotas (both default to 5 per Region).
 
 ## Architecture
 
-
-![CRCD Preprocessing Architecture](../images/pre-processing-architecture.png "AWS Config Dashboard, Preprocessing Architecture")
-
-The flow of data is as follows:
-1. **New Config record** lands in the source S3 bucket, the AWS Config Logs bucket.
-2. **S3 event notification** triggers the Preprocessing Producer Lambda.
-3. **Producer Lambda** checks the compressed file size:
-   - **Below threshold** (< 200 KB): copies the file directly to the Dashboard Bucket.
-   - **Above threshold** (>= 200 KB): launches a Fargate task.
-4. **Fargate task** streams the large file, splits it into files of 500 `configurationItems` each, and writes them to the Dashboard Bucket.
-5. **DynamoDB** tracks job status (STARTED → COMPLETED/FAILED) for both paths.
+See [security-architecture.md](./security-architecture.md) to read more about the architecture of the preprocessing feature.
 
 
 ## End-to-End Deployment Architectures
