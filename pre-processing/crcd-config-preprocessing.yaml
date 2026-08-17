@@ -1,9 +1,10 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS Config Resource Compliance Dashboard (CRCD) - Preprocessing AWS Config files using AWS Fargate'
-
+# Config Compliance Resource Dashboard - pre-processing 
 # In environments with a large number of resources, AWS Config may generate files that are bigger that 32MB (uncompressed).
 # This will break an Athena service limit and make it impossible to run queries, as all queries that try to open one of those files will fail.
 # These resources will pre-process AWS Config files and generate smaller files that can potentially avoid the issue.
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Config Resource Compliance Dashboard (CRCD) - Preprocessing AWS Config files using AWS Fargate'
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -23,8 +24,8 @@ Metadata:
         Label:
           default: "Fargate networking"
         Parameters:
+          - VpcId
           - FargateSubnetIds
-          - FargateSecurityGroupIds
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -48,10 +49,10 @@ Metadata:
         default: "Name of the Lambda function that performs supporting configurations: S3 object notification"
       PreProcessingLambdaProducerName:
         default: "Name of the Lambda function that triggers the pre-processing job"
+      VpcId:
+        default: "VPC for Fargate tasks"
       FargateSubnetIds:
         default: "Subnet IDs for Fargate tasks"
-      FargateSecurityGroupIds:
-        default: "Security Group IDs for Fargate tasks"
       LambdaSupportScriptUploaderName:
         default: "Name of the Lambda function that uploads the preprocessing script to S3"
       LambdaSupportECSServiceRoleName:
@@ -116,13 +117,13 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that ensures the ECS service-linked role exists."
     Description: "Name of the AWS Lambda function that ensures the ECS service-linked role exists (Required)."
 
+  VpcId:
+    Type: "AWS::EC2::VPC::Id"
+    Description: "ID of the VPC where the Fargate task runs. The template creates the task's security group in this VPC (Required)."
+
   FargateSubnetIds:
     Type: "List<AWS::EC2::Subnet::Id>"
-    Description: "Subnet IDs where Fargate tasks will run. Must have internet access (public subnet with auto-assign public IP, or private subnet with NAT gateway) to reach S3 and DynamoDB (Required)."
-
-  FargateSecurityGroupIds:
-    Type: "List<AWS::EC2::SecurityGroup::Id>"
-    Description: "Security Group IDs for Fargate tasks. Must allow outbound HTTPS (port 443) to reach AWS services (Required)."
+    Description: "Subnet IDs (in the VPC above) where Fargate tasks will run. Must have internet access (public subnet with auto-assign public IP, or private subnet with NAT gateway) to pull the container image and reach S3 and DynamoDB (Required)."
 
 
 
@@ -535,7 +536,7 @@ Resources:
           ECS_CLUSTER_ARN: !GetAtt PreProcessingECSCluster.Arn
           TASK_DEFINITION_ARN: !Ref PreProcessingTaskDefinition
           SUBNETS: !Join [",", !Ref FargateSubnetIds]
-          SECURITY_GROUPS: !Join [",", !Ref FargateSecurityGroupIds]
+          SECURITY_GROUPS: !Ref PreProcessingFargateSecurityGroup
           TRACKING_TABLE_NAME: !Ref DynamoDBJobTrackingTableName
           CONFIG_OBJECT_SIZE_THRESHOLD_BYTES: "200000"
       Code:
@@ -737,6 +738,34 @@ Resources:
   # Fargate task that performs the streaming split of AWS Config files
   # *************************************************************************************************************************
   # *************************************************************************************************************************
+
+  # Security group for the Fargate task. Egress only, restricted to HTTPS (443). No ingress rules
+  # (the task never accepts inbound connections). Outbound 443 is required so the task can pull its
+  # public container image (public ECR), install Python dependencies (PyPI), and reach the AWS
+  # service endpoints it uses (S3, DynamoDB, CloudWatch Logs).
+  PreProcessingFargateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      GroupDescription: "CRCD preprocessing Fargate task - outbound HTTPS (443) only, no inbound"
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: "Outbound HTTPS to pull the public container image and PyPI packages, and to reach AWS service endpoints (S3, DynamoDB, CloudWatch Logs)"
+      Tags:
+        - Key: Name
+          Value: crcd-preprocessing-fargate-sg
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W5
+            reason: "The Fargate task requires outbound internet access to pull its public container image and PyPI packages; egress is intentionally restricted to TCP port 443"
+          - id: W40
+            reason: "Egress is intentionally restricted to a single protocol/port (TCP 443) rather than all protocols"
 
   ECSServiceLinkedRoleLambdaRole:
     Type: AWS::IAM::Role
