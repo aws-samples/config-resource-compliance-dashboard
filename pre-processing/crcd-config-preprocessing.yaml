@@ -59,7 +59,7 @@ Parameters:
 
   DashboardBucketNamePrefix:
     Type: String
-    Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This can be used as source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and regions will be added automatically (Required)."
+    Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This can be used as source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and region will be added automatically (Required)."
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$'
     MinLength: 1
     Default: 'crcd-dashboard-bucket' 
@@ -240,7 +240,7 @@ Resources:
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducerRole.Arn
       Timeout: 300
-      Runtime: "python3.12"
+      Runtime: "python3.14"
       MemorySize: 128
       EphemeralStorage:
         Size: 512
@@ -498,7 +498,7 @@ Resources:
       Role: !GetAtt IAMRoleConfigFilePreprocessingProducerLambda.Arn
       LoggingConfig:
         LogFormat: "Text"
-      Runtime: python3.12
+      Runtime: python3.14
       Timeout: 120
       EphemeralStorage:
         Size: 512
@@ -930,29 +930,66 @@ Resources:
     Properties:
       FunctionName: !Sub "${LambdaSupportECSServiceRoleName}"
       Description: "CRCD Dashboard - Creates ECS service-linked role if it does not already exist (one-time execution)"
-      Runtime: python3.12
-      Timeout: 30
+      Runtime: python3.14
+      Timeout: 180
       MemorySize: 128
       Architectures:
         - "x86_64"
       Handler: index.lambda_handler
       Role: !GetAtt ECSServiceLinkedRoleLambdaRole.Arn
+      Environment:
+        Variables:
+          # Exponential backoff configuration for confirming the ECS service-linked role
+          # has propagated (IAM is eventually consistent). Both values are configurable.
+          SLR_MAX_ATTEMPTS: "5"
+          SLR_BASE_DELAY_SECONDS: "2"
       Code:
         ZipFile: |
           import boto3
           import cfnresponse
+          import os
+          import time
 
           def lambda_handler(event, context):
               try:
                   if event['RequestType'] in ['Create', 'Update']:
                       iam = boto3.client('iam')
+                      role_name = 'AWSServiceRoleForECS'
+                      max_attempts = int(os.environ.get('SLR_MAX_ATTEMPTS', '5'))
+                      base_delay = float(os.environ.get('SLR_BASE_DELAY_SECONDS', '3'))
+
+                      created = False
                       try:
                           iam.create_service_linked_role(AWSServiceName='ecs.amazonaws.com')
+                          created = True
                           print("Created ECS service-linked role")
                       except iam.exceptions.InvalidInputException:
                           print("ECS service-linked role already exists, skipping")
+
+                      # IAM is eventually consistent. When we just created the role, ECS
+                      # CreateCluster can fail with "Unable to assume the service linked role"
+                      # if it runs before the role has propagated. Confirm the role is
+                      # retrievable using exponential backoff (delay = base * 2**attempt),
+                      # and fail explicitly if it never appears after max_attempts.
+                      if created:
+                          for attempt in range(max_attempts):
+                              delay = base_delay * (2 ** attempt)
+                              time.sleep(delay)
+                              try:
+                                  iam.get_role(RoleName=role_name)
+                                  print(f"ECS service-linked role available after {attempt + 1} attempt(s)")
+                                  break
+                              except iam.exceptions.NoSuchEntityException:
+                                  print(f"Attempt {attempt + 1}/{max_attempts}: role not yet available, backed off {delay}s")
+                          else:
+                              msg = (f"ECS service-linked role '{role_name}' did not become "
+                                     f"available after {max_attempts} attempts")
+                              print(msg)
+                              cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': msg})
+                              return
                   cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
               except Exception as e:
+                  print(f"Error: {str(e)}")
                   cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
     Metadata:
       cfn_nag:
@@ -1104,7 +1141,7 @@ Resources:
     Properties:
       FunctionName: !Sub "${LambdaSupportScriptUploaderName}"
       Description: "CRCD Dashboard - Uploads the preprocessing Python script to S3 (one-time execution)"
-      Runtime: python3.12
+      Runtime: python3.14
       Timeout: 120
       MemorySize: 128
       Architectures:
@@ -1470,7 +1507,7 @@ Resources:
       TaskRoleArn: !GetAtt PreProcessingTaskRole.Arn
       ContainerDefinitions:
         - Name: "crcd-preprocessing"
-          Image: "public.ecr.aws/docker/library/python:3.12-slim"
+          Image: "public.ecr.aws/docker/library/python:3.14-slim"
           Essential: true
           Command:
             - /bin/sh
