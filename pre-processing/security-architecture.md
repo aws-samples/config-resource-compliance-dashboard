@@ -195,6 +195,37 @@ to the CRCD resources cannot affect anything else.
 
 ---
 
+## CloudWatch Logs
+
+Log delivery for both the Producer Lambda and the Fargate task is intentionally left on the
+**public AWS service path** (no CloudWatch Logs interface endpoint). This keeps the logging
+posture consistent with the rest of the CRCD project, where compute components send logs to the
+CloudWatch Logs public endpoint. Reasons this is acceptable:
+
+- **The logs contain only operational metadata, not Config content.** Both components log S3
+  object keys (path metadata such as account ID, Region, date, and record type), object sizes,
+  job/run identifiers, aggregate counts, and exception strings. Neither ever logs AWS Config
+  resource configuration content — the split script never prints `configurationItems`, and the
+  small-file path is a server-side S3 copy.
+- **Logs are encrypted in transit.** Delivery to CloudWatch Logs uses TLS/HTTPS (the Fargate
+  `awslogs` driver and the Lambda logging), so log traffic is encrypted even over the public
+  path.
+- **Logs are encrypted at rest.** CloudWatch Logs encrypts log data at rest by default using
+  AWS-owned keys; no configuration is required.
+
+The log groups do **not** attach a customer-managed KMS key (see the `W84` / `CKV_AWS_158`
+suppressions), by design: the log content is operational metadata only, so a dedicated CMK is
+not warranted. If a customer needs CMK-level control (e.g. for their own key rotation or audit
+requirements), a `KMSKeyId` can be added per log group.
+
+A CloudWatch Logs interface endpoint was considered but not adopted: it is an interface endpoint
+with an hourly + per-AZ data cost (unlike the free S3/DynamoDB gateway endpoints), it would only
+cover the Fargate task (the Producer Lambda is not in the VPC, so its log delivery stays on the
+public path regardless), and the logs carry no Config content — so the cost outweighs the
+marginal benefit.
+
+---
+
 ## Summary of the data paths
 
 | Path | Component | Network route | Carries Config content? |
