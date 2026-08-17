@@ -4,7 +4,7 @@ This guide walks you through testing the CRCD preprocessing script locally again
 
 ## Prerequisites
 
-- Python 3.12+
+- Python 3.14 (matches the version used by the deployed solution; Python 3.12+ also works for local testing)
 - `pip` package manager
 - AWS CLI configured (to download files from S3)
 - Enough disk space for the input file and output files
