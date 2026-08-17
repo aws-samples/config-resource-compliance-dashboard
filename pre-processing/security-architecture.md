@@ -72,6 +72,9 @@ The feature installs the following components, each described in detail in the s
   account/Region-scoped resources (outside the VPC), and log delivery uses the public AWS
   service path rather than a VPC endpoint. See the [CloudWatch Logs](#cloudwatch-logs) section
   for the rationale and the encryption details.
+- **(Optional) A KMS key for the Dashboard bucket**, created only when you provide the KMS key ARN
+  of a KMS-encrypted AWS Config Logs bucket. See the
+  [KMS-encrypted AWS Config Logs bucket](#kms-encrypted-aws-config-logs-bucket) section.
 
 ---
 
@@ -140,7 +143,7 @@ the hardening described below.
 
 ### Why the task needs internet access
 
-The task image is the public `public.ecr.aws/docker/library/python:3.12-slim`, and at startup
+The task image is the public `public.ecr.aws/docker/library/python:3.14-slim`, and at startup
 it runs `pip install ijson boto3` from PyPI. Both are **downloads of public software from
 outside AWS** and require outbound internet access. No AWS Config data leaves over this path —
 only public image layers and Python packages come *in*. Building a private, dependency-baked
@@ -266,6 +269,52 @@ with an hourly + per-AZ data cost (unlike the free S3/DynamoDB gateway endpoints
 cover the Fargate task (the Producer Lambda is not in the VPC, so its log delivery stays on the
 public path regardless), and the logs carry no Config content — so the cost outweighs the
 marginal benefit.
+
+---
+
+## KMS-encrypted AWS Config Logs bucket
+
+Some customers encrypt their AWS Config Logs bucket with a customer-managed KMS key. Support for
+this is **opt-in**, driven by a single optional parameter, and follows the same pattern the main
+dashboard stack (`cid-crcd-stack.yaml`) uses.
+
+### Input and condition
+
+- **Parameter `ConfigBucketKmsKeyArn`** (optional, default empty) — the ARN of the KMS key that
+  encrypts the AWS Config Logs bucket. It is validated with a KMS-ARN regex (`AllowedPattern`)
+  that accepts either an empty string or a well-formed key ARN across partitions
+  (`aws | aws-us-gov | aws-cn`).
+- **Condition `IsConfigLogsBucketKms`** = the parameter is non-empty. Everything below is gated
+  on this condition; when the parameter is left empty, none of these resources or permissions are
+  created and the behavior is unchanged (Dashboard bucket stays `AES256`).
+
+### What is created / changed when the key is provided
+
+- **A new KMS key** (`DashboardBucketKmsKey`, with rotation enabled) and alias
+  (`alias/crcd-preprocessing-key-dashboard`) that encrypt the **Dashboard bucket**. The rationale
+  mirrors the main stack: if the source is KMS-encrypted, the destination is encrypted too. The
+  key policy trusts the account root; the components get their access through their IAM roles.
+- **The Dashboard bucket encryption** switches (via `!If`) from `AES256` to `aws:kms` with the new
+  key and `BucketKeyEnabled: true`.
+- **Least-privilege `kms:` grants** are added conditionally (using the `!If [..., ..., AWS::NoValue]`
+  idiom) to exactly the roles that touch the encrypted data:
+  - **Producer Lambda role** — `kms:Decrypt` on the source key (for the small-file server-side
+    copy read) and `kms:Encrypt` / `kms:GenerateDataKey` on the Dashboard key (copy destination
+    write).
+  - **Fargate task role** — `kms:Decrypt` on the source key (read Config files), and `kms:Decrypt`
+    / `kms:Encrypt` / `kms:GenerateDataKey` on the Dashboard key (read the split script it
+    downloads, write the split output).
+  - **Script uploader role** — `kms:Encrypt` / `kms:GenerateDataKey` on the Dashboard key (writing
+    the preprocessing script into the now-encrypted bucket).
+- **Output `DashboardBucketKmsKeyArn`** — the ARN of the newly created Dashboard-bucket key
+  (emitted only when `IsConfigLogsBucketKms` is true).
+
+### Why the gateway endpoint policies do not mention KMS
+
+For SSE-KMS objects, S3 performs the KMS call **server-side** on the caller's behalf; the caller
+only needs `kms:` permissions in IAM plus the key policy, not a network path to KMS. The S3 and
+DynamoDB **gateway** endpoint policies therefore govern only `s3:` / `dynamodb:` actions — KMS is
+authorized separately by the key, and no KMS VPC endpoint is required.
 
 ---
 

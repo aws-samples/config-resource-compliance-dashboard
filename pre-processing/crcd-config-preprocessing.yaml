@@ -14,6 +14,7 @@ Metadata:
           default: "AWS Config logging - the source of data for the pre-processing job, where your AWS Config files are delivered"
         Parameters:
           - ConfigBucketName
+          - ConfigBucketKmsKeyArn
       -
         Label: 
           default: "Pre-processing job configuration"
@@ -33,6 +34,8 @@ Metadata:
     ParameterLabels:
       ConfigBucketName:
         default: "AWS Config Logs bucket"
+      ConfigBucketKmsKeyArn:
+        default: "AWS Config Logs bucket KMS key ARN (optional)"
       DashboardBucketNamePrefix:
         default: "Dashboard bucket (prefix)"
       DynamoDBJobTrackingTableName:
@@ -56,6 +59,13 @@ Parameters:
     MinLength: 1
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$'
     ConstraintDescription: "AWS Config Logs bucket name is missing or does not satisfy the Amazon S3 naming convention."
+
+  ConfigBucketKmsKeyArn:
+    Type: String
+    Default: ""
+    Description: "Optional. If your AWS Config Logs bucket is encrypted with a KMS key, provide the key's ARN here so the pre-processing job can decrypt the source files. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. Leave empty if the bucket is not encrypted with KMS."
+    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
+    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   DashboardBucketNamePrefix:
     Type: String
@@ -112,6 +122,12 @@ Conditions:
     # some customers may already have S3 notifications out of the AWS Config Logs bucket
     # we must not override that - and users will have to do that manually later
     !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
+
+  # The AWS Config Logs bucket is encrypted with a KMS key. When set, the pre-processing job needs
+  # kms:Decrypt on that key to read the source files, and the Dashboard bucket is created encrypted
+  # with a new KMS key that this template provisions.
+  IsConfigLogsBucketKms:
+    !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
 
 Rules:
   MandatoryConfigBucketName:
@@ -397,6 +413,35 @@ Resources:
           - id: W84
             reason: "No KMS encryption needed"
 
+  # KMS key that encrypts the Dashboard bucket, created only when the AWS Config Logs bucket is
+  # KMS-encrypted. The pre-processing components (producer Lambda, script uploader, Fargate task)
+  # get the required kms permissions via their IAM roles; the key policy trusts the account root.
+  DashboardBucketKmsKey:
+    Type: AWS::KMS::Key
+    Condition: IsConfigLogsBucketKms
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      Description: "CRCD pre-processing - Key that encrypts the Dashboard bucket (created when the AWS Config Logs bucket is KMS-encrypted)"
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Id: crcd-preprocessing-dashboardkey-policy
+        Statement:
+          - Sid: 'Enable IAM user permissions'
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action: 'kms:*'
+            Resource: '*'
+
+  DashboardBucketKmsKeyAlias:
+    Type: AWS::KMS::Alias
+    Condition: IsConfigLogsBucketKms
+    Properties:
+      AliasName: alias/crcd-preprocessing-key-dashboard
+      TargetKeyId: !Ref DashboardBucketKmsKey
+
   DashboardBucket:
   # checkov:skip=CKV_AWS_18: No need of Access Logging, customers will add it if required
     Type: AWS::S3::Bucket
@@ -406,8 +451,14 @@ Resources:
       BucketName: !Sub '${DashboardBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
+          - !If
+            - IsConfigLogsBucketKms
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: 'aws:kms'
+                KMSMasterKeyID: !GetAtt DashboardBucketKmsKey.Arn
+              BucketKeyEnabled: true
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
       AccessControl: BucketOwnerFullControl
       # This bucket needs versioning because the default Control Tower AWS Config bucket has it
       # And the Dashboard account installation will use replication, that requires versioning
@@ -481,6 +532,23 @@ Resources:
                 Action:
                   - s3:PutObject
                 Resource: !Sub '${DashboardBucket.Arn}/*'
+              # When the AWS Config Logs bucket is KMS-encrypted: decrypt source objects for the
+              # small-file server-side copy, and encrypt objects written to the KMS-encrypted Dashboard bucket.
+              - !If
+                - IsConfigLogsBucketKms
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                  Resource: !Ref ConfigBucketKmsKeyArn
+                - !Ref "AWS::NoValue"
+              - !If
+                - IsConfigLogsBucketKms
+                - Effect: Allow
+                  Action:
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !GetAtt DashboardBucketKmsKey.Arn
+                - !Ref "AWS::NoValue"
 
   # Lambda Function that triggers Fargate tasks
   ConfigFilePreprocessingProducerLambda:
@@ -1087,6 +1155,24 @@ Resources:
                   - dynamodb:UpdateItem
                   - dynamodb:GetItem
                 Resource: !GetAtt CRCDJobTrackingTable.Arn
+              # When the AWS Config Logs bucket is KMS-encrypted: decrypt the source Config files,
+              # and decrypt the split script + encrypt the output objects on the KMS-encrypted Dashboard bucket.
+              - !If
+                - IsConfigLogsBucketKms
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                  Resource: !Ref ConfigBucketKmsKeyArn
+                - !Ref "AWS::NoValue"
+              - !If
+                - IsConfigLogsBucketKms
+                - Effect: Allow
+                  Action:
+                    - kms:Decrypt
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !GetAtt DashboardBucketKmsKey.Arn
+                - !Ref "AWS::NoValue"
 
   PreProcessingTaskLogGroup:
   # checkov:skip=CKV_AWS_158: No KMS encryption needed
@@ -1128,6 +1214,15 @@ Resources:
                   - s3:PutObject
                   - s3:DeleteObject
                 Resource: !Sub '${DashboardBucket.Arn}/crcd-scripts/*'
+              # When the Dashboard bucket is KMS-encrypted, uploading the script requires these key actions.
+              - !If
+                - IsConfigLogsBucketKms
+                - Effect: Allow
+                  Action:
+                    - kms:Encrypt
+                    - kms:GenerateDataKey
+                  Resource: !GetAtt DashboardBucketKmsKey.Arn
+                - !Ref "AWS::NoValue"
 
   ScriptUploaderLambda:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
@@ -1526,6 +1621,11 @@ Outputs:
   DashboardBucketName:
     Description: Use this bucket as data source when deploying the AWS Config Resource Compliance dashboard
     Value: !Ref DashboardBucket
+
+  DashboardBucketKmsKeyArn:
+    Condition: IsConfigLogsBucketKms
+    Description: ARN of the KMS key created to encrypt the Dashboard bucket (only created when the AWS Config Logs bucket is KMS-encrypted)
+    Value: !GetAtt DashboardBucketKmsKey.Arn
 
   DynamoDBTableName:
     Description: Name of the DynamoDB tracking table
