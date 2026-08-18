@@ -3,39 +3,6 @@
 # This will break an Athena service limit and make it impossible to run queries, as all queries that try to open one of those files will fail.
 # These resources will pre-process AWS Config files and generate smaller files that can potentially avoid the issue.
 
-
-# The following use cases are supported
-#
-# 1. Single-account deployment (all in the AWS Config account) - supports standalone accounts and AWS Organizations
-#    The AWS Config account and the Dashboard account are the same account (ConfigAccountId = DashboardAccountId = this account).
-#    The AWS Config Logs bucket is the source of data, the Producer Lambda is triggered directly from that bucket,
-#    and pre-processing writes the result files to a new Dashboard bucket created in the same account.
-#    If the AWS Config Logs bucket is encrypted with a KMS key, the Dashboard bucket is also encrypted (with a new key this template creates).
-#
-# 2. Multi-account deployment (pre-processing runs in the Dashboard account, source data stays in the AWS Config account)
-#    The AWS Config Logs bucket lives in the AWS Config account; all pre-processing compute runs in the Dashboard account.
-#    Because S3 cannot invoke a Lambda in another account directly, the flow uses an SQS queue that lives in the
-#    Dashboard account: the AWS Config Logs bucket publishes S3 event notifications to that queue (cross-account
-#    S3 -> SQS), and the Dashboard-account Producer Lambda consumes it via a same-account event source mapping.
-#    Keeping the queue in the Dashboard account means the event source mapping is same-account (no ordering problem)
-#    and the AWS Config account only needs a bucket-side notification config plus the cross-account read grants.
-#    There are two steps, run in this order:
-#
-#    2.1 - Run this template on the Dashboard account FIRST.
-#    Creates all the pre-processing resources (Producer Lambda + its role, VPC/Fargate, DynamoDB, Dashboard bucket),
-#    the SQS queue (+ its dead-letter queue and policy) that receives the notifications, and the event source mapping.
-#    The Producer Lambda and Fargate task roles are granted least-privilege access to read the AWS Config Logs bucket
-#    in the AWS Config account (and kms:Decrypt on its KMS key, if any). Outputs the SQS queue ARN and the two role
-#    ARNs for use in step 2.2.
-#
-#    2.2 - Run on the AWS Config account SECOND.
-#    Configures the S3 event notification on the AWS Config Logs bucket so it delivers to the Dashboard-account SQS
-#    queue (whose ARN is constructed deterministically from DashboardAccountId, the Region, and the fixed queue name).
-#    The cross-account read grants that the Dashboard roles need - the AWS Config Logs bucket policy, and, if the
-#    bucket is KMS-encrypted, that key's policy granting the roles kms:Decrypt - are applied on the AWS Config account
-#    as well (see the deployment documentation).
-
-
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS Config Resource Compliance Dashboard (CRCD) - Preprocessing AWS Config files using AWS Fargate'
 
@@ -46,61 +13,39 @@ Metadata:
         Label:
           default: "AWS Config logging - the source of data for the pre-processing job, where your AWS Config files are delivered"
         Parameters:
-          - ConfigAccountId
           - ConfigBucketName
           - ConfigBucketKmsKeyArn
       -
         Label: 
-          default: "Pre-processing destination - where you will deploy the dashboard and where its data is"
+          default: "Pre-processing job configuration"
         Parameters:
-          - DashboardAccountId
           - ConfigureS3EventNotificationToLambdaJobProducer
-      -
-        Label:
-          default: "Multi-account only (AWS Config account step) - grant the Dashboard account read access to the AWS Config Logs bucket"
-        Parameters:
-          - ConfigureConfigBucketPolicy
-          - ConfigureConfigBucketKmsKeyPolicy
+          - DashboardBucketNamePrefix
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
         Parameters:
-          - DashboardBucketNamePrefix
           - PreProcessingLambdaProducerName
-          - PreProcessingLambdaProducerRoleName
-          - PreProcessingConfigNotificationQueueName
           - DynamoDBJobTrackingTableName
           - LambdaSupportJobTriggerConfigurationName
           - LambdaSupportScriptUploaderName
           - LambdaSupportECSServiceRoleName
     
     ParameterLabels:
-      ConfigAccountId:
-        default: "AWS Config account ID"
       ConfigBucketName:
         default: "AWS Config Logs bucket"
       ConfigBucketKmsKeyArn:
         default: "AWS Config Logs bucket KMS key ARN (optional)"
-      DashboardAccountId:
-        default: "Dashboard account ID"
       DashboardBucketNamePrefix:
         default: "Dashboard bucket (prefix)"
       DynamoDBJobTrackingTableName:
         default: "Dynamo DB tracking table"
       ConfigureS3EventNotificationToLambdaJobProducer:
         default: "Configure S3 event notification to trigger the job automatically on every new AWS Config file"
-      ConfigureConfigBucketPolicy:
-        default: "Allow the template to update the AWS Config Logs bucket policy to grant the Dashboard account read access"
-      ConfigureConfigBucketKmsKeyPolicy:
-        default: "Allow the template to update the AWS Config Logs bucket KMS key policy to grant the Dashboard account decrypt access"
       LambdaSupportJobTriggerConfigurationName:
         default: "Name of the Lambda function that performs supporting configurations: S3 object notification"
       PreProcessingLambdaProducerName:
         default: "Name of the Lambda function that triggers the pre-processing job"
-      PreProcessingLambdaProducerRoleName:
-        default: "Name of the IAM role assumed by the pre-processing Producer Lambda"
-      PreProcessingConfigNotificationQueueName:
-        default: "Name of the SQS queue that receives S3 event notifications from the AWS Config Logs bucket"
       LambdaSupportScriptUploaderName:
         default: "Name of the Lambda function that uploads the preprocessing script to S3"
       LambdaSupportECSServiceRoleName:
@@ -108,13 +53,6 @@ Metadata:
 
 
 Parameters:
-  ConfigAccountId:
-    Type: String
-    Description: "The ID of the AWS account that contains the Amazon S3 bucket collecting AWS Config files (Required)."
-    AllowedPattern: '\d{12}'
-    MinLength: 12
-    ConstraintDescription: "AWS Config account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
-
   ConfigBucketName:
     Type: String
     Description: "Name of the Amazon S3 bucket collecting AWS Config files (Required)."
@@ -129,16 +67,9 @@ Parameters:
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
-  DashboardAccountId:
-    Type: String
-    Description: "The ID of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the value of \"AWS Config account ID\" if you want to deploy the dashboard in the same account where AWS Config files are collected. To deploy the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
-    AllowedPattern: '\d{12}'
-    MinLength: 12
-    ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
-
   DashboardBucketNamePrefix:
     Type: String
-    Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This will be the source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and region will be added automatically (Required)."
+    Description: "Prefix of the Amazon S3 bucket that will store the transformed AWS Config files. This can be used as source of data for the dashboard. The Dashboard bucket will be created with the prefix you specify here, account ID and region will be added automatically (Required)."
     AllowedPattern: '^[a-z0-9][a-z0-9-]{1,30}[a-z0-9]$'
     MinLength: 1
     Default: 'crcd-dashboard-bucket' 
@@ -159,33 +90,9 @@ Parameters:
     ConstraintDescription: "Required: name of the Amazon DynamoDB table used to track the activities of the pre-processing job."
     Description: "Name of the Amazon DynamoDB table used to track the activities of the pre-processing job (Required)."
 
-  # The way the notification is built is different
-  # Case 1: s3 notification directly to the lambda producer
-  # Case 2.1: not used, this is ignored
-  # Case 2.2: s3 notification to the SQS queue
   ConfigureS3EventNotificationToLambdaJobProducer:
     Type: "String"
-    Description:  "Only used when deploying in the AWS Config account (single-account deployment, or the AWS Config account step of a multi-account deployment); ignored when deploying in a dedicated Dashboard account. Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket that triggers the pre-processing job whenever a new AWS Config file is delivered (to the Producer Lambda directly in a single-account deployment, or to the SQS queue in a multi-account deployment). Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket, in which case you must configure them manually."
-    AllowedValues: ['<select>', 'yes', 'no']
-    Default: "<select>" # This value is used below, careful if you change it
-
-  # Used only in the multi-account AWS Config account step (case 2.2). The template MERGES a statement
-  # into the existing AWS Config Logs bucket policy granting the Dashboard account's pre-processing
-  # roles read access - existing statements are preserved. This toggle is the customer's explicit
-  # consent to that modification.
-  ConfigureConfigBucketPolicy:
-    Type: "String"
-    Description: "Only used in the multi-account AWS Config account step. Select 'yes' to allow this template to add (merge) a statement to the AWS Config Logs bucket policy granting the Dashboard account's pre-processing roles read access. Existing statements are preserved. Select 'no' if you will configure the bucket policy manually. Ignored when deploying in the Dashboard account or in a single-account deployment."
-    AllowedValues: ['<select>', 'yes', 'no']
-    Default: "<select>" # This value is used below, careful if you change it
-
-  # Used only in the multi-account AWS Config account step (case 2.2), and only when the AWS Config
-  # Logs bucket is encrypted with a KMS key. The template MERGES a statement into that key's policy
-  # granting the Dashboard account's pre-processing roles kms:Decrypt - existing statements are
-  # preserved. This toggle is the customer's explicit consent to that modification.
-  ConfigureConfigBucketKmsKeyPolicy:
-    Type: "String"
-    Description: "Only used in the multi-account AWS Config account step, and only if the AWS Config Logs bucket is encrypted with a KMS key. Select 'yes' to allow this template to add (merge) a statement to that KMS key's policy granting the Dashboard account's pre-processing roles kms:Decrypt. Existing statements are preserved. Select 'no' if you will configure the key policy manually. Ignored when deploying in the Dashboard account, in a single-account deployment, or when the bucket is not KMS-encrypted."
+    Description:  "Select 'yes' to configure event notifications that will trigger the pre-processing job whenever there is a new AWS Config file added to the bucket. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket. In this case, you must configure S3 event notifications manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
@@ -210,30 +117,11 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that ensures the ECS service-linked role exists."
     Description: "Name of the AWS Lambda function that ensures the ECS service-linked role exists (Required)."
 
-  PreProcessingLambdaProducerRoleName:
-    Type: "String"
-    Default: "crcd-lambda-preprocessing-job-producer-role"
-    MinLength: 1
-    ConstraintDescription: "Required: name of the IAM role assumed by the pre-processing Producer Lambda."
-    Description: "Name of the IAM role assumed by the pre-processing Producer Lambda. In a multi-account deployment the AWS Config account grants this role permission to consume the SQS queue, so the name must match on both accounts (Required)."
-
-  PreProcessingConfigNotificationQueueName:
-    Type: "String"
-    Default: "crcd-preprocessing-config-notifications"
-    MinLength: 1
-    ConstraintDescription: "Required: name of the Amazon SQS queue that receives S3 event notifications from the AWS Config Logs bucket."
-    Description: "Name of the Amazon SQS queue (created in the AWS Config account) that receives S3 event notifications from the AWS Config Logs bucket and triggers the pre-processing Producer Lambda. The name must match on both accounts (Required)."
-
 Conditions:
   IsConfigureS3EventNotificationToLambdaJobProducer:
-    # Case 1 ONLY: configure the S3 event notification to trigger the Producer Lambda directly
-    # (same account). This condition is deliberately false in case 2.1 (ignored) and case 2.2
-    # (where the S3 -> SQS notification is wired by a separate condition/resource).
     # some customers may already have S3 notifications out of the AWS Config Logs bucket
     # we must not override that - and users will have to do that manually later
-    Fn::And:
-    - !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
-    - !Condition IsConfigAccountDeployment
+    !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
 
   # The AWS Config Logs bucket is encrypted with a KMS key. When set, the pre-processing job needs
   # kms:Decrypt on that key to read the source files, and the Dashboard bucket is created encrypted
@@ -241,93 +129,7 @@ Conditions:
   IsConfigLogsBucketKms:
     !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
 
-  # Single-account deployment: the full pre-processing stack is deployed in the AWS Config account,
-  # i.e. the AWS Config account, the Dashboard account, and the current (deploying) account are all
-  # the same. This is the functionality currently built.
-  # NOTE: unlike the main dashboard stack, we do NOT compare bucket names here - in pre-processing
-  # the source AWS Config Logs bucket and the created Dashboard bucket are always different buckets.
-  IsConfigAccountDeployment:
-    Fn::And:
-      - !Equals [!Ref ConfigAccountId, !Ref 'AWS::AccountId']
-      - !Equals [!Ref ConfigAccountId, !Ref DashboardAccountId]
-
-  # Case 2.2: this stack is run in the AWS Config account of a multi-account deployment, whose only
-  # job is to set up the S3 -> SQS event notification on the AWS Config Logs bucket. That is, we are
-  # deploying in the AWS Config account (ConfigAccountId == the current account) and it is a
-  # multi-account setup (ConfigAccountId != DashboardAccountId). Mutually exclusive with case 1
-  # (needs Config == Dashboard) and case 2.1 (needs Dashboard == the current account).
-  IsConfigAccountNotificationDeployment:
-    Fn::And:
-      - !Equals [!Ref ConfigAccountId, !Ref 'AWS::AccountId']
-      - !Not [!Equals [!Ref ConfigAccountId, !Ref DashboardAccountId]]
-
-  # Case 2.2 only: configure the S3 event notification from the AWS Config Logs bucket to the SQS
-  # queue. Gated by the same yes/no toggle as the case-1 direct-notification path, so customers who
-  # already manage their bucket's notifications can opt out.
-  IsConfigureS3EventNotificationToSQS:
-    Fn::And:
-      - !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
-      - !Condition IsConfigAccountNotificationDeployment
-
-  # True when this stack configures the S3 event notification on the AWS Config Logs bucket, in
-  # either direction: case 1 (to the Producer Lambda) or case 2.2 (to the SQS queue). The support
-  # Lambda that performs the configuration is shared between the two cases (they are mutually
-  # exclusive), while the per-case trigger supplies the case-specific NotificationConfiguration.
-  IsConfigureBucketNotification:
-    Fn::Or:
-      - !Condition IsConfigureS3EventNotificationToLambdaJobProducer
-      - !Condition IsConfigureS3EventNotificationToSQS
-
-  # The Dashboard-bucket KMS resources (the KMS key, bucket encryption, and the roles' kms grants) are
-  # created whenever we create pre-processing resources (use case 1 or 2.1) AND the AWS Config Logs
-  # bucket is encrypted with a KMS key.
-  IsCreatePreProcessingResourcesKms:
-    Fn::And:
-      - !Condition IsCreatePreProcessingResources
-      - !Condition IsConfigLogsBucketKms
-
-  # Resources common to use case 1 (single account) and use case 2.1 (Dashboard account) - e.g. the
-  # Producer Lambda, VPC/Fargate, DynamoDB tracking table, Dashboard bucket. Both of those use cases
-  # deploy in the Dashboard account, so these resources are created whenever this stack runs in the
-  # Dashboard account (DashboardAccountId == the current account). In use case 2.2 (run in the AWS
-  # Config account) DashboardAccountId != the current account, so these resources are not created.
-  IsCreatePreProcessingResources:
-    !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
-
-  # Case 2.1 only: this stack is run in the Dashboard account of a multi-account deployment. We are
-  # deploying in the Dashboard account (DashboardAccountId == the current account) AND it is a
-  # multi-account setup (ConfigAccountId != DashboardAccountId). This is where the cross-account
-  # pieces live: the SQS event source mapping on the Producer Lambda and the cross-account grants to
-  # consume the queue and read the AWS Config Logs bucket in the AWS Config account.
-  # Mutually exclusive with case 1 (needs Config == Dashboard) and case 2.2 (needs Config == current).
-  IsDashboardAccountDeployment:
-    Fn::And:
-      - !Equals [!Ref DashboardAccountId, !Ref 'AWS::AccountId']
-      - !Not [!Equals [!Ref ConfigAccountId, !Ref DashboardAccountId]]
-
-  # Case 2.1 where the AWS Config Logs bucket (in the AWS Config account) is encrypted with a KMS key.
-  IsDashboardAccountDeploymentKms:
-    Fn::And:
-      - !Condition IsDashboardAccountDeployment
-      - !Condition IsConfigLogsBucketKms
-
 Rules:
-  MandatoryConfigAccountId:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref ConfigAccountId
-          - ''
-        AssertDescription: "AWS Config account ID is required"
-
-  MandatoryDashboardAccountId:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref DashboardAccountId
-          - ''
-        AssertDescription: "Dashboard account ID is required"
-
   MandatoryConfigBucketName:
     Assertions:
       - Assert: !Not
@@ -361,61 +163,15 @@ Rules:
           - ''
         AssertDescription: "Lambda function name is required"
 
-  MandatoryLambdaSupportScriptUploaderName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref LambdaSupportScriptUploaderName
-          - ''
-        AssertDescription: "Lambda function name is required"
-
-  MandatoryLambdaSupportECSServiceRoleName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref LambdaSupportECSServiceRoleName
-          - ''
-        AssertDescription: "Lambda function name is required"
-
-  MandatoryPreProcessingLambdaProducerRoleName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref PreProcessingLambdaProducerRoleName
-          - ''
-        AssertDescription: "Producer Lambda IAM role name is required"
-
-  MandatoryPreProcessingConfigNotificationQueueName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref PreProcessingConfigNotificationQueueName
-          - ''
-        AssertDescription: "SQS notification queue name is required"
-
-  MandatoryDynamoDBJobTrackingTableName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref DynamoDBJobTrackingTableName
-          - ''
-        AssertDescription: "DynamoDB tracking table name is required"
-
 
   ValidateConfigureS3EventNotificationToLambdaJobProducer:
-    # This parameter is only consumed when the stack runs in the AWS Config account: use case 1
-    # (single account, the notification triggers the Producer Lambda directly) and use case 2.2
-    # (the AWS Config account step of a multi-account deployment, the notification targets the SQS
-    # queue). In use case 2.1 (dedicated Dashboard account) there is no AWS Config Logs bucket in
-    # this account to configure, so the parameter is ignored and must not be forced off '<select>'.
-    # Case 1 and case 2.2 both run in the AWS Config account, i.e. ConfigAccountId == this account.
-    RuleCondition: !Equals [!Ref ConfigAccountId, !Ref 'AWS::AccountId']
+    # must be selected
     Assertions:
       - Assert: !Not
         - !Equals
           - !Ref ConfigureS3EventNotificationToLambdaJobProducer
           - '<select>'
-        AssertDescription: "REQUIRED when deploying in the AWS Config account (single-account deployment, or the AWS Config account step of a multi-account deployment). Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket - it will trigger the Producer Lambda directly in a single-account deployment, or send events to the SQS queue in a multi-account deployment. Select 'no' if you already have S3 event notifications on the AWS Config Logs bucket and will configure them manually. This parameter is ignored when deploying in a dedicated Dashboard account."
+        AssertDescription: "REQUIRED PARAMETER - Select 'yes' if you want this template to configure the S3 event notification that triggers the pre-processing job when new AWS Config files are received. Select 'no' if you already have S3 event notifications on the AWS Config Logs bucket and want to configure this manually."
 
 
 
@@ -463,8 +219,7 @@ Resources:
 
   ConfigBucketNotificationConfigurationLambdaJobProducerRole:
     Type: AWS::IAM::Role
-    # Shared by case 1 and case 2.2 (see IsConfigureBucketNotification).
-    Condition: IsConfigureBucketNotification
+    Condition: IsConfigureS3EventNotificationToLambdaJobProducer
     Properties:
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -495,14 +250,12 @@ Resources:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
-    # Shared by case 1 and case 2.2 (see IsConfigureBucketNotification). The generic handler puts
-    # whatever NotificationConfiguration the per-case trigger passes (Lambda target or SQS target).
-    Condition: IsConfigureBucketNotification
+    Condition: IsConfigureS3EventNotificationToLambdaJobProducer
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${LambdaSupportJobTriggerConfigurationName}"
-      Description: "CRCD Dashboard - Configures the S3 event notification on the AWS Config Logs bucket (to the Producer Lambda in case 1, or to the SQS queue in case 2.2) (one-time execution)"
+      Description: "CRCD Dashboard - Configures the AWS Config Logs bucket S3 event notification to trigger the CRCD Lambda Preprocessing Job Producer function (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducerRole.Arn
       Timeout: 300
@@ -651,7 +404,7 @@ Resources:
   # get the required kms permissions via their IAM roles; the key policy trusts the account root.
   DashboardBucketKmsKey:
     Type: AWS::KMS::Key
-    Condition: IsCreatePreProcessingResourcesKms
+    Condition: IsConfigLogsBucketKms
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -670,7 +423,7 @@ Resources:
 
   DashboardBucketKmsKeyAlias:
     Type: AWS::KMS::Alias
-    Condition: IsCreatePreProcessingResourcesKms
+    Condition: IsConfigLogsBucketKms
     Properties:
       AliasName: alias/crcd-preprocessing-key-dashboard
       TargetKeyId: !Ref DashboardBucketKmsKey
@@ -678,7 +431,6 @@ Resources:
   DashboardBucket:
   # checkov:skip=CKV_AWS_18: No need of Access Logging, customers will add it if required
     Type: AWS::S3::Bucket
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -686,7 +438,7 @@ Resources:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - !If
-            - IsCreatePreProcessingResourcesKms
+            - IsConfigLogsBucketKms
             - ServerSideEncryptionByDefault:
                 SSEAlgorithm: 'aws:kms'
                 KMSMasterKeyID: !GetAtt DashboardBucketKmsKey.Arn
@@ -723,11 +475,10 @@ Resources:
 
   IAMRoleConfigFilePreprocessingProducerLambda:
     Type: AWS::IAM::Role
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      RoleName: !Ref PreProcessingLambdaProducerRoleName
+      RoleName: "crcd-lambda-preprocessing-job-producer-role"
       Description: "CRCD Dashboard - Allows to trigger Fargate tasks, send logs to CloudWatch, and write to DynamoDB."
       Path: "/"
       AssumeRolePolicyDocument:
@@ -770,40 +521,19 @@ Resources:
               # When the AWS Config Logs bucket is KMS-encrypted: decrypt source objects for the
               # small-file server-side copy, and encrypt objects written to the KMS-encrypted Dashboard bucket.
               - !If
-                - IsCreatePreProcessingResourcesKms
+                - IsConfigLogsBucketKms
                 - Effect: Allow
                   Action:
                     - kms:Decrypt
                   Resource: !Ref ConfigBucketKmsKeyArn
                 - !Ref "AWS::NoValue"
               - !If
-                - IsCreatePreProcessingResourcesKms
+                - IsConfigLogsBucketKms
                 - Effect: Allow
                   Action:
                     - kms:Encrypt
                     - kms:GenerateDataKey
                   Resource: !GetAtt DashboardBucketKmsKey.Arn
-                - !Ref "AWS::NoValue"
-              # Case 2.1 (multi-account): consume the SQS queue (in this Dashboard account) that
-              # receives the S3 event notifications from the AWS Config Logs bucket in the AWS Config account.
-              - !If
-                - IsDashboardAccountDeployment
-                - Effect: Allow
-                  Action:
-                    - sqs:ReceiveMessage
-                    - sqs:DeleteMessage
-                    - sqs:GetQueueAttributes
-                  Resource: !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:${PreProcessingConfigNotificationQueueName}"
-                - !Ref "AWS::NoValue"
-              # Case 2.1 (multi-account) with a KMS-encrypted source: decrypt the AWS Config Logs bucket
-              # objects (in the AWS Config account) for the small-file server-side copy. The key policy
-              # on the AWS Config account side must also grant this role kms:Decrypt.
-              - !If
-                - IsDashboardAccountDeploymentKms
-                - Effect: Allow
-                  Action:
-                    - kms:Decrypt
-                  Resource: !Ref ConfigBucketKmsKeyArn
                 - !Ref "AWS::NoValue"
 
   # Lambda Function that triggers Fargate tasks
@@ -812,7 +542,6 @@ Resources:
   # checkov:skip=CKV_AWS_173: Environment variables are not sensitive.
   # checkov:skip=CKV_AWS_116: No DLQ needed
     Type: AWS::Lambda::Function
-    Condition: IsCreatePreProcessingResources
     DependsOn: ConfigFilePreprocessingProducerLambdaLogGroup
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -824,8 +553,6 @@ Resources:
       LoggingConfig:
         LogFormat: "Text"
       Runtime: python3.14
-      # IMPORTANT: the SQS queue (PreProcessingConfigNotificationQueue) VisibilityTimeout must be 6x
-      # this value. If you fine-tune this timeout, update the queue's VisibilityTimeout to match.
       Timeout: 120
       EphemeralStorage:
         Size: 512
@@ -858,53 +585,6 @@ Resources:
 
           DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD = 200000
 
-
-          def extract_s3_records(event):
-              """
-              Normalize the incoming event into a flat list of S3 event-notification records,
-              regardless of how the notification was delivered:
-                - Case 1: direct S3 event notification    -> the record already has an 's3' key
-                - Case 2.1: S3 -> SQS (cross-account)      -> the S3 event is JSON in record['body']
-                - S3 -> SNS (and S3 -> SNS -> SQS)         -> the S3 event is JSON under 'Message'
-              S3 'TestEvent' messages (sent when a notification is first configured) carry no
-              's3' records and are skipped.
-              """
-              s3_records = []
-              for record in event.get('Records', []):
-                  # Case 1: direct S3 notification
-                  if 's3' in record:
-                      s3_records.append(record)
-                      continue
-
-                  # Case 2.1 (SQS) or SNS-to-SQS: the payload is JSON in the message body
-                  payload = record.get('body')
-                  # Direct SNS to Lambda: the payload is under Sns.Message
-                  if payload is None and 'Sns' in record:
-                      payload = record['Sns'].get('Message')
-                  if payload is None:
-                      print('SKIPPING: record is neither an S3, SQS nor SNS event.')
-                      continue
-
-                  try:
-                      parsed = json.loads(payload)
-                  except (ValueError, TypeError):
-                      print('SKIPPING: message body is not valid JSON.')
-                      continue
-
-                  # S3 -> SNS -> SQS: the S3 event is nested one more level under 'Message'
-                  if isinstance(parsed, dict) and 'Message' in parsed and 'Records' not in parsed:
-                      try:
-                          parsed = json.loads(parsed['Message'])
-                      except (ValueError, TypeError):
-                          print('SKIPPING: nested SNS Message is not valid JSON.')
-                          continue
-
-                  for inner in parsed.get('Records', []):
-                      if 's3' in inner:
-                          s3_records.append(inner)
-              return s3_records
-
-
           def lambda_handler(event, context):
               tracking_table_name = os.environ["DYNAMODB_TRACKING_TABLE_NAME"]
               dynamodb = boto3.resource('dynamodb').Table(tracking_table_name)
@@ -923,7 +603,7 @@ Resources:
               except ValueError:
                   print(f"Warning: CONFIG_OBJECT_SIZE_THRESHOLD_BYTES '{size_threshold_parameter}' is not a valid integer. Using default value of {DEFAULT_CONFIG_OBJECT_SIZE_THRESHOLD} bytes.")
 
-              records = extract_s3_records(event)
+              records = event['Records']
               for record in records:
                   bucket = record['s3']['bucket']['name']
                   key = urllib.parse.unquote_plus(record['s3']['object']['key'])
@@ -1043,7 +723,6 @@ Resources:
   ConfigFilePreprocessingProducerLambdaLogGroup:
   # checkov:skip=CKV_AWS_158: No KMS encryption needed
     Type: AWS::Logs::LogGroup
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1066,7 +745,6 @@ Resources:
   # checkov:skip=CKV_AWS_119: This is a tracking table, no need for encryption
   # checkov:skip=CKV_AWS_28: This is a tracking table, no need for point-in-time recovery
     Type: AWS::DynamoDB::Table
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1106,7 +784,6 @@ Resources:
   PreProcessingVPC:
   # checkov:skip=CKV2_AWS_11: VPC flow logs not required for this isolated, single-purpose preprocessing VPC
     Type: AWS::EC2::VPC
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1124,7 +801,6 @@ Resources:
 
   PreProcessingInternetGateway:
     Type: AWS::EC2::InternetGateway
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1134,14 +810,12 @@ Resources:
 
   PreProcessingVPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       InternetGatewayId: !Ref PreProcessingInternetGateway
 
   PreProcessingPublicSubnet1:
     Type: AWS::EC2::Subnet
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       CidrBlock: 10.0.0.0/25
@@ -1153,7 +827,6 @@ Resources:
 
   PreProcessingPublicSubnet2:
     Type: AWS::EC2::Subnet
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       CidrBlock: 10.0.0.128/25
@@ -1165,7 +838,6 @@ Resources:
 
   PreProcessingPublicRouteTable:
     Type: AWS::EC2::RouteTable
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       Tags:
@@ -1174,7 +846,6 @@ Resources:
 
   PreProcessingDefaultRoute:
     Type: AWS::EC2::Route
-    Condition: IsCreatePreProcessingResources
     DependsOn: PreProcessingVPCGatewayAttachment
     Properties:
       RouteTableId: !Ref PreProcessingPublicRouteTable
@@ -1183,14 +854,12 @@ Resources:
 
   PreProcessingPublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: IsCreatePreProcessingResources
     Properties:
       SubnetId: !Ref PreProcessingPublicSubnet1
       RouteTableId: !Ref PreProcessingPublicRouteTable
 
   PreProcessingPublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: IsCreatePreProcessingResources
     Properties:
       SubnetId: !Ref PreProcessingPublicSubnet2
       RouteTableId: !Ref PreProcessingPublicRouteTable
@@ -1201,7 +870,6 @@ Resources:
   # service endpoints it uses (S3, DynamoDB, CloudWatch Logs).
   PreProcessingFargateSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1236,7 +904,6 @@ Resources:
   # and the Dashboard bucket (and their objects).
   PreProcessingS3GatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
@@ -1263,7 +930,6 @@ Resources:
   # The endpoint policy restricts access through this endpoint to only the CRCD job tracking table.
   PreProcessingDynamoDBGatewayEndpoint:
     Type: AWS::EC2::VPCEndpoint
-    Condition: IsCreatePreProcessingResources
     Properties:
       VpcId: !Ref PreProcessingVPC
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.dynamodb"
@@ -1284,7 +950,6 @@ Resources:
 
   ECSServiceLinkedRoleLambdaRole:
     Type: AWS::IAM::Role
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1318,7 +983,6 @@ Resources:
   # checkov:skip=CKV_AWS_115: One-time execution
   # checkov:skip=CKV_AWS_116: No DLQ needed
     Type: AWS::Lambda::Function
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1393,13 +1057,11 @@ Resources:
 
   EnsureECSServiceLinkedRole:
     Type: Custom::ECSServiceLinkedRole
-    Condition: IsCreatePreProcessingResources
     Properties:
       ServiceToken: !GetAtt ECSServiceLinkedRoleLambda.Arn
 
   PreProcessingECSCluster:
     Type: AWS::ECS::Cluster
-    Condition: IsCreatePreProcessingResources
     DependsOn: EnsureECSServiceLinkedRole
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -1414,7 +1076,6 @@ Resources:
   # Role assumed by ECS to pull images and write logs (task execution role)
   PreProcessingTaskExecutionRole:
     Type: AWS::IAM::Role
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1433,7 +1094,6 @@ Resources:
   # Role assumed by the container itself to access S3 and DynamoDB (task role)
   PreProcessingTaskRole:
     Type: AWS::IAM::Role
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1476,14 +1136,14 @@ Resources:
               # When the AWS Config Logs bucket is KMS-encrypted: decrypt the source Config files,
               # and decrypt the split script + encrypt the output objects on the KMS-encrypted Dashboard bucket.
               - !If
-                - IsCreatePreProcessingResourcesKms
+                - IsConfigLogsBucketKms
                 - Effect: Allow
                   Action:
                     - kms:Decrypt
                   Resource: !Ref ConfigBucketKmsKeyArn
                 - !Ref "AWS::NoValue"
               - !If
-                - IsCreatePreProcessingResourcesKms
+                - IsConfigLogsBucketKms
                 - Effect: Allow
                   Action:
                     - kms:Decrypt
@@ -1491,21 +1151,10 @@ Resources:
                     - kms:GenerateDataKey
                   Resource: !GetAtt DashboardBucketKmsKey.Arn
                 - !Ref "AWS::NoValue"
-              # Case 2.1 (multi-account) with a KMS-encrypted source: decrypt the AWS Config Logs
-              # bucket objects (in the AWS Config account) that the task streams and splits. The key
-              # policy on the AWS Config account side must also grant this role kms:Decrypt.
-              - !If
-                - IsDashboardAccountDeploymentKms
-                - Effect: Allow
-                  Action:
-                    - kms:Decrypt
-                  Resource: !Ref ConfigBucketKmsKeyArn
-                - !Ref "AWS::NoValue"
 
   PreProcessingTaskLogGroup:
   # checkov:skip=CKV_AWS_158: No KMS encryption needed
     Type: AWS::Logs::LogGroup
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1520,7 +1169,6 @@ Resources:
   # Lambda that uploads the preprocessing script to S3 during stack creation
   ScriptUploaderLambdaRole:
     Type: AWS::IAM::Role
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1546,7 +1194,7 @@ Resources:
                 Resource: !Sub '${DashboardBucket.Arn}/crcd-scripts/*'
               # When the Dashboard bucket is KMS-encrypted, uploading the script requires these key actions.
               - !If
-                - IsCreatePreProcessingResourcesKms
+                - IsConfigLogsBucketKms
                 - Effect: Allow
                   Action:
                     - kms:Encrypt
@@ -1562,7 +1210,6 @@ Resources:
   # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
   # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
     Type: AWS::Lambda::Function
-    Condition: IsCreatePreProcessingResources
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
@@ -1612,7 +1259,6 @@ Resources:
   # Custom Resource that triggers the script upload
   PreProcessingScript:
     Type: Custom::ScriptUploader
-    Condition: IsCreatePreProcessingResources
     Properties:
       ServiceToken: !GetAtt ScriptUploaderLambda.Arn
       Bucket: !Ref DashboardBucket
@@ -1907,7 +1553,6 @@ Resources:
 
   PreProcessingTaskDefinition:
     Type: AWS::ECS::TaskDefinition
-    Condition: IsCreatePreProcessingResources
     DependsOn: PreProcessingScript
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
@@ -1943,203 +1588,28 @@ Resources:
               awslogs-stream-prefix: "preprocessing"
 
 
-  # *************************************************************************************************************************
-  # *************************************************************************************************************************
-  # Case 2.1 only (multi-account): the SQS queue lives in THIS (Dashboard) account.
-  # The AWS Config Logs bucket in the AWS Config account sends its S3 event notifications to this
-  # queue (cross-account S3 -> SQS), and the Producer Lambda consumes it via a same-account event
-  # source mapping. Keeping the queue here means the ESM is same-account (no ordering problem) and
-  # the AWS Config account only needs the bucket-side notification config (created in step 2.2).
-  # *************************************************************************************************************************
-  # *************************************************************************************************************************
-
-  # Dead Letter Queue: S3 event notifications that fail processing after maxReceiveCount attempts
-  # are moved here for investigation, so they are not lost or retried forever.
-  PreProcessingConfigNotificationDLQ:
-  # checkov:skip=CKV_AWS_27: We set SqsManagedSseEnabled: true
-    Type: AWS::SQS::Queue
-    Condition: IsDashboardAccountDeployment
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      QueueName: !Sub "${PreProcessingConfigNotificationQueueName}-dlq"
-      MessageRetentionPeriod: 1209600 # 14 days
-      SqsManagedSseEnabled: true
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W48
-            reason: "KMS encryption specified in SqsManagedSseEnabled = true"
-
-  PreProcessingConfigNotificationQueue:
-  # checkov:skip=CKV_AWS_27: SSE-SQS (SQS-managed) encryption is enabled by default; no customer-managed KMS key required here
-    Type: AWS::SQS::Queue
-    Condition: IsDashboardAccountDeployment
-    DeletionPolicy: "Delete"
-    UpdateReplacePolicy: "Delete"
-    Properties:
-      QueueName: !Ref PreProcessingConfigNotificationQueueName
-      # AWS recommends the queue visibility timeout be at least 6x the consuming Lambda's timeout,
-      # to avoid a message becoming visible (and re-processed) before Lambda finishes with it.
-      # The Producer Lambda timeout is 120s, so 6 x 120 = 720s.
-      VisibilityTimeout: 720
-      MessageRetentionPeriod: 86400
-      SqsManagedSseEnabled: true
-      # After maxReceiveCount failed processing attempts, move the message to the DLQ.
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt PreProcessingConfigNotificationDLQ.Arn
-        maxReceiveCount: 3
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W48
-            reason: "KMS encryption specified in SqsManagedSseEnabled = true"
-
-  # Queue policy: allow the AWS Config Logs bucket (in the AWS Config account) to send S3 event
-  # notifications to this queue. Scoped to the specific bucket and the AWS Config account.
-  PreProcessingConfigNotificationQueuePolicy:
-    Type: AWS::SQS::QueuePolicy
-    Condition: IsDashboardAccountDeployment
-    Properties:
-      Queues:
-        - !Ref PreProcessingConfigNotificationQueue
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: "AllowConfigLogsBucketToSendMessages"
-            Effect: Allow
-            Principal:
-              Service: s3.amazonaws.com
-            Action: "SQS:SendMessage"
-            Resource: !GetAtt PreProcessingConfigNotificationQueue.Arn
-            Condition:
-              ArnLike:
-                "aws:SourceArn": !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
-              StringEquals:
-                "aws:SourceAccount": !Ref ConfigAccountId
-
-  # Same-account event source mapping: the Producer Lambda consumes the queue above.
-  PreProcessingSqsEventSourceMapping:
-    Type: AWS::Lambda::EventSourceMapping
-    Condition: IsDashboardAccountDeployment
-    Properties:
-      EventSourceArn: !GetAtt PreProcessingConfigNotificationQueue.Arn
-      FunctionName: !Ref ConfigFilePreprocessingProducerLambda
-      Enabled: true
-      BatchSize: 10
-
-
-  # *************************************************************************************************************************
-  # *************************************************************************************************************************
-  # Case 2.2 only (multi-account, run in the AWS Config account): configure the S3 event notification
-  # on the AWS Config Logs bucket so it delivers to the SQS queue in the Dashboard account.
-  # The queue itself, its policy, and the Lambda consumer all live in the Dashboard account (created
-  # in step 2.1). This step only points the bucket's notification at that queue's ARN, which is
-  # constructed deterministically from DashboardAccountId, the Region, and the fixed queue name.
-  # It reuses the shared notification-configurer Lambda (ConfigBucketNotificationConfigurationLambdaJobProducer).
-  # *************************************************************************************************************************
-  # *************************************************************************************************************************
-
-  ConfigBucketNotificationConfigurationSQSTrigger:
-    Type: Custom::ConfigBucketSQSNotification
-    Condition: IsConfigureS3EventNotificationToSQS
-    Properties:
-      ServiceToken: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducer.Arn
-      Bucket: !Ref ConfigBucketName
-      # This Id lets the configurer remove only the CRCD notification on stack delete.
-      EventNotificationName: "CRCDPreprocessingSQSTrigger"
-      NotificationConfiguration:
-        QueueConfigurations:
-        - Events: ['s3:ObjectCreated:*']
-          QueueArn: !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${DashboardAccountId}:${PreProcessingConfigNotificationQueueName}"
-          Id: "CRCDPreprocessingSQSTrigger"
-
-
 Outputs:
   DashboardBucketName:
-    Condition: IsCreatePreProcessingResources
     Description: Use this bucket as data source when deploying the AWS Config Resource Compliance dashboard
     Value: !Ref DashboardBucket
 
   DashboardBucketKmsKeyArn:
-    Condition: IsCreatePreProcessingResourcesKms
+    Condition: IsConfigLogsBucketKms
     Description: ARN of the KMS key created to encrypt the Dashboard bucket (only created when the AWS Config Logs bucket is KMS-encrypted)
     Value: !GetAtt DashboardBucketKmsKey.Arn
 
   DynamoDBTableName:
-    Condition: IsCreatePreProcessingResources
     Description: Name of the DynamoDB tracking table
     Value: !Ref CRCDJobTrackingTable
 
   ConfigFilePreprocessingProducerLambdaArn:
-    Condition: IsCreatePreProcessingResources
     Description: ARN of the Lambda function that triggers the preprocessing Fargate task
     Value: !GetAtt ConfigFilePreprocessingProducerLambda.Arn
 
   ECSClusterArn:
-    Condition: IsCreatePreProcessingResources
     Description: ARN of the ECS cluster running preprocessing tasks
     Value: !GetAtt PreProcessingECSCluster.Arn
 
   TaskDefinitionArn:
-    Condition: IsCreatePreProcessingResources
     Description: ARN of the Fargate task definition for preprocessing
     Value: !Ref PreProcessingTaskDefinition
-
-  # Multi-account (case 2.1) outputs: values needed when running the AWS Config account step (2.2).
-  # These are deterministic (they can also be reconstructed from the account ID + fixed names), but
-  # are emitted here for convenience so they can be copied into / verified against the 2.2 stack.
-  ConfigNotificationQueueArn:
-    Condition: IsDashboardAccountDeployment
-    Description: "ARN of the SQS queue that receives S3 event notifications. Use this as the notification target when configuring the AWS Config Logs bucket in the AWS Config account (step 2.2)."
-    Value: !GetAtt PreProcessingConfigNotificationQueue.Arn
-
-  ProducerLambdaRoleArn:
-    Condition: IsDashboardAccountDeployment
-    Description: "ARN of the Producer Lambda IAM role. Grant this role read access to the AWS Config Logs bucket (and kms:Decrypt on its KMS key, if any) in the AWS Config account (step 2.2)."
-    Value: !GetAtt IAMRoleConfigFilePreprocessingProducerLambda.Arn
-
-  FargateTaskRoleArn:
-    Condition: IsDashboardAccountDeployment
-    Description: "ARN of the Fargate task IAM role. Grant this role read access to the AWS Config Logs bucket (and kms:Decrypt on its KMS key, if any) in the AWS Config account (step 2.2)."
-    Value: !GetAtt PreProcessingTaskRole.Arn
-
-  # -----------------------------------------------------------------------------------------------------------------------
-  # Development-only outputs: echo the value of each condition to help verify the deployment state.
-  # TODO: comment out (or remove) before release.
-  # -----------------------------------------------------------------------------------------------------------------------
-  ConditionIsConfigAccountDeployment:
-    Description: "Development: single-account deployment - use case 1 (ConfigAccountId = DashboardAccountId = this account)"
-    Value: !If [IsConfigAccountDeployment, 'true', 'false']
-
-  ConditionIsConfigAccountNotificationDeployment:
-    Description: "Development: AWS Config account run of a multi-account deployment - use case 2.2"
-    Value: !If [IsConfigAccountNotificationDeployment, 'true', 'false']
-
-  ConditionIsCreatePreProcessingResources:
-    Description: "Development: create the pre-processing resources - use case 1 or 2.1 (run in the Dashboard account)"
-    Value: !If [IsCreatePreProcessingResources, 'true', 'false']
-
-  ConditionIsDashboardAccountDeployment:
-    Description: "Development: Dashboard account run of a multi-account deployment - use case 2.1"
-    Value: !If [IsDashboardAccountDeployment, 'true', 'false']
-
-  ConditionIsDashboardAccountDeploymentKms:
-    Description: "Development: use case 2.1 AND the AWS Config Logs bucket is KMS-encrypted"
-    Value: !If [IsDashboardAccountDeploymentKms, 'true', 'false']
-
-  ConditionIsConfigLogsBucketKms:
-    Description: "Development: the AWS Config Logs bucket is encrypted with a KMS key"
-    Value: !If [IsConfigLogsBucketKms, 'true', 'false']
-
-  ConditionIsCreatePreProcessingResourcesKms:
-    Description: "Development: create pre-processing resources AND the AWS Config Logs bucket is KMS-encrypted"
-    Value: !If [IsCreatePreProcessingResourcesKms, 'true', 'false']
-
-  ConditionIsConfigureS3EventNotificationToLambdaJobProducer:
-    Description: "Development: case 1 - configure the S3 event notification to trigger the Producer Lambda directly"
-    Value: !If [IsConfigureS3EventNotificationToLambdaJobProducer, 'true', 'false']
-
-  ConditionIsConfigureS3EventNotificationToSQS:
-    Description: "Development: case 2.2 - configure the S3 event notification to the SQS queue"
-    Value: !If [IsConfigureS3EventNotificationToSQS, 'true', 'false']
