@@ -265,8 +265,6 @@ Resources:
         Size: 512
       Architectures:
         - "x86_64"
-      TracingConfig:
-        Mode: "Active"
       VpcConfig:
         SecurityGroupIds: []
         SubnetIds: []
@@ -972,6 +970,9 @@ Resources:
               - Effect: Allow
                 Action:
                   - iam:CreateServiceLinkedRole
+                  # iam:GetRole is needed by the exponential-backoff check that confirms the
+                  # service-linked role has propagated after creation.
+                  - iam:GetRole
                 Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/aws-service-role/ecs.amazonaws.com/*"
 
   ECSServiceLinkedRoleLambda:
@@ -1571,8 +1572,12 @@ Resources:
           Command:
             - /bin/sh
             - -c
+            # --root-user-action=ignore suppresses pip's "running as root" warning. It is safe here:
+            # this Fargate task is ephemeral and single-purpose - it is destroyed after it runs, so there
+            # is no long-lived system to render "unusable", no other packages to conflict with, and no
+            # next run reusing the same filesystem.
             - !Sub |
-              pip install --quiet ijson boto3 &&
+              pip install --quiet --root-user-action=ignore ijson boto3 &&
               python -c "import boto3; boto3.client('s3').download_file('${DashboardBucket}', 'crcd-scripts/crcd_preprocessing_task.py', '/tmp/crcd_preprocessing_task.py')" &&
               python /tmp/crcd_preprocessing_task.py
           LogConfiguration:
