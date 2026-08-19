@@ -63,7 +63,7 @@ See [security-architecture.md](./security-architecture.md) to read more about th
 
 ### AWS Config Account
 
-![CRCD Preprocessing Architecture](../images/config-account-preprocessing-deployment.png "AWS Config Dashboard, Preprocessing Architecture")
+![CRCD Preprocessing Architecture](../images/config-account-preprocessing-deployment.png "AWS Config Dashboard, Preprocessing architecture on the AWS Config account")
 
 In your AWS Config account:
 1. Deploy the preprocessing resources. Note down the name of the Dashboard bucket.
@@ -72,7 +72,7 @@ In your AWS Config account:
 
 ### Dashboard Account
 
-Coming soon...
+![CRCD Preprocessing Architecture](../images/pre-processing-dashboard-acct-deployment.png "AWS Config Dashboard, Preprocessing architecture on dedicated Dashboard account")
 
 # Deployment
 
