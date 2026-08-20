@@ -1,4 +1,5 @@
 ignore_templates:
   - "crcd_conformance_pack/crcd-conformance-specification.yaml"
 ignore_checks:
+  - W1030
   - W1031

@@ -9,4 +9,4 @@ terraform.tfstate
 terraform.tfstate.backup
 .scannerwork/
 temp/
-pre-processing/payload-files/
+preprocessing/payload-files/

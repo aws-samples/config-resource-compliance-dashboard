@@ -14,7 +14,7 @@ Athena-friendly files in a separate Dashboard bucket. It has two runtime compone
 - A **Fargate task** that streams and splits the large files.
 
 
-![CRCD Preprocessing Architecture](../images/pre-processing-architecture.png "AWS Config Dashboard, Preprocessing Architecture")
+![CRCD Preprocessing Architecture](../images/preprocessing-architecture.png "AWS Config Dashboard, Preprocessing Architecture")
 
 The flow of data is as follows:
 1. **New Config record** lands in the source S3 bucket, the AWS Config Logs bucket.
@@ -33,7 +33,7 @@ server-side within AWS.
 
 ## Detailed Architecture
 
-![CRCD Preprocessing Detailed Architecture](../images/pre-processing-full-architecture.png "AWS Config Dashboard, Preprocessing Detailed Architecture")
+![CRCD Preprocessing Detailed Architecture](../images/preprocessing-full-architecture.png "AWS Config Dashboard, Preprocessing Detailed Architecture")
 
 > [!NOTE]
 > The IP ranges shown on the route table icon are illustrative only and do not represent the

@@ -34,7 +34,7 @@ aws s3api list-objects-v2 \
 
 If the query returns data, you have to deploy this solution before installing the dashboard.
 
-You can test locally this solution on your files by following [this guide](./local-test-pre-processing/README.md).
+You can test locally this solution on your files by following [this guide](./local-test-preprocessing/README.md).
 
 
 ## Solution
@@ -72,7 +72,7 @@ In your AWS Config account:
 
 ### Dashboard Account
 
-![CRCD Preprocessing Architecture](../images/pre-processing-dashboard-acct-deployment.png "AWS Config Dashboard, Preprocessing architecture on dedicated Dashboard account")
+![CRCD Preprocessing Architecture](../images/preprocessing-dashboard-acct-deployment.png "AWS Config Dashboard, Preprocessing architecture on dedicated Dashboard account")
 
 # Deployment
 
