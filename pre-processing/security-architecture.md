@@ -1,13 +1,13 @@
-# Pre-processing Security Architecture
+# CRCD Dashboard Preprocessing Security Architecture
 
 This document records the security design decisions for the AWS Config Resource Compliance
-Dashboard (CRCD) pre-processing feature, deployed by `crcd-config-preprocessing.yaml`.
+Dashboard (CRCD) preprocessing feature, deployed by `crcd-config-preprocessing.yaml`.
 
-## Purpose of the pre-processing feature
+## Purpose of the preprocessing feature
 
 In environments with many resources, AWS Config can deliver files larger than 32 MB
 (uncompressed), which exceeds an Athena service limit and causes dashboard queries to fail.
-The pre-processing feature watches the AWS Config Logs bucket and produces smaller,
+The preprocessing feature watches the AWS Config Logs bucket and produces smaller,
 Athena-friendly files in a separate Dashboard bucket. It has two runtime components:
 
 - A **Producer Lambda function** that reacts to each new AWS Config file.

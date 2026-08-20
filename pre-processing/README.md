@@ -84,7 +84,7 @@ Coming soon...
 
 ## AWS Config Snapshot File Structure
 
-This section describes the structure of the AWS Config snapshot JSON files that serve as input for the pre-processing pipeline.
+This section describes the structure of the AWS Config snapshot JSON files that serve as input for the preprocessing pipeline.
 
 ### File Naming Convention
 
@@ -144,7 +144,7 @@ When AWS Config generates a snapshot file, it creates one single YAML row contai
 
 
 
-## Details about Pre-Processing
+## Details about Preprocessing
 Data must be pre-processed to split or reduce oversized rows. The idea is to ingest a large file and create multiple output files that have the same structure as the original file:
 
 
@@ -158,6 +158,6 @@ Data must be pre-processed to split or reduce oversized rows. The idea is to ing
 
 But where the array `configurationItems` contains a subset of the items, making sure each processed file is within the hard limit of 32MB.
 
-For example, if the original file contains 10000 items and is above the 32MB limit, the pre-processing function will generate 20 files each with 500 items. More sophisticated ways os splitting the original file may exist.
+For example, if the original file contains 10000 items and is above the 32MB limit, the preprocessing function will generate 20 files each with 500 items. More sophisticated ways os splitting the original file may exist.
 
 - **Streaming processing** - Uses `ijson` to parse files incrementally, holding only one batch in memory at a time. Memory usage stays constant regardless of input file size. This allows preprocessing to manage large files; the functionality has been successfully tested with Config records having 500,000 objects in the `configurationItems` array.

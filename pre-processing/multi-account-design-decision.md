@@ -1,18 +1,18 @@
-# Multi-Account Pre-processing: Design Decision (Cross-account read vs. S3 replication)
+# Multi-Account Preprocessing: Design Decision (Cross-account read vs. S3 replication)
 
 **Decision:** for the multi-account deployment we use **S3 replication into a transient bucket in the
 Dashboard account** (Option B below), not direct cross-account reads. This note records the
-difficulties of the alternative (giving the pre-processing compute cross-account read access to the
+difficulties of the alternative (giving the preprocessing compute cross-account read access to the
 AWS Config Logs bucket) and the cost comparison that led to the decision.
 
 ## Context
 
-The pre-processing feature splits oversized AWS Config files (files that exceed Athena's ~32 MB
+The preprocessing feature splits oversized AWS Config files (files that exceed Athena's ~32 MB
 per-row limit) into smaller files. In a **multi-account** deployment:
 
 - The **AWS Config Logs bucket** lives in the **AWS Config account** (the account we most want to
   protect - it holds the organization's audit data).
-- All pre-processing compute (the Producer Lambda and the Fargate task) runs in the **Dashboard
+- All preprocessing compute (the Producer Lambda and the Fargate task) runs in the **Dashboard
   account**.
 
 The core problem: the compute in the Dashboard account must read Config files that live in the AWS
@@ -21,7 +21,7 @@ Config account. There are two broad ways to bridge that gap:
 - **Option A - Direct cross-account read:** the Producer Lambda and/or the Fargate task read the AWS
   Config Logs bucket directly across the account boundary.
 - **Option B - S3 replication:** the AWS Config Logs bucket replicates its objects into a transient
-  bucket in the Dashboard account, and pre-processing then runs entirely within the Dashboard
+  bucket in the Dashboard account, and preprocessing then runs entirely within the Dashboard
   account (the same way it does in a single-account deployment).
 
 ## Why we are considering replication (Option B)
@@ -80,7 +80,7 @@ For an organization of **100 accounts x 10 regions = 1,000 account-regions**, a 
 volume is **~100,000 history files/day** (range ~50k-200k, workload-dependent) plus **~1,000
 snapshot files/day** at 24h snapshot frequency.
 
-Replication, by contrast, lets pre-processing run within the Dashboard account exactly as it does in
+Replication, by contrast, lets preprocessing run within the Dashboard account exactly as it does in
 a single-account deployment: only genuinely **oversized** files ever reach Fargate; everything else
 is cheap. The transient bucket (with a tight lifecycle) costs almost nothing.
 
@@ -153,7 +153,7 @@ mirror rather than invent.
 
 ## How it is implemented (two steps)
 
-- **Step 2.1 - Dashboard account (run first):** installs the pre-processing resources and a
+- **Step 2.1 - Dashboard account (run first):** installs the preprocessing resources and a
   **transient bucket** (versioned, with a tight lifecycle) that receives the replicated AWS Config
   files and is the same-account source that triggers the Producer Lambda. Outputs the transient
   bucket name.
