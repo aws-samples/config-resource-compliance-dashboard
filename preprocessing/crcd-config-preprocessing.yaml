@@ -178,19 +178,19 @@ Parameters:
 
   ConfigureS3Replication:
     Type: "String"
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2); ignored otherwise. Select 'yes' to let this template configure cross-account S3 replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account. Select 'no' if you already have an S3 replication configuration on the AWS Config Logs bucket, in which case you must configure it manually (this template will not modify existing replication)."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup; ignored otherwise. Select 'yes' to let this template configure cross-account S3 replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account. Select 'no' if you already have an S3 replication configuration on the AWS Config Logs bucket, in which case you must configure it manually (this template will not modify existing replication)."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>"
 
   TransientBucketNameForReplication:
     Type: String
     Default: ""
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2). The name of the transient bucket in the Dashboard account that receives the replicated AWS Config files - copy the value of the 'TransientBucketName' output from the Dashboard account step (2.1). Leave empty otherwise."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup. The name of the transient bucket in the Dashboard account that receives the replicated AWS Config files - copy the value of the 'TransientBucketName' output from the Dashboard account setup. Leave empty otherwise."
 
   TransientBucketKmsKeyArn:
     Type: String
     Default: ""
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2), and only if the AWS Config Logs bucket is KMS-encrypted. The ARN of the KMS key that encrypts the transient bucket - copy the value of the 'DashboardBucketKmsKeyArn' output from the Dashboard account step (2.1). Leave empty if the AWS Config Logs bucket is not KMS-encrypted."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup, and only if the AWS Config Logs bucket is KMS-encrypted. The ARN of the KMS key that encrypts the transient bucket - copy the value of the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup. Leave empty if the AWS Config Logs bucket is not KMS-encrypted."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
@@ -466,7 +466,7 @@ Rules:
         - !Equals
           - !Ref ConfigureS3Replication
           - '<select>'
-        AssertDescription: "REQUIRED when deploying in the AWS Config account of a multi-account deployment (step 2.2). Select 'yes' to let this template configure S3 replication of AWS Config files from the AWS Config Logs bucket to the transient bucket. Select 'no' if you already have S3 replication configured on the AWS Config Logs bucket and will configure it manually."
+        AssertDescription: "REQUIRED when deploying in the AWS Config account setup of a multi-account deployment. Select 'yes' to let this template configure S3 replication of AWS Config files from the AWS Config Logs bucket to the transient bucket. Select 'no' if you already have S3 replication configured on the AWS Config Logs bucket and will configure it manually."
 
   # In use case 2.2, the transient bucket name is always required, and the two KMS key ARNs must be
   # provided together (both or none): if the AWS Config Logs bucket is KMS-encrypted the transient
@@ -480,11 +480,11 @@ Rules:
         - !Equals
           - !Ref TransientBucketNameForReplication
           - ''
-        AssertDescription: "REQUIRED in the AWS Config account step (2.2): provide the transient bucket name (the 'TransientBucketName' output from the Dashboard account step 2.1)."
+        AssertDescription: "REQUIRED in the AWS Config account setup: provide the transient bucket name (the 'TransientBucketName' output from the Dashboard account setup)."
       - Assert: !Or
         - !Equals [!Ref ConfigBucketKmsKeyArn, '']
         - !Not [!Equals [!Ref TransientBucketKmsKeyArn, '']]
-        AssertDescription: "The AWS Config Logs bucket is KMS-encrypted (ConfigBucketKmsKeyArn is set), so the transient bucket KMS key ARN (TransientBucketKmsKeyArn) is also required. Provide the 'DashboardBucketKmsKeyArn' output from the Dashboard account step (2.1)."
+        AssertDescription: "The AWS Config Logs bucket is KMS-encrypted (ConfigBucketKmsKeyArn is set), so the transient bucket KMS key ARN (TransientBucketKmsKeyArn) is also required. Provide the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup."
       - Assert: !Or
         - !Equals [!Ref TransientBucketKmsKeyArn, '']
         - !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
