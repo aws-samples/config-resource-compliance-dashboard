@@ -1,4 +1,4 @@
-# Config Compliance Resource Dashboard - pre-processing 
+# Config Compliance Resource Dashboard - preprocessing 
 # In environments with a large number of resources, AWS Config may generate files that are bigger that 32MB (uncompressed).
 # This will break an Athena service limit and make it impossible to run queries, as all queries that try to open one of those files will fail.
 # These resources will pre-process AWS Config files and generate smaller files that can potentially avoid the issue.
@@ -9,15 +9,15 @@
 # 1. Single-account deployment (all in the AWS Config account) - supports standalone accounts and AWS Organizations
 #    The AWS Config account and the Dashboard account are the same account (ConfigAccountId = DashboardAccountId = this account).
 #    The AWS Config Logs bucket is the source of data, the Producer Lambda is triggered directly from that bucket,
-#    and pre-processing writes the result files to a new Dashboard bucket created in the same account.
+#    and preprocessing writes the result files to a new Dashboard bucket created in the same account.
 #    If the AWS Config Logs bucket is encrypted with a KMS key, the Dashboard bucket is also encrypted (with a new key this template creates).
 #
-# 2. Multi-account deployment (pre-processing runs in the Dashboard account, AWS Config Logs bucket is in the AWS Config account)
+# 2. Multi-account deployment (preprocessing runs in the Dashboard account, AWS Config Logs bucket is in the AWS Config account)
 #    The AWS Config account replicates its AWS Config files into a transient bucket in the Dashboard account, and
-#    pre-processing runs within the Dashboard account reading from that transient bucket. Deployed in two steps:
+#    preprocessing runs within the Dashboard account reading from that transient bucket. Deployed in two steps:
 #
 #    2.1 - Run this template on the Dashboard account FIRST.
-#    Installs the pre-processing resources (Producer Lambda + its role, VPC/Fargate, DynamoDB, Dashboard bucket) and
+#    Installs the preprocessing resources (Producer Lambda + its role, VPC/Fargate, DynamoDB, Dashboard bucket) and
 #    the transient bucket (versioned, with a tight lifecycle) that receives the replicated AWS Config files and is the
 #    source that triggers the Producer Lambda. Outputs the transient bucket name for use in step 2.2.
 #
@@ -35,17 +35,24 @@ Metadata:
     ParameterGroups:
       -
         Label:
-          default: "AWS Config logging - the source of data for the pre-processing job, where your AWS Config files are delivered"
+          default: "AWS Config logging - the source of data for the preprocessing job, where your AWS Config files are delivered"
         Parameters:
           - ConfigAccountId
           - ConfigBucketName
           - ConfigBucketKmsKeyArn
       -
         Label: 
-          default: "Pre-processing destination - where you will deploy the dashboard and where its data is"
+          default: "Preprocessing destination - where you will deploy the dashboard and where its data is"
         Parameters:
           - DashboardAccountId
           - ConfigureS3EventNotificationToLambdaJobProducer
+      -
+        Label:
+          default: "Multi-account deployment - configure replication of config data"
+        Parameters:
+          - ConfigureS3Replication
+          - TransientBucketNameForReplication
+          - TransientBucketKmsKeyArn
       -
         Label:
           default: "Technical Parameters (DO NOT CHANGE)"
@@ -53,11 +60,12 @@ Metadata:
           - DashboardBucketNamePrefix
           - TransientBucketNamePrefix
           - PreProcessingLambdaProducerName
-          - PreProcessingLambdaProducerRoleName
           - DynamoDBJobTrackingTableName
           - LambdaSupportJobTriggerConfigurationName
           - LambdaSupportScriptUploaderName
           - LambdaSupportECSServiceRoleName
+          - PreProcessingCrossAccountReplicationRole
+          - PreProcessingReplicationConfigurationLambdaName
     
     ParameterLabels:
       ConfigAccountId:
@@ -79,13 +87,21 @@ Metadata:
       LambdaSupportJobTriggerConfigurationName:
         default: "Name of the Lambda function that performs supporting configurations: S3 object notification"
       PreProcessingLambdaProducerName:
-        default: "Name of the Lambda function that triggers the pre-processing job"
-      PreProcessingLambdaProducerRoleName:
-        default: "Name of the IAM role assumed by the pre-processing Producer Lambda"
+        default: "Name of the Lambda function that triggers the preprocessing job"
       LambdaSupportScriptUploaderName:
         default: "Name of the Lambda function that uploads the preprocessing script to S3"
       LambdaSupportECSServiceRoleName:
         default: "Name of the Lambda function that ensures the ECS service-linked role exists"
+      ConfigureS3Replication:
+        default: "Configure cross-account replication of AWS Config files to the transient bucket"
+      TransientBucketNameForReplication:
+        default: "Transient bucket name (replication destination)"
+      TransientBucketKmsKeyArn:
+        default: "Transient bucket KMS key ARN (required if the AWS Config Logs bucket is KMS-encrypted)"
+      PreProcessingCrossAccountReplicationRole:
+        default: "Name of the IAM role used for cross-account replication of AWS Config files"
+      PreProcessingReplicationConfigurationLambdaName:
+        default: "Name of the Lambda function that configures S3 replication on the AWS Config Logs bucket"
 
 
 Parameters:
@@ -106,7 +122,7 @@ Parameters:
   ConfigBucketKmsKeyArn:
     Type: String
     Default: ""
-    Description: "Optional. If your AWS Config Logs bucket is encrypted with a KMS key, provide the key's ARN here so the pre-processing job can decrypt the source files. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. Leave empty if the bucket is not encrypted with KMS."
+    Description: "Optional. If your AWS Config Logs bucket is encrypted with a KMS key, provide the key's ARN here so the preprocessing job can decrypt the source files. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. Leave empty if the bucket is not encrypted with KMS."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
@@ -145,8 +161,8 @@ Parameters:
     Type: String
     Default: 'CRCDPreprocessingJobTracking'
     MinLength: 1
-    ConstraintDescription: "Required: name of the Amazon DynamoDB table used to track the activities of the pre-processing job."
-    Description: "Name of the Amazon DynamoDB table used to track the activities of the pre-processing job (Required)."
+    ConstraintDescription: "Required: name of the Amazon DynamoDB table used to track the activities of the preprocessing job."
+    Description: "Name of the Amazon DynamoDB table used to track the activities of the preprocessing job (Required)."
 
   # The way the notification is built is different
   # Case 1: s3 notification from the Config Logs bucket directly to the lambda producer
@@ -154,9 +170,29 @@ Parameters:
   # Case 2.2: not used 
   ConfigureS3EventNotificationToLambdaJobProducer:
     Type: "String"
-    Description:  "Only used when deploying in the AWS Config account (single-account deployment); ignored when deploying in a dedicated Dashboard account. Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket that triggers the pre-processing job whenever a new AWS Config file is delivered. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket, in which case you must configure them manually."
+    Description:  "Only used when deploying in the AWS Config account (single-account deployment); ignored when deploying in a dedicated Dashboard account. Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket that triggers the preprocessing job whenever a new AWS Config file is delivered. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket, in which case you must configure them manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
+
+  # *** Multi-account deployment - replication of config data (only used in the AWS Config account step, case 2.2) ***
+
+  ConfigureS3Replication:
+    Type: "String"
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2); ignored otherwise. Select 'yes' to let this template configure cross-account S3 replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account. Select 'no' if you already have an S3 replication configuration on the AWS Config Logs bucket, in which case you must configure it manually (this template will not modify existing replication)."
+    AllowedValues: ['<select>', 'yes', 'no']
+    Default: "<select>"
+
+  TransientBucketNameForReplication:
+    Type: String
+    Default: ""
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2). The name of the transient bucket in the Dashboard account that receives the replicated AWS Config files - copy the value of the 'TransientBucketName' output from the Dashboard account step (2.1). Leave empty otherwise."
+
+  TransientBucketKmsKeyArn:
+    Type: String
+    Default: ""
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account (step 2.2), and only if the AWS Config Logs bucket is KMS-encrypted. The ARN of the KMS key that encrypts the transient bucket - copy the value of the 'DashboardBucketKmsKeyArn' output from the Dashboard account step (2.1). Leave empty if the AWS Config Logs bucket is not KMS-encrypted."
+    AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
+    ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   LambdaSupportJobTriggerConfigurationName:
     Type: "String"
@@ -179,12 +215,20 @@ Parameters:
     ConstraintDescription: "Required: AWS Lambda function that ensures the ECS service-linked role exists."
     Description: "Name of the AWS Lambda function that ensures the ECS service-linked role exists (Required)."
 
-  PreProcessingLambdaProducerRoleName:
+  PreProcessingCrossAccountReplicationRole:
     Type: "String"
-    Default: "crcd-lambda-preprocessing-job-producer-role"
+    # cannot concatenate with source bucket name as there is a limit on 64 characters for role names
+    Default: "crcd-preproc-s3replication-role"
     MinLength: 1
-    ConstraintDescription: "Required: name of the IAM role assumed by the pre-processing Producer Lambda."
-    Description: "Name of the IAM role assumed by the pre-processing Producer Lambda (Required)."
+    ConstraintDescription: "Required: name of the IAM role used for cross-account replication of AWS Config files."
+    Description: "Name of the S3 service role used to replicate AWS Config files from the AWS Config Logs bucket to the transient bucket (Required)."
+
+  PreProcessingReplicationConfigurationLambdaName:
+    Type: "String"
+    Default: "crcd-support-configure-s3-replication-preprocessing"
+    MinLength: 1
+    ConstraintDescription: "Required: AWS Lambda function that configures S3 replication on the AWS Config Logs bucket."
+    Description: "Name of the AWS Lambda function that configures S3 replication on the AWS Config Logs bucket (Required)."
 
 Conditions:
   IsConfigureS3EventNotificationToLambdaJobProducer:
@@ -198,16 +242,16 @@ Conditions:
     - !Equals [!Ref ConfigureS3EventNotificationToLambdaJobProducer, 'yes']
     - !Condition IsConfigAccountDeployment
 
-  # The AWS Config Logs bucket is encrypted with a KMS key. When set, the pre-processing job needs
+  # The AWS Config Logs bucket is encrypted with a KMS key. When set, the preprocessing job needs
   # kms:Decrypt on that key to read the source files, and the Dashboard bucket is created encrypted
   # with a new KMS key that this template provisions.
   IsConfigLogsBucketKms:
     !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
 
-  # Single-account deployment: the full pre-processing stack is deployed in the AWS Config account,
+  # Single-account deployment: the full preprocessing stack is deployed in the AWS Config account,
   # i.e. the AWS Config account, the Dashboard account, and the current (deploying) account are all
   # the same. This is the functionality currently built.
-  # NOTE: unlike the main dashboard stack, we do NOT compare bucket names here - in pre-processing
+  # NOTE: unlike the main dashboard stack, we do NOT compare bucket names here - in preprocessing
   # the source AWS Config Logs bucket and the created Dashboard bucket are always different buckets.
   IsConfigAccountDeployment:
     Fn::And:
@@ -231,7 +275,7 @@ Conditions:
     !Condition IsConfigureS3EventNotificationToLambdaJobProducer
 
   # The Dashboard-bucket KMS resources (the KMS key, bucket encryption, and the roles' kms grants) are
-  # created whenever we create pre-processing resources (use case 1 or 2.1) AND the AWS Config Logs
+  # created whenever we create preprocessing resources (use case 1 or 2.1) AND the AWS Config Logs
   # bucket is encrypted with a KMS key.
   IsCreatePreProcessingResourcesKms:
     Fn::And:
@@ -262,7 +306,7 @@ Conditions:
       - !Condition IsConfigLogsBucketKms
 
   # Case 1 (single-account) where the AWS Config Logs bucket is encrypted with a KMS key. Only in
-  # this case do the pre-processing components read the AWS Config Logs bucket directly, so only here
+  # this case do the preprocessing components read the AWS Config Logs bucket directly, so only here
   # do they need kms:Decrypt on the customer-provided source key (ConfigBucketKmsKeyArn). In case 2.1
   # the components read the transient bucket instead, which is encrypted with the template's own
   # DashboardBucketKmsKey, so the source key grant must NOT be added there.
@@ -270,6 +314,21 @@ Conditions:
     Fn::And:
       - !Condition IsConfigAccountDeployment
       - !Condition IsConfigLogsBucketKms
+
+  # Case 2.2: configure cross-account S3 replication from the AWS Config Logs bucket to the transient
+  # bucket. Gated by the yes/no toggle so customers who already manage replication can opt out.
+  IsConfigureS3Replication:
+    Fn::And:
+      - !Condition IsConfigAccountNotificationDeployment
+      - !Equals [!Ref ConfigureS3Replication, 'yes']
+
+  # Case 2.2 replication where the buckets are KMS-encrypted. Driven by the destination (transient
+  # bucket) key ARN being provided; the ValidateReplicationKmsArns rule enforces that the source and
+  # destination key ARNs are supplied together (both or none).
+  IsS3ReplicationKms:
+    Fn::And:
+      - !Condition IsConfigureS3Replication
+      - !Not [!Equals [!Ref TransientBucketKmsKeyArn, '']]
 
 Rules:
   MandatoryConfigAccountId:
@@ -345,14 +404,6 @@ Rules:
           - ''
         AssertDescription: "Lambda function name is required"
 
-  MandatoryPreProcessingLambdaProducerRoleName:
-    Assertions:
-      - Assert: !Not
-        - !Equals
-          - !Ref PreProcessingLambdaProducerRoleName
-          - ''
-        AssertDescription: "Producer Lambda IAM role name is required"
-
   MandatoryDynamoDBJobTrackingTableName:
     Assertions:
       - Assert: !Not
@@ -385,6 +436,59 @@ Rules:
           - !Ref ConfigureS3EventNotificationToLambdaJobProducer
           - '<select>'
         AssertDescription: "REQUIRED when deploying in the AWS Config account (i.e. single-account deployment). Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket - it will trigger the Producer Lambda directly. Select 'no' if you already have S3 event notifications on the AWS Config Logs bucket and will configure them manually. This parameter is ignored when deploying in a dedicated Dashboard account."
+
+  MandatoryPreProcessingCrossAccountReplicationRole:
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref PreProcessingCrossAccountReplicationRole
+          - ''
+        AssertDescription: "Cross-account replication role name is required"
+
+  MandatoryPreProcessingReplicationConfigurationLambdaName:
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref PreProcessingReplicationConfigurationLambdaName
+          - ''
+        AssertDescription: "Replication configuration Lambda function name is required"
+
+  # ConfigureS3Replication is REQUIRED in use case 2.2 (AWS Config account step of a multi-account
+  # deployment), ignored otherwise. The RuleCondition is exactly the case 2.2 condition
+  # (IsConfigAccountNotificationDeployment): ConfigAccountId == this account AND
+  # ConfigAccountId != DashboardAccountId. Rules cannot use !Condition, so it is spelled out here.
+  ValidateConfigureS3Replication:
+    RuleCondition: !And
+      - !Equals [!Ref ConfigAccountId, !Ref 'AWS::AccountId']
+      - !Not [!Equals [!Ref ConfigAccountId, !Ref DashboardAccountId]]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref ConfigureS3Replication
+          - '<select>'
+        AssertDescription: "REQUIRED when deploying in the AWS Config account of a multi-account deployment (step 2.2). Select 'yes' to let this template configure S3 replication of AWS Config files from the AWS Config Logs bucket to the transient bucket. Select 'no' if you already have S3 replication configured on the AWS Config Logs bucket and will configure it manually."
+
+  # In use case 2.2, the transient bucket name is always required, and the two KMS key ARNs must be
+  # provided together (both or none): if the AWS Config Logs bucket is KMS-encrypted the transient
+  # bucket key ARN must be supplied, and vice-versa. RuleCondition is the case 2.2 condition.
+  ValidateReplicationKmsArns:
+    RuleCondition: !And
+      - !Equals [!Ref ConfigAccountId, !Ref 'AWS::AccountId']
+      - !Not [!Equals [!Ref ConfigAccountId, !Ref DashboardAccountId]]
+    Assertions:
+      - Assert: !Not
+        - !Equals
+          - !Ref TransientBucketNameForReplication
+          - ''
+        AssertDescription: "REQUIRED in the AWS Config account step (2.2): provide the transient bucket name (the 'TransientBucketName' output from the Dashboard account step 2.1)."
+      - Assert: !Or
+        - !Equals [!Ref ConfigBucketKmsKeyArn, '']
+        - !Not [!Equals [!Ref TransientBucketKmsKeyArn, '']]
+        AssertDescription: "The AWS Config Logs bucket is KMS-encrypted (ConfigBucketKmsKeyArn is set), so the transient bucket KMS key ARN (TransientBucketKmsKeyArn) is also required. Provide the 'DashboardBucketKmsKeyArn' output from the Dashboard account step (2.1)."
+      - Assert: !Or
+        - !Equals [!Ref TransientBucketKmsKeyArn, '']
+        - !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
+        AssertDescription: "A transient bucket KMS key ARN (TransientBucketKmsKeyArn) was provided, so the AWS Config Logs bucket KMS key ARN (ConfigBucketKmsKeyArn) is also required. Provide both KMS key ARNs or neither."
 
 
 
@@ -435,6 +539,7 @@ Resources:
     # Shared by case 1 and case 2.2 (see IsConfigureBucketNotification).
     Condition: IsConfigureBucketNotification
     Properties:
+      RoleName: "crcd-preproc-s3-notification-config-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -471,7 +576,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${LambdaSupportJobTriggerConfigurationName}"
-      Description: "CRCD Dashboard Support - Configures the S3 event notification on the AWS Config Logs bucket to the Pre-processing Producer Lambda (one-time execution)"
+      Description: "CRCD Dashboard Preprocessing Support - Configures the S3 event notification on the AWS Config Logs bucket to the Preprocessing Producer Lambda (one-time execution)"
       Handler: index.lambda_handler
       Role: !GetAtt ConfigBucketNotificationConfigurationLambdaJobProducerRole.Arn
       Timeout: 300
@@ -514,7 +619,7 @@ Resources:
                       existing_config = s3.get_bucket_notification_configuration(Bucket=bucket_name)
                       if has_notifications(existing_config):
                           # If there's an existing configuration, fail the Lambda function
-                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. CRCD dashboard deployment cannot proceed."
+                          error_message = f"Existing S3 event configuration found on bucket {bucket_name}. CRCD Dashboard Preprocessing deployment cannot proceed."
                           print(error_message)
                           print(f"Existing S3 event configuration: {existing_config}")
                           send_response(event, context, 'FAILED', {'Error': error_message})
@@ -616,7 +721,7 @@ Resources:
 
 
   # KMS key that encrypts the Dashboard bucket, created only when the AWS Config Logs bucket is
-  # KMS-encrypted. The pre-processing components (producer Lambda, script uploader, Fargate task)
+  # KMS-encrypted. The preprocessing components (producer Lambda, script uploader, Fargate task)
   # get the required kms permissions via their IAM roles; the key policy trusts the account root.
   DashboardBucketKmsKey:
     Type: AWS::KMS::Key
@@ -624,7 +729,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      Description: "CRCD pre-processing - Key that encrypts the Dashboard bucket (created when the AWS Config Logs bucket is KMS-encrypted)"
+      Description: "CRCD Preprocessing - Key that encrypts the Dashboard bucket (created when the AWS Config Logs bucket is KMS-encrypted)"
       EnableKeyRotation: true
       KeyPolicy:
         Version: "2012-10-17"
@@ -636,6 +741,21 @@ Resources:
               AWS: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
             Action: 'kms:*'
             Resource: '*'
+          # Case 2.1 (multi-account) only: allow the AWS Config account to use this key to encrypt
+          # the objects it replicates into the transient bucket. The replication role is created in
+          # the AWS Config account (step 2.2) and does not exist yet, so - like the main dashboard
+          # stack - we grant the AWS Config account root; the role's own IAM policy (step 2.2) uses it.
+          - !If
+            - IsDashboardAccountDeploymentKms
+            - Sid: 'Allow AWS Config account use the key for replication'
+              Effect: Allow
+              Principal:
+                AWS: !Sub "arn:${AWS::Partition}:iam::${ConfigAccountId}:root"
+              Action:
+                - kms:Encrypt
+                - kms:GenerateDataKey
+              Resource: '*'
+            - !Ref "AWS::NoValue"
 
   DashboardBucketKmsKeyAlias:
     Type: AWS::KMS::Alias
@@ -761,6 +881,49 @@ Resources:
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${TransientBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
 
+  # Case 2.1 (multi-account): authorize replication into the transient bucket from the AWS Config
+  # account. The replication service role is created in the AWS Config account (step 2.2) and does
+  # not exist yet here, so - like the main dashboard stack - we grant the whole AWS Config account
+  # root; the role's own IAM policy (step 2.2) is what actually uses these permissions.
+  TransientBucketReplicationPolicy:
+    Type: AWS::S3::BucketPolicy
+    Condition: IsDashboardAccountDeployment
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      Bucket: !Ref TransientBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # BSC17 risk mitigation
+          - Sid: "AllowSSLRequestsOnly"
+            Effect: "Deny"
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt TransientBucket.Arn
+              - !Sub "${TransientBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+          - Sid: "ReplicationPermissionsObjects"
+            Effect: "Allow"
+            Principal:
+              AWS: !Ref ConfigAccountId
+            Action:
+              - "s3:ReplicateObject"
+              - "s3:ReplicateDelete"
+            Resource: !Sub "${TransientBucket.Arn}/*"
+          - Sid: "ReplicationPermissionsBucket"
+            Effect: "Allow"
+            Principal:
+              AWS: !Ref ConfigAccountId
+            Action:
+              - "s3:List*"
+              - "s3:GetBucketVersioning"
+              - "s3:PutBucketVersioning"
+            Resource: !GetAtt TransientBucket.Arn
+
 
   # *************************************************************************************************************************
   # *************************************************************************************************************************
@@ -774,8 +937,8 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      RoleName: !Ref PreProcessingLambdaProducerRoleName
-      Description: "CRCD Dashboard - Allows to trigger Fargate tasks, send logs to CloudWatch, and write to DynamoDB."
+      RoleName: "crcd-lambda-preprocessing-job-producer-role"
+      Description: "CRCD Dashboard Preprocessing - Allows to trigger Fargate tasks, send logs to CloudWatch, and write to DynamoDB."
       Path: "/"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -875,7 +1038,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${PreProcessingLambdaProducerName}"
-      Description: "CRCD Dashboard - Lambda function that triggers a Fargate task to pre-process new AWS Config files"
+      Description: "CRCD Dashboard Preprocessing - Lambda function that triggers a Fargate task to pre-process new AWS Config files"
       Handler: index.lambda_handler
       Role: !GetAtt IAMRoleConfigFilePreprocessingProducerLambda.Arn
       LoggingConfig:
@@ -1115,7 +1278,7 @@ Resources:
 
   # *************************************************************************************************************************
   # *************************************************************************************************************************
-  # Dynamo DB table to track the pre-processing activities
+  # Dynamo DB table to track the preprocessing activities
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
@@ -1152,7 +1315,7 @@ Resources:
   # *************************************************************************************************************************
 
   # -----------------------------------------------------------------------------------------------------------------------
-  # Dedicated VPC for the pre-processing Fargate task.
+  # Dedicated VPC for the preprocessing Fargate task.
   # The stack creates its own isolated VPC so it never touches the customer's existing networking:
   #   - No customer VPC/subnet/route-table inputs are required.
   #   - The gateway endpoints attach only to our route table, so their scoped policies cannot affect any
@@ -1376,6 +1539,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
+      RoleName: "crcd-preproc-ecs-service-role-lambda-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1411,7 +1575,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${LambdaSupportECSServiceRoleName}"
-      Description: "CRCD Dashboard - Creates ECS service-linked role if it does not already exist (one-time execution)"
+      Description: "CRCD Dashboard Preprocessing - Creates ECS service-linked role if it does not already exist (one-time execution)"
       Runtime: python3.14
       Timeout: 180
       MemorySize: 128
@@ -1507,7 +1671,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       RoleName: "crcd-preprocessing-task-execution-role"
-      Description: "CRCD Dashboard - Allows ECS to pull container images and write logs"
+      Description: "CRCD Dashboard Preprocessing - Allows ECS to pull container images and write logs"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1526,7 +1690,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       RoleName: "crcd-preprocessing-task-role"
-      Description: "CRCD Dashboard - Allows the preprocessing container to read from the AWS Config Logs bucket, write to Dashboard bucket, and update DynamoDB"
+      Description: "CRCD Dashboard Preprocessing - Allows the preprocessing container to read from the AWS Config Logs bucket, write to Dashboard bucket, and update DynamoDB"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1638,7 +1802,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      RoleName: "crcd-script-uploader-lambda-role"
+      RoleName: "crcd-preproc-script-uploader-lambda-role"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -1681,7 +1845,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Sub "${LambdaSupportScriptUploaderName}"
-      Description: "CRCD Dashboard - Uploads the preprocessing Python script to S3 (one-time execution)"
+      Description: "CRCD Dashboard Preprocessing - Uploads the preprocessing Python script to S3 (one-time execution)"
       Runtime: python3.14
       Timeout: 120
       MemorySize: 128
@@ -2057,6 +2221,321 @@ Resources:
               awslogs-stream-prefix: "preprocessing"
 
 
+  # *************************************************************************************************************************
+  # *************************************************************************************************************************
+  # Case 2.2 only (multi-account, run in the AWS Config account): configure cross-account S3
+  # replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account.
+  # The transient bucket, its replication bucket policy, and (if KMS) the destination key grant are
+  # created in the Dashboard account step (2.1). This step creates the replication role and, unless
+  # the customer opts out, the replication configuration on the AWS Config Logs bucket.
+  # *************************************************************************************************************************
+  # *************************************************************************************************************************
+
+  # Service role assumed by S3 when replicating files to the transient bucket in the Dashboard account
+  PreProcessingReplicationRole:
+    Type: AWS::IAM::Role
+    Condition: IsConfigAccountNotificationDeployment
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sts:AssumeRole
+      # A service role is an IAM role that a service assumes to perform actions on your behalf.
+      Path: "/service-role/"
+      RoleName: !Ref PreProcessingCrossAccountReplicationRole
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Role names are as per our design"
+
+  # Policy for the S3 replication role: read-for-replication on the AWS Config Logs bucket (source),
+  # replicate-write on the transient bucket (destination).
+  PreProcessingReplicationRoleS3Policy:
+    Type: AWS::IAM::Policy
+    Condition: IsConfigAccountNotificationDeployment
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+              - s3:GetReplicationConfiguration
+              - s3:GetObjectVersionForReplication
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectVersionTagging
+              - s3:GetObjectRetention
+              - s3:GetObjectLegalHold
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${TransientBucketNameForReplication}"
+              - !Sub "arn:${AWS::Partition}:s3:::${TransientBucketNameForReplication}/*"
+          - Effect: Allow
+            Action:
+              - s3:ReplicateObject
+              - s3:ReplicateDelete
+              - s3:ReplicateTags
+              - s3:ObjectOwnerOverrideToBucketOwner
+            Resource:
+              - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${TransientBucketNameForReplication}/*"
+      PolicyName: !Sub "${PreProcessingCrossAccountReplicationRole}_s3"
+      Roles:
+        - !Ref PreProcessingReplicationRole
+
+  # When the buckets are KMS-encrypted, the replication role must decrypt with the source key and
+  # encrypt with the destination (transient bucket) key.
+  PreProcessingReplicationRoleKmsPolicy:
+    Type: AWS::IAM::Policy
+    Condition: IsS3ReplicationKms
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:GenerateDataKey
+            Resource: !Ref ConfigBucketKmsKeyArn
+          - Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:GenerateDataKey
+            Resource: !Ref TransientBucketKmsKeyArn
+      PolicyName: !Sub "${PreProcessingCrossAccountReplicationRole}_kms"
+      Roles:
+        - !Ref PreProcessingReplicationRole
+
+  # IAM role for the Lambda that configures replication on the AWS Config Logs bucket
+  PreProcessingConfigBucketReplicationConfigurationLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: IsConfigureS3Replication
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      RoleName: "crcd-preproc-s3-replication-config-role"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3BucketReplicationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  # PutReplicationConfiguration requires iam:PassRole on the replication role.
+                  # https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutBucketReplication.html
+                  - 'iam:PassRole'
+                  - 's3:PutReplicationConfiguration'
+                  - 's3:GetReplicationConfiguration'
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}"
+                  - !GetAtt PreProcessingReplicationRole.Arn
+
+  # Lambda triggered by CloudFormation to configure bucket replication on the AWS Config Logs bucket
+  PreProcessingConfigBucketReplicationConfigurationLambda:
+  # checkov:skip=CKV_AWS_115: This is called only once by the CFN template.
+  # checkov:skip=CKV_AWS_116: No DLQ by design. If this lambda fails, the whole CFN template fails.
+    Type: AWS::Lambda::Function
+    Condition: IsConfigureS3Replication
+    DeletionPolicy: "Delete"
+    UpdateReplacePolicy: "Delete"
+    Properties:
+      FunctionName: !Ref PreProcessingReplicationConfigurationLambdaName
+      Description: "CRCD Dashboard Preprocessing - Configures a cross-account S3 replication on the AWS Config Logs bucket to the transient bucket (one-time execution)"
+      Handler: index.lambda_handler
+      LoggingConfig:
+        LogFormat: "Text"
+      Role: !GetAtt PreProcessingConfigBucketReplicationConfigurationLambdaRole.Arn
+      Timeout: 300
+      Runtime: "python3.14"
+      MemorySize: 128
+      EphemeralStorage:
+        Size: 512
+      Architectures:
+        - "x86_64"
+      VpcConfig:
+        SecurityGroupIds: []
+        SubnetIds: []
+        Ipv6AllowedForDualStack: false
+      RuntimeManagementConfig:
+        UpdateRuntimeOn: "Auto"
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+          from botocore.exceptions import ClientError
+
+          def lambda_handler(event, context):
+            print("Request received:\n", json.dumps(event))
+
+            # Get the necessary parameters from the event
+            params = event['ResourceProperties']
+            source_bucket_name = params['SourceBucket']
+            destination_bucket_kms_key = params['DestinationBucketKmsKeyArn']
+            destination_bucket_name = params['DestinationBucket']
+            source_account_id = params['SourceAccountId']
+            destination_account_id = params['DestinationAccountId']
+            replication_role_arn = params['ReplicationRoleArn']
+            replication_rule_name = 'crcd-preproc-configfile-replication'
+
+            s3 = boto3.client('s3')
+
+            if event['RequestType'] == 'Delete':
+              # Remove only the CRCD preprocessing replication rule
+              try:
+                existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
+                if 'ReplicationConfiguration' in existing_config:
+                  rules = existing_config['ReplicationConfiguration']['Rules']
+                  # Filter out the rule with the specified name
+                  new_rules = [rule for rule in rules if rule['ID'] != replication_rule_name]
+                  if len(new_rules) < len(rules):
+                    if new_rules:
+                      # Update the replication configuration with the remaining rules
+                      new_config = existing_config['ReplicationConfiguration']
+                      new_config['Rules'] = new_rules
+                      s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=new_config)
+                    else:
+                      # If no rules remain, delete the entire replication configuration
+                      s3.delete_bucket_replication(Bucket=source_bucket_name)
+                    print(f"Replication rule '{replication_rule_name}' deleted successfully.")
+                  else:
+                    print(f"Replication rule '{replication_rule_name}' not found.")
+                else:
+                  print("No replication configuration found.")
+              except ClientError as e:
+                if e.response['Error']['Code'] == 'ReplicationConfigurationNotFoundError':
+                  print("No replication configuration found.")
+                else:
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  return
+            else:
+              # Check if replication configuration already exists.
+              # CRCD will not override any existing S3 replication configuration.
+              try:
+                existing_config = s3.get_bucket_replication(Bucket=source_bucket_name)
+                if 'ReplicationConfiguration' in existing_config:
+                  error_message = f"Replication configuration already exists on bucket {source_bucket_name}. CRCD dashboard Preprocessing deployment cannot proceed."
+                  print(error_message)
+                  # This will make the CloudFormation template fail
+                  send_response(event, context, 'FAILED', {'Error': error_message})
+                  return
+              except ClientError as e:
+                if e.response['Error']['Code'] != 'ReplicationConfigurationNotFoundError':
+                  send_response(event, context, 'FAILED', {'Error': str(e)})
+                  return
+
+              # Configure the replication
+              try:
+                if (not destination_bucket_kms_key):
+                  print('Replication configuration with SSE-S3 encrypted buckets')
+                  replication_configuration = {
+                    'Role': replication_role_arn,
+                    'Rules': [
+                      {
+                        'ID': replication_rule_name,
+                        'Status': 'Enabled',
+                        'Priority': 1,
+                        "DeleteMarkerReplication": {"Status": "Disabled"},
+                        "Filter": {"Prefix": ""},
+                        'Destination': {
+                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                          'Account': destination_account_id
+                        }
+                      }
+                    ]
+                  }
+                else:
+                  print('Replication configuration with KMS encrypted buckets')
+                  replication_configuration = {
+                    'Role': replication_role_arn,
+                    'Rules': [
+                      {
+                        'ID': replication_rule_name,
+                        'Status': 'Enabled',
+                        'Priority': 1,
+                        "DeleteMarkerReplication": {"Status": "Disabled"},
+                        "Filter": {"Prefix": ""},
+                        'Destination': {
+                          'Bucket': f'arn:aws:s3:::{destination_bucket_name}',
+                          'Account': destination_account_id,
+                          'EncryptionConfiguration': {
+                            'ReplicaKmsKeyID': f'{destination_bucket_kms_key}'
+                          },
+                        },
+                        'SourceSelectionCriteria': {
+                          'SseKmsEncryptedObjects': {
+                            'Status': 'Enabled'
+                          },
+                          'ReplicaModifications': {
+                            'Status': 'Disabled'
+                          }
+                        }
+                      }
+                    ]
+                  }
+
+                print('Calling the s3 API')
+                s3.put_bucket_replication(Bucket=source_bucket_name, ReplicationConfiguration=replication_configuration)
+                print('Called the S3 API')
+              except Exception as e:
+                print('ERROR: ' + str(e))
+                send_response(event, context, 'FAILED', {'Error': str(e)})
+                return
+
+            send_response(event, context, 'SUCCESS', {})
+
+          def send_response(event, context, response_status, response_data):
+            response_body = json.dumps({
+              'Status': response_status,
+              'Reason': 'See the details in CloudWatch Log Stream: ' + context.log_stream_name,
+              'PhysicalResourceId': context.log_stream_name,
+              'StackId': event['StackId'],
+              'RequestId': event['RequestId'],
+              'LogicalResourceId': event['LogicalResourceId'],
+              'Data': response_data
+            })
+
+            response_url = event['ResponseURL']
+
+            import urllib.request
+            req = urllib.request.Request(response_url, data=response_body.encode('utf-8'), method='PUT')
+            with urllib.request.urlopen(req) as f:
+              print(f.read())
+              print(f.info())
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W92
+            reason: "This function does not need reserved concurrent executions"
+
+  PreProcessingConfigBucketReplicationConfigurationLambdaTrigger:
+    Type: Custom::PreProcessingConfigBucketReplicationConfiguration
+    Condition: IsConfigureS3Replication
+    Properties:
+      ServiceToken: !GetAtt PreProcessingConfigBucketReplicationConfigurationLambda.Arn
+      SourceBucket: !Ref ConfigBucketName
+      DestinationBucket: !Ref TransientBucketNameForReplication
+      DestinationBucketKmsKeyArn: !Ref TransientBucketKmsKeyArn
+      SourceAccountId: !Ref ConfigAccountId
+      DestinationAccountId: !Ref DashboardAccountId
+      ReplicationRoleArn: !GetAtt PreProcessingReplicationRole.Arn
+
+
 Outputs:
   DashboardBucketName:
     Condition: IsCreatePreProcessingResources
@@ -2106,6 +2585,17 @@ Outputs:
     Description: "ARN of the Fargate task IAM role."
     Value: !GetAtt PreProcessingTaskRole.Arn
 
+  # Multi-account (case 2.2) outputs: the cross-account replication role created in the AWS Config account.
+  PreProcessingReplicationRoleName:
+    Condition: IsConfigAccountNotificationDeployment
+    Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files to the transient bucket."
+    Value: !Ref PreProcessingReplicationRole
+
+  PreProcessingReplicationRoleArn:
+    Condition: IsConfigAccountNotificationDeployment
+    Description: "ARN of the IAM role created for the cross-account S3 replication of AWS Config files to the transient bucket."
+    Value: !GetAtt PreProcessingReplicationRole.Arn
+
   # -----------------------------------------------------------------------------------------------------------------------
   # Development-only outputs: echo the value of each condition to help verify the deployment state.
   # TODO: comment out (or remove) before release.
@@ -2119,7 +2609,7 @@ Outputs:
     Value: !If [IsConfigAccountNotificationDeployment, 'true', 'false']
 
   ConditionIsCreatePreProcessingResources:
-    Description: "Development: create the pre-processing resources - use case 1 or 2.1 (run in the Dashboard account)"
+    Description: "Development: create the preprocessing resources - use case 1 or 2.1 (run in the Dashboard account)"
     Value: !If [IsCreatePreProcessingResources, 'true', 'false']
 
   ConditionIsDashboardAccountDeployment:
@@ -2135,7 +2625,7 @@ Outputs:
     Value: !If [IsConfigLogsBucketKms, 'true', 'false']
 
   ConditionIsCreatePreProcessingResourcesKms:
-    Description: "Development: create pre-processing resources AND the AWS Config Logs bucket is KMS-encrypted"
+    Description: "Development: create preprocessing resources AND the AWS Config Logs bucket is KMS-encrypted"
     Value: !If [IsCreatePreProcessingResourcesKms, 'true', 'false']
 
   ConditionIsConfigureS3EventNotificationToLambdaJobProducer:
