@@ -1689,6 +1689,16 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         conformance_packs AS (
          SELECT
            ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
@@ -1698,13 +1708,37 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') 
-            AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) 
-            OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) 
-                AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
+         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))))
          GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
-      )
-      , resource_compliance AS (
+        ),
+        -- Current data: only from the latest snapshot file
+        current_compliance AS (
+         SELECT
+           c."accountId" "AccountId"
+         , c."region" "Region"
+         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+         , MAX_BY("json_extract_scalar"(rule, '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         , "json_extract_scalar"(rule, '$.configRuleId') "RuleId"
+         , ARBITRARY("json_extract_scalar"(rule, '$.configRuleName')) "RuleName"
+         , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+         FROM
+           ((cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", c."dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+        ),
+        -- Historical data: end-of-month snapshots (no latest_snapshot filter)
+        historical_compliance AS (
          SELECT
            "accountId" "AccountId"
          , "region" "Region"
@@ -1720,9 +1754,19 @@ views:
            ((cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
-         GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
-      )
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date"))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") < date_add('day', -1, current_date)
+           AND datasource = 'ConfigSnapshot'
+         GROUP BY "accountId", "region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+        ),
+        -- Union current + historical
+        resource_compliance AS (
+          SELECT * FROM current_compliance
+          UNION ALL
+          SELECT * FROM historical_compliance
+        )
       SELECT
         rc.AccountId
       , rc.Region
@@ -1758,6 +1802,16 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_actual AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         conformance_packs AS (
          SELECT
            ARBITRARY("configurationItem"."resourceId") "ConformancePackId"
@@ -1769,12 +1823,12 @@ views:
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
          WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)))
          GROUP BY "json_extract_scalar"(rule, '$.configRuleName')
-      )
-      , resource_compliance AS (
+        ),
+        resource_compliance AS (
          SELECT
-           "accountId" "AccountId"
-         , "region" "Region"
-         , CAST(date_parse("dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+           c."accountId" "AccountId"
+         , c."region" "Region"
+         , CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
@@ -1783,12 +1837,18 @@ views:
          , ARBITRARY("json_extract_scalar"(rule, '$.configRuleName')) "RuleName"
          , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
          FROM
-           ((cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+           ((cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
          CROSS JOIN UNNEST(CAST("json_extract"("configurationItem"."configuration", '$.configRuleList') AS array(json))) u (rule))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-         GROUP BY "AccountId", "Region", "dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
-      )
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", c."dt", "json_extract_scalar"(rule, '$.configRuleId'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+        )
       SELECT
         rc.AccountId
       , rc.Region
@@ -1814,7 +1874,45 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_conformance_pack AS
       WITH
-        conformance_pack_compliance AS (
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
+        -- Current data: only from the latest snapshot file
+        current_conformance_pack AS (
+         SELECT
+           c."accountId" "AccountId"
+         , c."region" "Region"
+         , CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , "configurationItem"."resourceId" "ConformancePackId"
+         , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ConformancePackName"
+         , 'AWS::Config::ConformancePackCompliance' "ResourceType"
+         , MAX_BY("configurationItem"."arn", "configurationItem"."configurationitemcapturetime") "Arn"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.compliantRuleCount'), "configurationItem"."configurationitemcapturetime") "CompliantRuleCount"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.nonCompliantRuleCount'), "configurationItem"."configurationitemcapturetime") "NonCompliantRuleCount"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.totalRuleCount'), "configurationItem"."configurationitemcapturetime") "TotalRuleCount"
+         FROM
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", c."dt", "configurationItem"."resourceId"
+        ),
+        -- Historical data: end-of-month snapshots (no latest_snapshot filter)
+        historical_conformance_pack AS (
          SELECT
            "accountId" "AccountId"
          , "region" "Region"
@@ -1831,9 +1929,19 @@ views:
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ConformancePackCompliance'
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date"))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") < date_add('day', -1, current_date)
+           AND datasource = 'ConfigSnapshot'
          GROUP BY "accountId", "region", "dt", "configurationItem"."resourceId"
-      )
+        ),
+        -- Union current + historical
+        conformance_pack_compliance AS (
+          SELECT * FROM current_conformance_pack
+          UNION ALL
+          SELECT * FROM historical_conformance_pack
+        )
       SELECT
         ccp.AccountId
       , ccp.Region
@@ -1856,7 +1964,42 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_compliance_resource AS
       WITH
-        resource_compliance AS (
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
+        -- Current data: only from the latest snapshot file
+        current_compliance AS (
+         SELECT
+           c."accountId" "AccountId"
+         , c."region" "Region"
+         , CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") "ComplianceSampleDate"
+         , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "EventType"
+         , MAX_BY("configurationItem"."resourceId", "configurationItem"."configurationitemcapturetime") "ConfigEventResourceId"
+         , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
+         , "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId') "ResourceId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "configurationItem"."configurationitemcapturetime") "ResourceType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
+         FROM
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", c."dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
+        ),
+        -- Historical data: end-of-month snapshots (no latest_snapshot filter)
+        historical_compliance AS (
          SELECT
            "accountId" "AccountId"
          , "region" "Region"
@@ -1869,10 +2012,20 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.complianceType'), "configurationItem"."configurationitemcapturetime") "ComplianceType"
          FROM
            (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem)) t1
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance') AND (((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) OR (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")))) AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date)))) AND (datasource = 'ConfigSnapshot'))
+         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
+         WHERE "configurationItem"."resourcetype" = 'AWS::Config::ResourceCompliance'
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") = last_day_of_month(CAST(date_parse("dt", '%Y-%m-%d') AS "Date"))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= last_day_of_month(date_add('month', -5, current_date))
+           AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") < date_add('day', -1, current_date)
+           AND datasource = 'ConfigSnapshot'
          GROUP BY "accountId", "region", "dt", "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceType'), "json_extract_scalar"("configurationItem"."configuration", '$.targetResourceId')
-      )
+        ),
+        -- Union current + historical
+        resource_compliance AS (
+          SELECT * FROM current_compliance
+          UNION ALL
+          SELECT * FROM historical_compliance
+        )
       SELECT
         rc.AccountId
       , rc.Region
@@ -2007,11 +2160,21 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           "accountId" "AccountId"
-         , "region" "Region"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+           c."accountId" "AccountId"
+         , c."region" "Region"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , "configurationItem"."resourceId" "ResourceId"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
@@ -2023,10 +2186,15 @@ views:
          , "configurationItem"."resourcetype" "ResourceType"
          , ARBITRARY("configurationItem"."arn") "Arn"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE ((CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-         GROUP BY "accountId", "region", "configurationItem"."resourcetype", "configurationItem"."resourceId"
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", "configurationItem"."resourcetype", "configurationItem"."resourceId"
       )
       SELECT
         r.AccountId
@@ -2050,15 +2218,25 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ebs AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           ARBITRARY("accountId") "AccountId"
-         , ARBITRARY("region") "Region"
+           ARBITRARY(c."accountId") "AccountId"
+         , ARBITRARY(c."region") "Region"
          , MAX_BY("configurationItem"."configurationitemstatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
          , ARBITRARY("configurationItem"."arn") "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX_BY("configurationItem"."tags"['Name'], "configurationItem"."configurationitemcapturetime") "TagName"
          , MAX_BY("configurationItem"."tags"['${tag1}'], "configurationItem"."configurationitemcapturetime") "TAG1"
          , MAX_BY("configurationItem"."tags"['${tag2}'], "configurationItem"."configurationitemcapturetime") "TAG2"
@@ -2085,9 +2263,15 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].state'), "configurationItem"."configurationitemcapturetime") "AttachmentState"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.attachments[0].volumeId'), "configurationItem"."configurationitemcapturetime") "AttachmentVolumeId"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Volume') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::EC2::Volume'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT
@@ -2130,12 +2314,22 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_ec2 AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           ARBITRARY("accountId") "AccountId"
-         , ARBITRARY("region") "Region"
+           ARBITRARY(c."accountId") "AccountId"
+         , ARBITRARY(c."region") "Region"
          , ARBITRARY("configurationItem"."availabilityZone") "AvailabilityZone"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
@@ -2162,9 +2356,15 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.privateDnsName'), "configurationItem"."configurationitemcapturetime") "PrivateDnsName"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.publicDnsName'), "configurationItem"."configurationitemcapturetime") "PublicDnsName"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::EC2::Instance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::EC2::Instance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
          GROUP BY "configurationItem"."resourceId"
       )
       , ssm_info AS (
@@ -2224,11 +2424,21 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_lambda AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           "accountId"
-         , "region"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+           c."accountId"
+         , c."region"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , ARBITRARY("configurationItem"."arn") "Arn"
          , "configurationItem"."resourceId" "ConfigEventResourceId"
@@ -2253,10 +2463,16 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timeout'), "configurationItem"."configurationitemcapturetime") "Timeout"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.version'), "configurationItem"."configurationitemcapturetime") "LambdaVersion"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::Lambda::Function') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
-         GROUP BY "accountId", "region", "configurationItem"."resourceId"
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::Lambda::Function'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
+         GROUP BY c."accountId", c."region", "configurationItem"."resourceId"
       )
       SELECT
         r.AccountId
@@ -2292,12 +2508,22 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_rds AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           ARBITRARY("accountId") "AccountId"
-         , ARBITRARY("region") "Region"
+           ARBITRARY(c."accountId") "AccountId"
+         , ARBITRARY(c."region") "Region"
          , ARBITRARY("configurationItem"."availabilityZone") "AvailabilityZone"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
          , ARBITRARY("configurationItem"."arn") "Arn"
@@ -2333,9 +2559,15 @@ views:
          , "configurationItem"."resourceId" "ConfigEventResourceId"
          , MAX_BY("configurationItem"."resourceName", "configurationItem"."configurationitemcapturetime") "ResourceName"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::RDS::DBInstance') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::RDS::DBInstance'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT
@@ -2384,11 +2616,21 @@ views:
     data: |-
       CREATE OR REPLACE VIEW "${athena_database_name}".config_inventory_s3 AS
       WITH
+        latest_snapshot AS (
+          SELECT
+            "accountId",
+            "region",
+            MAX(regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1)) as latest_timestamp
+          FROM cid_crcd_config
+          WHERE datasource = 'ConfigSnapshot'
+            AND CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+          GROUP BY "accountId", "region"
+        ),
         resource_info AS (
          SELECT
-           ARBITRARY("accountId") "AccountId"
-         , ARBITRARY("region") "Region"
-         , MAX(CAST(date_parse("dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
+           ARBITRARY(c."accountId") "AccountId"
+         , ARBITRARY(c."region") "Region"
+         , MAX(CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date")) "PartitionDate"
          , MAX(CAST(parse_datetime("configurationItem"."configurationitemcapturetime", 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp)) "ConfigItemCaptureTime"
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "ConfigItemStatus"
          , ARBITRARY("configurationItem"."arn") "Arn"
@@ -2402,9 +2644,15 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.name'), "configurationItem"."configurationitemcapturetime") "BucketName"
          , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
          FROM
-           (cid_crcd_config
-         CROSS JOIN UNNEST("configurationitems") t (configurationItem))
-         WHERE (("configurationItem"."resourcetype" = 'AWS::S3::Bucket') AND (CAST(date_parse("dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)) AND (datasource = 'ConfigSnapshot'))
+           (cid_crcd_config c
+         CROSS JOIN UNNEST(c."configurationitems") t (configurationItem))
+         INNER JOIN latest_snapshot ls
+           ON c."accountId" = ls."accountId"
+           AND c."region" = ls."region"
+         WHERE "configurationItem"."resourcetype" = 'AWS::S3::Bucket'
+           AND CAST(date_parse(c."dt", '%Y-%m-%d') AS "Date") >= date_add('day', -1, current_date)
+           AND c.datasource = 'ConfigSnapshot'
+           AND regexp_extract("$path", 'ConfigSnapshot_(\d{8}T\d{6}Z)', 1) = ls.latest_timestamp
          GROUP BY "configurationItem"."resourceId"
       )
       SELECT
