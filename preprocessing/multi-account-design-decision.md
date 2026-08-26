@@ -1,9 +1,12 @@
 # Multi-Account Preprocessing: Design Decision (Cross-account read vs. S3 replication)
 
 **Decision:** for the multi-account deployment we use **S3 replication into a transient bucket in the
-Dashboard account** (Option B below), not direct cross-account reads. This note records the
-difficulties of the alternative (giving the preprocessing compute cross-account read access to the
-AWS Config Logs bucket) and the cost comparison that led to the decision.
+Dashboard account** (Option B below), not direct cross-account reads. 
+
+
+![CRCD Preprocessing Architecture](../images/preprocessing-dashboard-acct-deployment.png "AWS Config Dashboard, Preprocessing architecture on dedicated Dashboard account")
+
+This note records the difficulties of the alternative (giving the preprocessing compute cross-account read access to the AWS Config Logs bucket) and the cost comparison that led to the decision.
 
 ## Context
 
