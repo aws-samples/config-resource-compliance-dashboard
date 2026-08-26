@@ -43,7 +43,7 @@ mechanisms, each with a real drawback:
   KMS-encrypted, the **KMS key policy** (via `PutKeyPolicy`, which *replaces* the entire key policy).
   Problems:
   - The automation would need `s3:PutBucketPolicy` and `kms:PutKeyPolicy` on the most sensitive
-    account. These are exactly the permissions security teams lock down, frequently with **SCPs**
+    account. These are exactly the permissions security teams lock down, frequently with Service Control Policies (SCP)
     that deny them outright. If such an SCP exists, the deployment fails.
   - Concentrating "can rewrite the audit bucket / key policy" in an automated component on the
     protected account is a large trust and blast-radius ask that customers may reject.
@@ -94,7 +94,7 @@ Assumptions:
 - Org scale: 1,000 account-regions -> ~100,000 ConfigHistory files/day + ~1,000 ConfigSnapshot
   files/day (24h snapshot frequency).
 - **Same-region** replication (no cross-region data-transfer charge).
-- Fargate task: 1 vCPU + 4 GB ~= $0.058/hour ~= $0.00097/minute.
+- Fargate task: 1 vCPU + 4 GB \~= $0.058/hour \~= $0.00097/minute.
 - **Fargate average task duration: 3 minutes** (largest files observed ~5 minutes) -> ~$0.0029/task.
 - Option B assumption: Fargate runs on **20% of daily snapshots** (~200 tasks/day) - i.e. only the
   oversized files, tied to the small snapshot count rather than total file count.
@@ -129,9 +129,9 @@ Assumptions:
 
 ### Sensitivity
 
-- **History at 200k/day:** Option A ~= **~$17,500/month**; Option B ~= **~$52/month** (replication
+- **History at 200k/day:** Option A \~= **~$17,500/month**; Option B \~= **~$52/month** (replication
   ~$30, Fargate ~$17, storage ~$5).
-- **Snapshots at 6h (4,000/day), Fargate = 20% = 800 tasks/day:** Option B ~= **~$85/month**.
+- **Snapshots at 6h (4,000/day), Fargate = 20% = 800 tasks/day:** Option B \~= **~$85/month**.
 - **Break-even:** at 3-minute tasks, Fargate-per-file only matches Option B's ~$34/month at roughly
   a few hundred files/day total - far below organization scale. Fargate-per-file is only economical
   for very small deployments.
