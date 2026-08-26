@@ -156,13 +156,10 @@ mirror rather than invent.
 
 ## How it is implemented (two steps)
 
-- **Step 2.1 - Dashboard account (run first):** installs the preprocessing resources and a
-  **transient bucket** (versioned, with a tight lifecycle) that receives the replicated AWS Config
-  files and is the same-account source that triggers the Producer Lambda. Outputs the transient
-  bucket name.
-- **Step 2.2 - AWS Config account (run second):** installs cross-account S3 replication from the AWS
-  Config Logs bucket to the transient bucket from step 2.1 (its name is provided as an input): the
-  replication configuration, the replication IAM role, and, if the AWS Config Logs bucket is
-  KMS-encrypted, the KMS grants needed for replication.
+- **Step 1 - Dashboard account (run first):** installs the preprocessing resources and a
+  **transient bucket** (versioned, with a tight lifecycle) that receives the replicated AWS Config files and is the same-account source that triggers the Producer Lambda. Outputs the transient bucket name.
+- **Step 2 - AWS Config account (run second):** installs cross-account S3 replication from the AWS Config Logs bucket to the transient bucket from step 1 (its name is provided as an input): the replication configuration, the replication IAM role, and, if the AWS Config Logs bucket is KMS-encrypted, the KMS grants needed for replication.
 
-The transient bucket name is the only value that must be carried from step 2.1 to step 2.2.
+The transient bucket name is the only value that must be carried from step 1 to step 2.
+
+After this is done, users can proceed with the single-account installation of the dashboard; steps 3 and 4.
