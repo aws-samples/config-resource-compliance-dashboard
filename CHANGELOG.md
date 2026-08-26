@@ -2,7 +2,9 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 
 # [5.X.X] - TBC
 ## Added
-- Support data refresh more frequently than 24 hours.
+- Support high-frequency data refresh of AWS Config records.
+
+Accessing resource configuration data from AWS Config in near-real-time is inherently limited by two factors: first, Config must detect and record the change, which happens asynchronously with no guaranteed timing — there will always be a delay between the actual change and Config capturing it. Second, even once changes are recorded, Config snapshot delivery can only be triggered at most once per hour, meaning there's an additional ceiling on how quickly the full configuration state can be exported.
 
 # [5.0.0] - 2026-06-30
 ## Added
