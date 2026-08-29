@@ -12,6 +12,7 @@ Designed to run on AWS Fargate (no time limit, modest memory requirements).
 import gzip
 import io
 import json
+import logging
 import os
 import re
 import urllib.parse
@@ -21,6 +22,15 @@ from decimal import Decimal
 
 import boto3
 import ijson
+
+
+# Fargate sends stdout/stderr to the awslogs driver, so a StreamHandler is all we need for
+# the logs to reach the task's CloudWatch log group. Honour the LOG_LEVEL env var if set.
+logging.basicConfig(
+    level=os.environ.get('LOG_LEVEL', 'INFO').upper(),
+    format='%(asctime)s %(levelname)s %(message)s',
+)
+logger = logging.getLogger('crcd_preprocessing')
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -88,16 +98,6 @@ def get_destination_key(source_path, filename):
     return filename
 
 
-def compress_json(data):
-    """Compress a dict to gzipped JSON bytes."""
-    json_bytes = json.dumps(data, cls=DecimalEncoder).encode('utf-8')
-    buffer = io.BytesIO()
-    with gzip.GzipFile(mode='wb', fileobj=buffer) as gz:
-        gz.write(json_bytes)
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
 def build_output_filename(source_meta, sequence_number):
     # Mirror the source AWS Config filename structure so downstream tooling sees the same
     # naming. All generated files keep the source account, region, type and timestamp(s);
@@ -120,7 +120,13 @@ def build_output_filename(source_meta, sequence_number):
     return f"{account_id}_Config_{region}_{config_type}_{timestamp}_{seq:05d}_{random_part}.json.gz"
 
 
-BATCH_SIZE = 500
+# Batches are flushed by accumulated UNCOMPRESSED size, not item count. The ~32 MB limit
+# that breaks Athena is on the uncompressed JSON record, so splitting by bytes is what
+# actually prevents the failure; item count was only an empirical proxy. TARGET leaves
+# headroom below the hard limit for the JSON wrapper plus a safety margin, so every file
+# is guaranteed under the limit regardless of how large individual items are.
+TARGET_UNCOMPRESSED_BYTES = 28 * 1024 * 1024   # flush before crossing this
+HARD_LIMIT_BYTES = 32 * 1024 * 1024            # the Athena record limit we must stay under
 
 
 class StreamingConfigSplitter:
@@ -156,14 +162,18 @@ class StreamingConfigSplitter:
     def process(self):
         """Main entry point. Streams the source file and writes batched output."""
         source_path = f"s3://{self.source_bucket}/{self.source_key}"
-        print(f"Processing: {source_path}")
-        print(f"Destination: s3://{self.dest_bucket}/{self.dest_prefix}/")
-        print(f"Batch size: {BATCH_SIZE} items per file")
+        logger.info(f"Processing: {source_path}")
+        logger.info(f"Destination: s3://{self.dest_bucket}/{self.dest_prefix}/")
+        logger.info(f"Target size: {TARGET_UNCOMPRESSED_BYTES} uncompressed bytes per file")
 
         item_count = 0
         file_count = 0
         error_count = 0
+        # batch holds each item PRE-SERIALIZED to JSON bytes, so we serialize every item
+        # exactly once (here) instead of re-dumping the whole list in _write_batch.
+        # batch_bytes tracks the accumulated array payload size (item bytes + separators).
         batch = []
+        batch_bytes = 0
 
         try:
             stream = self._open_stream()
@@ -201,20 +211,41 @@ class StreamingConfigSplitter:
                         if depth == 0:
                             item = builder.value
                             builder = None
-                            batch.append(item)
                             item_count += 1
 
-                            if len(batch) >= BATCH_SIZE:
+                            # Serialize the item once, up front, and batch by bytes.
+                            item_bytes = json.dumps(item, cls=DecimalEncoder).encode('utf-8')
+                            # +1 for the comma separator this item would add in the array
+                            # (conservative: over-counts the final item's trailing comma).
+                            projected = batch_bytes + len(item_bytes) + 1
+
+                            # Flush the current batch if adding this item would cross the
+                            # target. Never flush an empty batch: a single oversized item
+                            # must still be written (it cannot be split further).
+                            if batch and projected + self._wrapper_overhead() > TARGET_UNCOMPRESSED_BYTES:
                                 try:
                                     self._write_batch(batch, file_count + 1)
                                     file_count += 1
                                 except Exception as e:
                                     error_count += len(batch)
-                                    print(f"Error writing batch {file_count + 1}: {e}")
+                                    logger.error(f"Error writing batch {file_count + 1}: {e}")
                                 batch = []
+                                batch_bytes = 0
+
+                            batch.append(item_bytes)
+                            batch_bytes += len(item_bytes) + 1
+
+                            # A lone item bigger than the hard limit cannot be made
+                            # compliant by splitting; warn so it can be investigated.
+                            if len(item_bytes) + self._wrapper_overhead() > HARD_LIMIT_BYTES:
+                                logger.warning(
+                                    f"single configurationItem exceeds the hard limit "
+                                    f"({len(item_bytes)} uncompressed bytes) and cannot be split "
+                                    f"further; the resulting file will exceed {HARD_LIMIT_BYTES} bytes"
+                                )
 
                             if item_count % 5000 == 0:
-                                print(f"Progress: {item_count} items read, {file_count} files written")
+                                logger.info(f"Progress: {item_count} items read, {file_count} files written")
 
             # Write remaining items
             if batch:
@@ -223,17 +254,17 @@ class StreamingConfigSplitter:
                     file_count += 1
                 except Exception as e:
                     error_count += len(batch)
-                    print(f"Error writing final batch: {e}")
+                    logger.error(f"Error writing final batch: {e}")
 
-            print(f"\nProcessing complete:")
-            print(f"  Items processed: {item_count}")
-            print(f"  Files written: {file_count}")
-            print(f"  Items with errors: {error_count}")
+            logger.info("Processing complete:")
+            logger.info(f"  Items processed: {item_count}")
+            logger.info(f"  Files written: {file_count}")
+            logger.info(f"  Items with errors: {error_count}")
 
             self._update_tracking('COMPLETED', item_count)
 
         except Exception as e:
-            print(f"Fatal error: {e}")
+            logger.error(f"Fatal error: {e}")
             self._update_tracking('FAILED', item_count, str(e))
             raise
 
@@ -248,9 +279,31 @@ class StreamingConfigSplitter:
             return gzip.GzipFile(fileobj=raw_stream)
         return raw_stream
 
+    def _wrapper_prefix_suffix(self):
+        # The output file is:
+        #   {"fileVersion": <v>, "configSnapshotId": <id>, "configurationItems": [ <items> ]}
+        # Build the fixed prefix/suffix around the pre-serialized item bytes so we never
+        # re-serialize the items. json.dumps handles escaping of the two string fields.
+        head = (
+            '{"fileVersion": ' + json.dumps(self.file_version)
+            + ', "configSnapshotId": ' + json.dumps(self.config_snapshot_id)
+            + ', "configurationItems": ['
+        )
+        return head.encode('utf-8'), b']}'
+
+    def _wrapper_overhead(self):
+        # Exact byte cost of everything in the file that is NOT item payload or separators,
+        # given the currently known file_version / config_snapshot_id. Used when deciding
+        # whether the next item would push the file over the target.
+        prefix, suffix = self._wrapper_prefix_suffix()
+        return len(prefix) + len(suffix)
+
     def _write_batch(self, batch, batch_number):
         """
         Write a batch of configurationItems as a single gzipped JSON file to S3.
+
+        batch is a list of pre-serialized configurationItem JSON byte-strings; they are
+        joined with commas inside the wrapper so items are never re-serialized here.
 
         Output naming convention:
             ConfigSnapshot: {accountId}_Config_{region}_ConfigSnapshot_{timestamp}_{sequence}_{random}.json.gz
@@ -259,11 +312,8 @@ class StreamingConfigSplitter:
         The source account, region, type, and timestamp(s) are preserved from the source
         filename to allow correlation between input and output files.
         """
-        output = {
-            "fileVersion": self.file_version,
-            "configSnapshotId": self.config_snapshot_id,
-            "configurationItems": batch
-        }
+        prefix, suffix = self._wrapper_prefix_suffix()
+        payload = prefix + b','.join(batch) + suffix
 
         filename = build_output_filename(
             source_meta=self.source_meta,
@@ -275,12 +325,15 @@ class StreamingConfigSplitter:
         if self.dest_prefix:
             dest_key = f"{self.dest_prefix}/{dest_key}" if dest_key else self.dest_prefix
 
-        compressed = compress_json(output)
+        buffer = io.BytesIO()
+        with gzip.GzipFile(mode='wb', fileobj=buffer) as gz:
+            gz.write(payload)
+        buffer.seek(0)
 
         self.s3.put_object(
             Bucket=self.dest_bucket,
             Key=dest_key,
-            Body=compressed,
+            Body=buffer.getvalue(),
             ContentType='application/json',
             ContentEncoding='gzip'
         )
@@ -312,7 +365,7 @@ class StreamingConfigSplitter:
                 ExpressionAttributeValues=expr_values
             )
         except Exception as e:
-            print(f"Warning: failed to update tracking table: {e}")
+            logger.warning(f"failed to update tracking table: {e}")
 
 
 def main():

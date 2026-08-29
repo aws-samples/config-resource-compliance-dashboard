@@ -19,10 +19,10 @@ Athena-friendly files in a separate Dashboard bucket. It has two runtime compone
 The flow of data is as follows:
 1. **New Config record** lands in the source S3 bucket, the AWS Config Logs bucket.
 2. **S3 event notification** triggers the Preprocessing Producer Lambda.
-3. **Producer Lambda** checks the compressed file size:
-   - **Below threshold** (< 200 KB): copies the file directly to the Dashboard Bucket.
-   - **Above threshold** (>= 200 KB): launches a Fargate task.
-4. **Fargate task** streams the large file, splits it into files of 500 `configurationItems` each, and writes them to the Dashboard Bucket.
+3. **Producer Lambda** determines the file's **uncompressed** size (by reading the 4-byte gzip trailer with a ranged `GetObject`, no full download) and branches on it:
+   - **Below the uncompressed threshold** (default 28 MB): copies the file directly to the Dashboard Bucket.
+   - **At or above the threshold** (or if the size cannot be determined, or the compressed size already exceeds a safety ceiling): launches a Fargate task.
+4. **Fargate task** streams the large file and splits it by accumulated uncompressed size, packing `configurationItems` into each output file until adding the next would cross a 28 MB target, then writes the output files to the Dashboard Bucket.
 5. **DynamoDB** tracks job status (STARTED → COMPLETED/FAILED) for both paths.
 
 The core principle behind the design: **the only component that transports AWS Config file
@@ -86,20 +86,28 @@ notification whenever AWS Config delivers a new file to the AWS Config Logs buck
 ### What it does
 
 For each new object it parses the S3 key to confirm it is an AWS Config file
-(`ConfigSnapshot` / `ConfigHistory`), then branches on object size using the
-`CONFIG_OBJECT_SIZE_THRESHOLD_BYTES` environment variable (default **200,000 bytes**):
+(`ConfigSnapshot` / `ConfigHistory`), then branches on the file's **uncompressed** size. The
+threshold is set by the `CONFIG_OBJECT_UNCOMPRESSED_SIZE_THRESHOLD_BYTES` environment variable
+(default **29,360,128 bytes**, i.e. 28 MB, matching the Fargate splitter's target). To learn the
+uncompressed size without downloading the file, the Lambda reads only the **4-byte gzip trailer**
+(the ISIZE field) with a ranged `GetObject`. A `CONFIG_OBJECT_COMPRESSED_SIZE_CEILING_BYTES`
+pre-filter (default 10 MB) sends objects with a large compressed size straight to Fargate without
+reading the trailer, which also avoids the gzip ISIZE 4 GiB wraparound.
 
-- **Small files (below the threshold):** the Lambda performs a **server-to-server S3 copy**
-  (`s3:CopyObject` with a `CopySource`) directly from the AWS Config Logs bucket to the
-  Dashboard bucket. This is an important security property: the object bytes are copied
-  **inside S3** and never transit the Lambda's own network path. The Lambda handles no file
-  content in this path — it only issues the copy API call and records the result.
-- **Large files (at or above the threshold):** the Lambda launches a Fargate task
-  (`ecs:RunTask`) to perform the streaming split, passing the source path, destination bucket,
-  tracking table name, and a job run ID as container environment overrides.
+- **Small files (uncompressed size known and below the threshold):** the Lambda performs a
+  **server-to-server S3 copy** (`s3:CopyObject` with a `CopySource`) directly from the AWS Config
+  Logs bucket to the Dashboard bucket. This is an important security property: the object bytes are
+  copied **inside S3** and never transit the Lambda's own network path. In this path the Lambda
+  reads only a 4-byte size trailer — not file content — and otherwise just issues the copy API call
+  and records the result.
+- **Large files (at or above the threshold, size undeterminable, or above the compressed ceiling):**
+  the Lambda launches a Fargate task (`ecs:RunTask`) to perform the streaming split, passing the
+  source path, destination bucket, tracking table name, and a job run ID as container environment
+  overrides. If the uncompressed size cannot be determined, the Lambda fails safe to this path.
 
 Every action is recorded in a DynamoDB tracking table (`CRCDJobTrackingTable`) with a status
-(`COMPLETED`, `STARTED`, `FAILED`), timestamps, object size, and a 90-day TTL.
+(`COMPLETED`, `STARTED`, `FAILED`), timestamps, the compressed object size, the uncompressed size
+(when known), and a 90-day TTL.
 
 ### What it has access to
 

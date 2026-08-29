@@ -45,7 +45,7 @@ This preprocessing pipeline automatically splits large AWS Config files into sma
 > The CRCD Preprocessing pipeline must be installed before installing the CloudFormation template of the CRCD Dashboard. Preprocessing will create an S3 bucket that will not contain oversized files. This bucket will be the source of data for your dashboard installation.
 
 Key design decisions:
-- **Batched output** - Each output file contains up to 500 configuration items, maintaining the same JSON structure as the original file (`fileVersion`, `configSnapshotId`, `configurationItems`).
+- **Size-based batched output** - Items are packed into each output file until adding the next one would cross an uncompressed-size target (28 MB, leaving headroom under Athena's 32 MB limit), then a new file is started. Each output file keeps the same JSON structure as the original (`fileVersion`, `configSnapshotId`, `configurationItems`). Batching by accumulated uncompressed bytes - rather than a fixed item count - guarantees every file stays under the limit regardless of how large individual items are, while keeping the number of output files as low as possible.
 - **Filename correlation** - Output files preserve the account ID, Region, type, and timestamp from the source file, making it easy to trace output back to input.
 - **Zero data loss** - Items are processed sequentially and written atomically to S3. The job tracks progress in DynamoDB.
 - **Fully automated deployment** - A single CloudFormation template creates all resources without manual steps.
@@ -158,6 +158,8 @@ Data must be pre-processed to split or reduce oversized rows. The idea is to ing
 
 But where the array `configurationItems` contains a subset of the items, making sure each processed file is within the hard limit of 32MB.
 
-For example, if the original file contains 10000 items and is above the 32MB limit, the preprocessing function will generate 20 files each with 500 items. More sophisticated ways os splitting the original file may exist.
+The split is driven by accumulated **uncompressed size**, not by a fixed item count. The preprocessing task keeps adding items to the current output file and flushes it whenever adding the next item would push the file past a 28 MB target (headroom is left below the 32 MB limit for the JSON wrapper and safety). Because the decision is on bytes, each file is guaranteed to stay under the limit no matter how the item sizes are distributed - a handful of very large items produces a file with few items, while many small items pack into a file with many. This also minimizes the number of output files, which Athena prefers (fewer files mean less per-file planning overhead).
+
+For example, a large snapshot of ~430 MB uncompressed with 100,000 items splits into roughly 17 files, each just under 28 MB - versus the 200 files a fixed 500-item batch would have produced. If a single configuration item ever exceeds the 32 MB limit on its own, it cannot be split further and is written to its own file (with a warning logged).
 
 - **Streaming processing** - Uses `ijson` to parse files incrementally, holding only one batch in memory at a time. Memory usage stays constant regardless of input file size. This allows preprocessing to manage large files; the functionality has been successfully tested with Config records having 500,000 objects in the `configurationItems` array.
