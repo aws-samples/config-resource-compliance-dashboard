@@ -98,15 +98,25 @@ def compress_json(data):
     return buffer.getvalue()
 
 
-def build_output_filename(account_id, region, config_type, timestamp, sequence_number):
-    """
-    Build output filename following the convention:
-        {accountId}_Config_{region}_{type}_{timestamp}_{sequence}_{random}.json.gz
-
-    sequence_number wraps at 99999 back to 00000.
-    """
+def build_output_filename(source_meta, sequence_number):
+    # Mirror the source AWS Config filename structure so downstream tooling sees the same
+    # naming. All generated files keep the source account, region, type and timestamp(s);
+    # only the trailing sequence + random part change per batch.
+    #   ConfigSnapshot: <account>_Config_<region>_ConfigSnapshot_<timestamp>_<seq>_<random>.json.gz
+    #   ConfigHistory:  <account>_Config_<region>_ConfigHistory_<resourceType>_<timestamp>_<endTimestamp>_<seq>_<random>.json.gz
     seq = sequence_number % 100000
     random_part = uuid.uuid4().hex[:12]
+    account_id = source_meta['account_id']
+    region = source_meta['region']
+    config_type = source_meta['type']
+    timestamp = source_meta['timestamp']
+    if config_type == 'ConfigHistory':
+        resource_type = source_meta['resource_type']
+        end_timestamp = source_meta['end_timestamp']
+        return (
+            f"{account_id}_Config_{region}_ConfigHistory_{resource_type}_"
+            f"{timestamp}_{end_timestamp}_{seq:05d}_{random_part}.json.gz"
+        )
     return f"{account_id}_Config_{region}_{config_type}_{timestamp}_{seq:05d}_{random_part}.json.gz"
 
 
@@ -243,10 +253,11 @@ class StreamingConfigSplitter:
         Write a batch of configurationItems as a single gzipped JSON file to S3.
 
         Output naming convention:
-            {accountId}_Config_{region}_{type}_{timestamp}_{sequence}_{random}.json.gz
+            ConfigSnapshot: {accountId}_Config_{region}_ConfigSnapshot_{timestamp}_{sequence}_{random}.json.gz
+            ConfigHistory:  {accountId}_Config_{region}_ConfigHistory_{resourceType}_{timestamp}_{endTimestamp}_{sequence}_{random}.json.gz
 
-        Account ID, region, type, and timestamp are preserved from the source filename
-        to allow correlation between input and output files.
+        The source account, region, type, and timestamp(s) are preserved from the source
+        filename to allow correlation between input and output files.
         """
         output = {
             "fileVersion": self.file_version,
@@ -255,10 +266,7 @@ class StreamingConfigSplitter:
         }
 
         filename = build_output_filename(
-            account_id=self.source_meta['account_id'],
-            region=self.source_meta['region'],
-            config_type=self.source_meta['type'],
-            timestamp=self.source_meta['timestamp'],
+            source_meta=self.source_meta,
             sequence_number=batch_number
         )
 
