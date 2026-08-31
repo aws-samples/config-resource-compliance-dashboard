@@ -297,46 +297,135 @@ done
 
 Alternatively, the base template can be deployed from the AWS Config console by selecting it from the conformance pack dropdown in each region.
 
-
 ### Organization-Wide Deployment
 
-#### Step 1: Deploy prerequisites in the primary region (all accounts)
+This section describes how to deploy the conformance pack across all accounts in an AWS Organization.
 
-Deploy the prerequisites CloudFormation template using StackSets to create the Lambda functions and IAM roles in every member account, but only in the primary region:
+The deployment is split into three steps:
+
+- **Step 1 — Delegated administrator account (once):** deploy the prerequisite
+  Lambda functions to every member account (primary Region only) using a
+  service-managed CloudFormation StackSet.
+- **Step 2 — Delegated administrator account (once):** deploy the **base** conformance
+  pack to all non-primary Regions organization-wide.
+- **Step 3 — Each member account (repeat):** deploy the **extended** conformance
+  pack in the primary Region of each account, pointing it at that account's own
+  prerequisite Lambda functions.
+
+> **Why the extended pack is deployed per account.** The extended pack's two
+> custom rules invoke account-local Lambda functions. Each function's ARN
+> contains its own account ID, and the functions only allow invocation from the
+> account they live in (`SourceAccount: !Ref AWS::AccountId` in the prerequisites
+> template). A single organization-level `put-organization-conformance-pack`
+> call can only pass one Lambda ARN to every account, so it cannot work for the
+> extended pack. The base pack has no Lambda dependency and *is* deployed
+> organization-wide (in Step 2).
+
+#### Deployment prerequisites
+
+- **AWS Config** enabled organization-wide, in every account and Region you
+  target.
+- **Service-managed StackSets**: [enable trusted access](https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-cloudformation.html#integrate-enable-ta-cloudformation)
+  for CloudFormation StackSets in AWS Organizations.
+- Run Step 1 and Step 2 from an account designated as the delegated administrator of both [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html) and [AWS Config](https://docs.aws.amazon.com/config/latest/developerguide/aggregated-register-delegated-administrator.html) (recommended), or from the management (payer) account of your organization.
+
+---
+
+#### Step 1: From the delegated administrator account (primary Region)
+
+Perform all of the following from the delegated administrator account.
+
+> **Steps 1a and 1b work together.** Step 1a *defines* the StackSet but deploys
+> nothing; Step 1b *deploys* it to the member accounts. It is the two together
+> that create the Lambda functions and IAM roles in every targeted account, so
+> run both.
+
+##### Step 1a: Create the StackSet (defines what will be deployed; deploys nothing yet)
+
+Create a service-managed StackSet from the prerequisites template. This only
+registers the template and its parameters — no resources are created in any
+account until you deploy stack instances in Step 1b.
 
 ```
-aws cloudformation deploy \
-  --template-file sire-conformance-pack-prerequisites.yaml \
-  --stack-name sire-conformance-pack-prerequisites \
+PRIMARY_REGION=<PRIMARY_REGION>
+
+aws cloudformation create-stack-set \
+  --stack-set-name sire-conformance-pack-prerequisites \
+  --template-body file://sire-conformance-pack-prerequisites.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region <PRIMARY_REGION>
+  --permission-model SERVICE_MANAGED \
+  --auto-deployment Enabled=true,RetainStacksOnAccountRemoval=false \
+  --parameters ParameterKey=RootUsageThresholdDays,ParameterValue=5 \
+  --call-as DELEGATED_ADMIN \
+  --region "$PRIMARY_REGION"
 ```
 
-Use CloudFormation StackSets to deploy the prerequisites across all member accounts in the primary region.
 
-#### Step 2: Deploy the extended template in the primary region (all accounts)
+- **Root usage threshold**: to change the default (`5` days) for the `sire-ia-iam-iam-root-not-used-regularly` rule, edit the `--parameters` argument to the command above.
+- `--call-as DELEGATED_ADMIN` - Use it if you run the command run from
+ the delegated administrator account. If you run the command from the management
+ (payer) account instead, omit the flag (or pass `--call-as SELF`).
 
-Deploy the extended conformance pack across the organization in the primary region only:
+##### Step 1b: Deploy stack instances to every member account (creates the Lambda functions and IAM roles)
 
-```
-aws configservice put-organization-conformance-pack \
-  --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template-extended.yaml \
-  --conformance-pack-input-parameters \
-    ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
-    ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1>
-```
-
-Note: Organization conformance packs deploy to all accounts but you control the region by running the command from the primary region.
-
-#### Step 3: Deploy the base template in all other regions (all accounts)
-
-Deploy the base conformance pack across the organization in every other region where AWS Config is enabled:
+Create stack instances from the StackSet defined in Step 1a, across your organization, **in the primary Region only**. This is the step that actually creates the Lambda functions and IAM roles in each targeted account:
 
 ```
-REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
+PRIMARY_REGION=<PRIMARY_REGION>
 
-for REGION in $REGIONS; do
+aws cloudformation create-stack-instances \
+  --stack-set-name sire-conformance-pack-prerequisites \
+  --deployment-targets OrganizationalUnitIds=<ROOT_OR_OU_IDS> \
+  --regions "$PRIMARY_REGION" \
+  --call-as DELEGATED_ADMIN \
+  --region "$PRIMARY_REGION"
+```
+
+- `<ROOT_OR_OU_IDS>` — the organization root ID (`r-xxxx`) to target all accounts, or a comma-separated list of Organizational Unit IDs (`ou-xxxx-xxxxxxxx`).
+- `--call-as DELEGATED_ADMIN` - Use it if you run the command run from
+ the delegated administrator account. If you run the command from the management
+ (payer) account instead, omit the flag (or pass `--call-as SELF`).
+
+> **Deploy to the primary Region only for this StackSet.** The prerequisites
+> template uses fixed IAM role names (`SIREConfPackRuleRootNotUsedRegularly`,
+> `SIREConfPackRuleUserAccessKeyCheck`) and fixed Lambda function names
+> (`sire-root-not-used-regularly`, `sire-user-access-key-check`). IAM role names
+> are global per account, so adding more than one Region to `--regions` would
+> cause the second Region's instance to fail on a name collision. IAM is global,
+> so a single Region per account is all you need.
+
+**Optional parameters and targeting:**
+
+- **Exclude specific accounts** (for example, accounts where AWS Config is not
+  enabled — otherwise those instances fail): add an `Accounts` list and an
+  `AccountFilterType` to `--deployment-targets`. To deploy to an OU *except*
+  certain accounts:
+
+  ```
+  --deployment-targets OrganizationalUnitIds=<OU_IDS>,Accounts=<ACCOUNT_IDS>,AccountFilterType=DIFFERENCE
+  ```
+
+  For `create-stack-instances`, `AccountFilterType` accepts `DIFFERENCE` (all
+  accounts in the OU *except* the listed ones — useful for excluding suspended
+  accounts or accounts without AWS Config) or `INTERSECTION` (only the listed
+  accounts within the OU). For the full description of `AccountFilterType`,
+  `Accounts`, and `OrganizationalUnitIds`, see the [DeploymentTargets API
+  reference](https://docs.aws.amazon.com/AWSCloudFormation/latest/APIReference/API_DeploymentTargets.html).
+
+
+#### Step 2: Deploy the base pack to all other Regions (organization-wide)
+
+Remain in the delegated administrator account.
+
+The base conformance pack has no Lambda dependency, so it is deployed
+organization-wide with `put-organization-conformance-pack`. Deploy it to every
+Region **except** the primary Region (the primary Region is covered by the
+extended pack in Step 3):
+
+```
+OTHER_REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
+
+for REGION in $OTHER_REGIONS; do
   echo "Deploying base conformance pack in $REGION..."
   aws configservice put-organization-conformance-pack \
     --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
@@ -344,6 +433,62 @@ for REGION in $REGIONS; do
     --region $REGION
 done
 ```
+
+- To skip specific accounts (for example, where AWS Config is not enabled), add
+  `--excluded-accounts <ACCOUNT_IDS>` to the command.
+
+---
+
+#### Step 3: In each member account (primary Region)
+
+> **Before you begin, confirm Step 2 finished.** The base pack deploys
+> asynchronously — the ARNs returned in Step 2 mean "accepted", not "complete".
+> From the delegated administrator (or management) account, verify that every
+> account reports `CREATE_SUCCESSFUL` before proceeding:
+>
+> ```
+> PRIMARY_REGION=<PRIMARY_REGION>
+> aws configservice get-organization-conformance-pack-detailed-status \
+>   --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+>   --region "$PRIMARY_REGION"
+> ```
+>
+> Every entry in the output must show `Status: CREATE_SUCCESSFUL`. If any account
+> is still `CREATE_IN_PROGRESS`, wait and re-run the command. If any account is
+> `CREATE_FAILED`, check its `ErrorMessage` (a common cause is AWS Config not
+> being enabled in that account/Region) and resolve it before continuing.
+
+Repeat this step in every member account that should run the extended pack, including the delegated administrator account. Log into the account and open AWS CloudShell in the primary Region (or use any authenticated AWS CLI session for that account).
+
+The snippet below resolves that account's own Lambda ARNs by their fixed
+function names and deploys the extended conformance pack in one shot — no manual
+ARN copying required. Set `PRIMARY_REGION` first, then paste the block:
+
+```
+PRIMARY_REGION=<PRIMARY_REGION>
+
+ROOT_ARN=$(aws lambda get-function \
+  --function-name sire-root-not-used-regularly \
+  --query 'Configuration.FunctionArn' --output text \
+  --region "$PRIMARY_REGION")
+
+KEY_ARN=$(aws lambda get-function \
+  --function-name sire-user-access-key-check \
+  --query 'Configuration.FunctionArn' --output text \
+  --region "$PRIMARY_REGION")
+
+aws configservice put-conformance-pack \
+  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+  --template-body file://sire-conformance-pack-template-extended.yaml \
+  --conformance-pack-input-parameters \
+    ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue="$ROOT_ARN" \
+    ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue="$KEY_ARN" \
+  --region "$PRIMARY_REGION"
+```
+
+Because each account resolves its own ARNs at deploy time, every account gets an
+extended pack wired to its own local Lambda functions.
+
 
 ### Base-Only Deployment (Fallback)
 
