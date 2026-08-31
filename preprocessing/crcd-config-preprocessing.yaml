@@ -13,16 +13,16 @@
 #    If the AWS Config Logs bucket is encrypted with a KMS key, the Dashboard bucket is also encrypted (with a new key this template creates).
 #
 # 2. Multi-account deployment (preprocessing runs in the Dashboard account, AWS Config Logs bucket is in the AWS Config account)
-#    The AWS Config account replicates its AWS Config files into a transient bucket in the Dashboard account, and
-#    preprocessing runs within the Dashboard account reading from that transient bucket. Deployed in two steps:
+#    The AWS Config account replicates its AWS Config files into a Transient bucket in the Dashboard account, and
+#    preprocessing runs within the Dashboard account reading from that Transient bucket. Deployed in two steps:
 #
 #    2.1 - Run this template on the Dashboard account FIRST.
 #    Installs the preprocessing resources (Producer Lambda + its role, VPC/Fargate, DynamoDB, Dashboard bucket) and
-#    the transient bucket (versioned, with a tight lifecycle) that receives the replicated AWS Config files and is the
-#    source that triggers the Producer Lambda. Outputs the transient bucket name for use in step 2.2.
+#    the Transient bucket (versioned, with a tight lifecycle) that receives the replicated AWS Config files and is the
+#    source that triggers the Producer Lambda. Outputs the Transient bucket name for use in step 2.2.
 #
 #    2.2 - Run on the AWS Config account SECOND.
-#    Installs cross-account S3 replication from the AWS Config Logs bucket to the transient bucket from step 2.1 (its
+#    Installs cross-account S3 replication from the AWS Config Logs bucket to the Transient bucket from step 2.1 (its
 #    name is provided as an input): the replication configuration, the replication IAM role, and, if the AWS Config
 #    Logs bucket is KMS-encrypted, the KMS grants needed for replication.
 
@@ -35,20 +35,20 @@ Metadata:
     ParameterGroups:
       -
         Label:
-          default: "AWS Config logging - the source of data for the preprocessing job, where your AWS Config files are delivered"
+          default: "Preprocessing source - the preprocessing input is where your AWS Config files are delivered"
         Parameters:
           - ConfigAccountId
           - ConfigBucketName
           - ConfigBucketKmsKeyArn
       -
         Label: 
-          default: "Preprocessing destination - where you will deploy the dashboard and where its data is"
+          default: "Preprocessing destination - the preprocessing output will be the data source of the AWS Config dashboard, you will deploy the dashboard here"
         Parameters:
           - DashboardAccountId
           - ConfigureS3EventNotificationToLambdaJobProducer
       -
         Label:
-          default: "Multi-account deployment - configure replication of config data"
+          default: "Multi-account deployment only (second step) - replication of AWS Config data to the Dashboard account"
         Parameters:
           - ConfigureS3Replication
           - TransientBucketNameForReplication
@@ -73,7 +73,7 @@ Metadata:
       ConfigBucketName:
         default: "AWS Config Logs bucket"
       ConfigBucketKmsKeyArn:
-        default: "AWS Config Logs bucket KMS key ARN (optional)"
+        default: "ARN of the KMS key that encrypts the AWS Config Logs bucket"
       DashboardAccountId:
         default: "Dashboard account ID"
       DashboardBucketNamePrefix:
@@ -93,7 +93,7 @@ Metadata:
       LambdaSupportECSServiceRoleName:
         default: "Name of the Lambda function that ensures the ECS service-linked role exists"
       ConfigureS3Replication:
-        default: "Configure cross-account replication of AWS Config files to the transient bucket"
+        default: "Configure cross-account replication of AWS Config files to the Transient bucket"
       TransientBucketNameForReplication:
         default: "Transient bucket name (replication destination)"
       TransientBucketKmsKeyArn:
@@ -122,13 +122,19 @@ Parameters:
   ConfigBucketKmsKeyArn:
     Type: String
     Default: ""
-    Description: "Optional. If your AWS Config Logs bucket is encrypted with a KMS key, provide the key's ARN here so the preprocessing job can decrypt the source files. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. Leave empty if the bucket is not encrypted with KMS."
+    # TODO delete Description: "Optional. If your AWS Config Logs bucket is encrypted with a KMS key, provide the key's ARN here so the preprocessing 
+    # job can decrypt the source files. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. 
+    # Leave empty if the bucket is not encrypted with KMS."
+    Description: "If you encrypt the AWS Config Logs bucket with a KMS key, copy the key's ARN here. The preprocessing job will get permissions to use the key for decrypt operations. When provided, the Dashboard bucket created by this template will also be encrypted with a new KMS key. Leave empty if the bucket is not encrypted with KMS."
+    # TODO , or if you want to grant key permissions manually. -- if not specified, they will have to encrypt the dash bucket manually
+    # TODO add indication of double use of the key... If you deploy the dashboard on a dedicated Dashboard account, you must provide the key's ARN in both steps."
+    
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
   DashboardAccountId:
     Type: String
-    Description: "The ID of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Insert the value of \"AWS Config account ID\" if you want to deploy the dashboard in the same account where AWS Config files are collected. To deploy the dashboard on a dedicated account, insert another existing AWS account ID (Required)."
+    Description: "The ID of the AWS account that will contain the dashboard's data pipeline resources and the Amazon S3 bucket that is used as source of data for the dashboard. Single-account deployment: insert the value of \"AWS Config account ID\" to deploy the dashboard in the same account where AWS Config files are collected. Multi-account deployment: insert another existing AWS account ID to deploy on a dedicated acccount (Required)."
     AllowedPattern: '\d{12}'
     MinLength: 12
     ConstraintDescription: "Dashboard account ID is missing or incorrect: AWS account IDs must be a 12-digit number."
@@ -166,11 +172,11 @@ Parameters:
 
   # The way the notification is built is different
   # Case 1: s3 notification from the Config Logs bucket directly to the lambda producer
-  # Case 2.1: s3 notification from the transient bucket to the lambda producer
+  # Case 2.1: s3 notification from the Transient bucket to the lambda producer
   # Case 2.2: not used 
   ConfigureS3EventNotificationToLambdaJobProducer:
     Type: "String"
-    Description:  "Only used when deploying in the AWS Config account (single-account deployment); ignored when deploying in a dedicated Dashboard account. Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket that triggers the preprocessing job whenever a new AWS Config file is delivered. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket, in which case you must configure them manually."
+    Description:  "Only used when deploying in the AWS Config account (single-account deployment), otherwise ignored. Select 'yes' to let this template configure the S3 event notification on the AWS Config Logs bucket that triggers the preprocessing job whenever a new AWS Config file is delivered. Select 'no' if you already have S3 event notifications configured on the AWS Config Logs bucket, in which case you must configure them manually."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>" # This value is used below, careful if you change it
 
@@ -178,19 +184,19 @@ Parameters:
 
   ConfigureS3Replication:
     Type: "String"
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup; ignored otherwise. Select 'yes' to let this template configure cross-account S3 replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account. Select 'no' if you already have an S3 replication configuration on the AWS Config Logs bucket, in which case you must configure it manually (this template will not modify existing replication)."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account, ignored otherwise. Select 'yes' to let this template configure cross-account S3 replication from the AWS Config Logs bucket to the Transient bucket in the Dashboard account. Select 'no' if you already have an S3 replication configuration on the AWS Config Logs bucket, in which case you must configure it manually (this template will not modify existing replication)."
     AllowedValues: ['<select>', 'yes', 'no']
     Default: "<select>"
 
   TransientBucketNameForReplication:
     Type: String
     Default: ""
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup. The name of the transient bucket in the Dashboard account that receives the replicated AWS Config files - copy the value of the 'TransientBucketName' output from the Dashboard account setup. Leave empty otherwise."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account, ignored otherwise. The name of the Transient bucket in the Dashboard account that receives the replicated AWS Config files - copy the value of the 'TransientBucketName' output from the Dashboard account setup (first step). Leave empty otherwise."
 
   TransientBucketKmsKeyArn:
     Type: String
     Default: ""
-    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup, and only if the AWS Config Logs bucket is KMS-encrypted. The ARN of the KMS key that encrypts the transient bucket - copy the value of the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup. Leave empty if the AWS Config Logs bucket is not KMS-encrypted."
+    Description: "Only used in a multi-account deployment when running this template in the AWS Config account setup, and only if the AWS Config Logs bucket is KMS-encrypted. The ARN of the KMS key that encrypts the Transient bucket - copy the value of the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup (first step). Leave empty if the AWS Config Logs bucket is not KMS-encrypted."
     AllowedPattern: '^$|^arn:(aws|aws-us-gov|aws-cn):kms:\w+(?:-\w+)+:\d{12}:key\/[A-Za-z0-9]+(?:-[A-Za-z0-9]+)+$'
     ConstraintDescription: "The KMS key ARN does not satisfy the conventions for a KMS Amazon Resource Name [arn:<aws_partition>:kms:<aws_region>:<account_id>:key/<key_id>]."
 
@@ -221,7 +227,7 @@ Parameters:
     Default: "crcd-preproc-s3replication-role"
     MinLength: 1
     ConstraintDescription: "Required: name of the IAM role used for cross-account replication of AWS Config files."
-    Description: "Name of the S3 service role used to replicate AWS Config files from the AWS Config Logs bucket to the transient bucket (Required)."
+    Description: "Name of the S3 service role used to replicate AWS Config files from the AWS Config Logs bucket to the Transient bucket (Required)."
 
   PreProcessingReplicationConfigurationLambdaName:
     Type: "String"
@@ -234,7 +240,7 @@ Conditions:
   IsConfigureS3EventNotificationToLambdaJobProducer:
     # Case 1 ONLY: configure the S3 event notification on the AWS Config Logs bucket to trigger the
     # Producer Lambda directly (same account). This condition is deliberately false in case 2.1
-    # (the transient bucket in the Dashboard account wires its own notification to the Producer
+    # (the Transient bucket in the Dashboard account wires its own notification to the Producer
     # Lambda) and case 2.2 (the AWS Config account only sets up S3 replication, no notification).
     # some customers may already have S3 notifications out of the AWS Config Logs bucket
     # we must not override that - and users will have to do that manually later
@@ -308,21 +314,21 @@ Conditions:
   # Case 1 (single-account) where the AWS Config Logs bucket is encrypted with a KMS key. Only in
   # this case do the preprocessing components read the AWS Config Logs bucket directly, so only here
   # do they need kms:Decrypt on the customer-provided source key (ConfigBucketKmsKeyArn). In case 2.1
-  # the components read the transient bucket instead, which is encrypted with the template's own
+  # the components read the Transient bucket instead, which is encrypted with the template's own
   # DashboardBucketKmsKey, so the source key grant must NOT be added there.
   IsConfigAccountDeploymentKms:
     Fn::And:
       - !Condition IsConfigAccountDeployment
       - !Condition IsConfigLogsBucketKms
 
-  # Case 2.2: configure cross-account S3 replication from the AWS Config Logs bucket to the transient
+  # Case 2.2: configure cross-account S3 replication from the AWS Config Logs bucket to the Transient
   # bucket. Gated by the yes/no toggle so customers who already manage replication can opt out.
   IsConfigureS3Replication:
     Fn::And:
       - !Condition IsConfigAccountNotificationDeployment
       - !Equals [!Ref ConfigureS3Replication, 'yes']
 
-  # Case 2.2 replication where the buckets are KMS-encrypted. Driven by the destination (transient
+  # Case 2.2 replication where the buckets are KMS-encrypted. Driven by the destination (Transient
   # bucket) key ARN being provided; the ValidateReplicationKmsArns rule enforces that the source and
   # destination key ARNs are supplied together (both or none).
   IsS3ReplicationKms:
@@ -418,7 +424,7 @@ Rules:
     # This parameter is only consumed in use case 1 (single account), where the notification on the
     # AWS Config Logs bucket triggers the Producer Lambda directly and the user must choose whether
     # this template configures it.
-    # In use case 2.1 (dedicated Dashboard account) the notification from the transient bucket to the
+    # In use case 2.1 (dedicated Dashboard account) the notification from the Transient bucket to the
     # Producer Lambda is wired automatically since we control all resources, so the parameter is
     # ignored and must not be forced off '<select>'.
     # In use case 2.2 (AWS Config account step of a multi-account deployment) the parameter is also
@@ -466,10 +472,10 @@ Rules:
         - !Equals
           - !Ref ConfigureS3Replication
           - '<select>'
-        AssertDescription: "REQUIRED when deploying in the AWS Config account setup of a multi-account deployment. Select 'yes' to let this template configure S3 replication of AWS Config files from the AWS Config Logs bucket to the transient bucket. Select 'no' if you already have S3 replication configured on the AWS Config Logs bucket and will configure it manually."
+        AssertDescription: "REQUIRED when deploying in the AWS Config account setup of a multi-account deployment. Select 'yes' to let this template configure S3 replication of AWS Config files from the AWS Config Logs bucket to the Transient bucket. Select 'no' if you already have S3 replication configured on the AWS Config Logs bucket and will configure it manually."
 
-  # In use case 2.2, the transient bucket name is always required, and the two KMS key ARNs must be
-  # provided together (both or none): if the AWS Config Logs bucket is KMS-encrypted the transient
+  # In use case 2.2, the Transient bucket name is always required, and the two KMS key ARNs must be
+  # provided together (both or none): if the AWS Config Logs bucket is KMS-encrypted the Transient
   # bucket key ARN must be supplied, and vice-versa. RuleCondition is the case 2.2 condition.
   ValidateReplicationKmsArns:
     RuleCondition: !And
@@ -480,15 +486,15 @@ Rules:
         - !Equals
           - !Ref TransientBucketNameForReplication
           - ''
-        AssertDescription: "REQUIRED in the AWS Config account setup: provide the transient bucket name (the 'TransientBucketName' output from the Dashboard account setup)."
+        AssertDescription: "REQUIRED in the AWS Config account setup: provide the Transient bucket name (the 'TransientBucketName' output from the Dashboard account setup)."
       - Assert: !Or
         - !Equals [!Ref ConfigBucketKmsKeyArn, '']
         - !Not [!Equals [!Ref TransientBucketKmsKeyArn, '']]
-        AssertDescription: "The AWS Config Logs bucket is KMS-encrypted (ConfigBucketKmsKeyArn is set), so the transient bucket KMS key ARN (TransientBucketKmsKeyArn) is also required. Provide the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup."
+        AssertDescription: "The AWS Config Logs bucket is KMS-encrypted (ConfigBucketKmsKeyArn is set), so the Transient bucket KMS key ARN (TransientBucketKmsKeyArn) is also required. Provide the 'DashboardBucketKmsKeyArn' output from the Dashboard account setup."
       - Assert: !Or
         - !Equals [!Ref TransientBucketKmsKeyArn, '']
         - !Not [!Equals [!Ref ConfigBucketKmsKeyArn, '']]
-        AssertDescription: "A transient bucket KMS key ARN (TransientBucketKmsKeyArn) was provided, so the AWS Config Logs bucket KMS key ARN (ConfigBucketKmsKeyArn) is also required. Provide both KMS key ARNs or neither."
+        AssertDescription: "A Transient bucket KMS key ARN (TransientBucketKmsKeyArn) was provided, so the AWS Config Logs bucket KMS key ARN (ConfigBucketKmsKeyArn) is also required. Provide both KMS key ARNs or neither."
 
 
 
@@ -742,7 +748,7 @@ Resources:
             Action: 'kms:*'
             Resource: '*'
           # Case 2.1 (multi-account) only: allow the AWS Config account to use this key to encrypt
-          # the objects it replicates into the transient bucket. The replication role is created in
+          # the objects it replicates into the Transient bucket. The replication role is created in
           # the AWS Config account (step 2.2) and does not exist yet, so - like the main dashboard
           # stack - we grant the AWS Config account root; the role's own IAM policy (step 2.2) uses it.
           - !If
@@ -807,13 +813,13 @@ Resources:
   # *************************************************************************************************************************
   # Transient bucket - Case 2.1 (multi-account, Dashboard account) ONLY.
   # In a multi-account deployment the AWS Config Logs bucket lives in the AWS Config account and its
-  # objects are replicated (cross-account, same-region) into this transient bucket in the Dashboard
+  # objects are replicated (cross-account, same-region) into this Transient bucket in the Dashboard
   # account. Because this bucket is in the same account as the Producer Lambda, it triggers the
   # Lambda directly (native S3 event notification), exactly like the AWS Config Logs bucket does in
   # a single-account deployment (case 1). This bucket is NOT created in case 1.
   #
   # - Versioning is enabled because S3 replication requires the destination bucket to be versioned.
-  # - Objects are expired after 5 days (they are transient: once pre-processed they are not needed).
+  # - Objects are expired after 5 days (they are Transient: once pre-processed they are not needed).
   # - Encryption mirrors the Dashboard bucket: a new KMS key when the AWS Config Logs bucket is
   #   KMS-encrypted (IsConfigLogsBucketKms), otherwise SSE-S3 (AES256).
   # *************************************************************************************************************************
@@ -866,7 +872,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  # Allow S3 (the transient bucket) to invoke the Producer Lambda. SourceArn is built from the
+  # Allow S3 (the Transient bucket) to invoke the Producer Lambda. SourceArn is built from the
   # bucket name (not !GetAtt TransientBucket.Arn) to avoid a circular dependency: the bucket's
   # NotificationConfiguration references the Lambda, and this permission must exist before it.
   LambdaInvocationPermissionTransientBucket:
@@ -881,7 +887,7 @@ Resources:
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub "arn:${AWS::Partition}:s3:::${TransientBucketNamePrefix}-${AWS::AccountId}-${AWS::Region}"
 
-  # Case 2.1 (multi-account): authorize replication into the transient bucket from the AWS Config
+  # Case 2.1 (multi-account): authorize replication into the Transient bucket from the AWS Config
   # account. The replication service role is created in the AWS Config account (step 2.2) and does
   # not exist yet here, so - like the main dashboard stack - we grant the whole AWS Config account
   # root; the role's own IAM policy (step 2.2) is what actually uses these permissions.
@@ -970,7 +976,7 @@ Resources:
                   - !GetAtt PreProcessingTaskExecutionRole.Arn
                   - !GetAtt PreProcessingTaskRole.Arn
               # Case 1 (single-account): the Producer Lambda reads the source files directly from the
-              # AWS Config Logs bucket. In case 2.1 it reads the transient bucket instead (below), so
+              # AWS Config Logs bucket. In case 2.1 it reads the Transient bucket instead (below), so
               # this grant is not needed there.
               - !If
                 - IsConfigAccountDeployment
@@ -980,9 +986,9 @@ Resources:
                   Resource: !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
                 - !Ref "AWS::NoValue"
               # Case 2.1 (multi-account): the Producer Lambda reads the replicated source files from
-              # the transient bucket in this (Dashboard) account, not from the AWS Config Logs bucket.
+              # the Transient bucket in this (Dashboard) account, not from the AWS Config Logs bucket.
               # The resource is built from the bucket name (not !GetAtt TransientBucket.Arn) because
-              # this role is consumed by the Producer Lambda, which the transient bucket's
+              # this role is consumed by the Producer Lambda, which the Transient bucket's
               # NotificationConfiguration references - a !GetAtt here would create a dependency cycle.
               - !If
                 - IsDashboardAccountDeployment
@@ -1016,7 +1022,7 @@ Resources:
                   Resource: !GetAtt DashboardBucketKmsKey.Arn
                 - !Ref "AWS::NoValue"
               # Case 2.1 (multi-account) with a KMS-encrypted source: the Producer Lambda reads the
-              # transient bucket in this (Dashboard) account, which is encrypted with the template's
+              # Transient bucket in this (Dashboard) account, which is encrypted with the template's
               # own DashboardBucketKmsKey, so it needs kms:Decrypt on that key (NOT the source key).
               - !If
                 - IsDashboardAccountDeploymentKms
@@ -1136,7 +1142,7 @@ Resources:
               Normalize the incoming event into a flat list of S3 event-notification records,
               regardless of how the notification was delivered:
                 - Direct S3 event notification -> the record already has an 's3' key
-                  (From the AWS Config Logs bucket or from the transient bucket)
+                  (From the AWS Config Logs bucket or from the Transient bucket)
                 - S3 -> SQS                                         -> the S3 event is JSON in record['body']
                 - S3 -> SNS (and S3 -> SNS -> SQS)                  -> the S3 event is JSON under 'Message'
               The SQS/SNS branches are kept for robustness if a customer fronts the notification with
@@ -1567,7 +1573,7 @@ Resources:
               - !GetAtt DashboardBucket.Arn
               - !Sub "${DashboardBucket.Arn}/*"
           # Case 1 (single-account): the Fargate task streams the source files directly from the AWS
-          # Config Logs bucket through this endpoint. In case 2.1 the source is the transient bucket
+          # Config Logs bucket through this endpoint. In case 2.1 the source is the Transient bucket
           # (statement below) and the AWS Config Logs bucket is in another account, so it must NOT be
           # reachable through this endpoint.
           - !If
@@ -1583,7 +1589,7 @@ Resources:
                 - !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
             - !Ref "AWS::NoValue"
           # Case 2.1 (multi-account): the Fargate task streams the replicated source files from the
-          # transient bucket through this endpoint, so the endpoint policy must allow it too. Built
+          # Transient bucket through this endpoint, so the endpoint policy must allow it too. Built
           # from the bucket name (not !GetAtt TransientBucket.Arn) to avoid a dependency cycle.
           - !If
             - IsDashboardAccountDeployment
@@ -1806,9 +1812,9 @@ Resources:
                   Resource: !Sub "arn:${AWS::Partition}:s3:::${ConfigBucketName}/*"
                 - !Ref "AWS::NoValue"
               # Case 2.1 (multi-account): the task streams the replicated source files from the
-              # transient bucket. Built from the bucket name (not !GetAtt TransientBucket.Arn) to
-              # avoid a dependency cycle: the transient bucket -> Producer Lambda (notification) ->
-              # task definition -> this task role -> transient bucket.
+              # Transient bucket. Built from the bucket name (not !GetAtt TransientBucket.Arn) to
+              # avoid a dependency cycle: the Transient bucket -> Producer Lambda (notification) ->
+              # task definition -> this task role -> Transient bucket.
               - !If
                 - IsDashboardAccountDeployment
                 - Effect: Allow
@@ -1857,7 +1863,7 @@ Resources:
                 - !Ref "AWS::NoValue"
               # When the Dashboard bucket is KMS-encrypted (case 1 or 2.1): decrypt the split script
               # and encrypt the split output objects. In case 2.1 this same key also encrypts the
-              # transient bucket, so this covers decrypting the replicated source files too.
+              # Transient bucket, so this covers decrypting the replicated source files too.
               - !If
                 - IsCreatePreProcessingResourcesKms
                 - Effect: Allow
@@ -2378,14 +2384,14 @@ Resources:
   # *************************************************************************************************************************
   # *************************************************************************************************************************
   # Case 2.2 only (multi-account, run in the AWS Config account): configure cross-account S3
-  # replication from the AWS Config Logs bucket to the transient bucket in the Dashboard account.
-  # The transient bucket, its replication bucket policy, and (if KMS) the destination key grant are
+  # replication from the AWS Config Logs bucket to the Transient bucket in the Dashboard account.
+  # The Transient bucket, its replication bucket policy, and (if KMS) the destination key grant are
   # created in the Dashboard account step (2.1). This step creates the replication role and, unless
   # the customer opts out, the replication configuration on the AWS Config Logs bucket.
   # *************************************************************************************************************************
   # *************************************************************************************************************************
 
-  # Service role assumed by S3 when replicating files to the transient bucket in the Dashboard account
+  # Service role assumed by S3 when replicating files to the Transient bucket in the Dashboard account
   PreProcessingReplicationRole:
     Type: AWS::IAM::Role
     Condition: IsConfigAccountNotificationDeployment
@@ -2409,7 +2415,7 @@ Resources:
             reason: "Role names are as per our design"
 
   # Policy for the S3 replication role: read-for-replication on the AWS Config Logs bucket (source),
-  # replicate-write on the transient bucket (destination).
+  # replicate-write on the Transient bucket (destination).
   PreProcessingReplicationRoleS3Policy:
     Type: AWS::IAM::Policy
     Condition: IsConfigAccountNotificationDeployment
@@ -2445,7 +2451,7 @@ Resources:
         - !Ref PreProcessingReplicationRole
 
   # When the buckets are KMS-encrypted, the replication role must decrypt with the source key and
-  # encrypt with the destination (transient bucket) key.
+  # encrypt with the destination (Transient bucket) key.
   PreProcessingReplicationRoleKmsPolicy:
     Type: AWS::IAM::Policy
     Condition: IsS3ReplicationKms
@@ -2510,7 +2516,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: !Ref PreProcessingReplicationConfigurationLambdaName
-      Description: "CRCD Dashboard Preprocessing - Configures a cross-account S3 replication on the AWS Config Logs bucket to the transient bucket (one-time execution)"
+      Description: "CRCD Dashboard Preprocessing - Configures a cross-account S3 replication on the AWS Config Logs bucket to the Transient bucket (one-time execution)"
       Handler: index.lambda_handler
       LoggingConfig:
         LogFormat: "Text"
@@ -2726,7 +2732,7 @@ Outputs:
   # are emitted here for convenience so they can be copied into / verified against the 2.2 stack.
   TransientBucketName:
     Condition: IsDashboardAccountDeployment
-    Description: "Name of the transient bucket in the Dashboard account. Use this as the S3 replication destination when configuring the AWS Config Logs bucket in the AWS Config account."
+    Description: "Name of the Transient bucket in the Dashboard account. Use this as the S3 replication destination when configuring the AWS Config Logs bucket in the AWS Config account."
     Value: !Ref TransientBucket
 
   ProducerLambdaRoleArn:
@@ -2742,12 +2748,12 @@ Outputs:
   # Multi-account (case 2.2) outputs: the cross-account replication role created in the AWS Config account.
   PreProcessingReplicationRoleName:
     Condition: IsConfigAccountNotificationDeployment
-    Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files to the transient bucket."
+    Description: "Name of the IAM role created for the cross-account S3 replication of AWS Config files to the Transient bucket."
     Value: !Ref PreProcessingReplicationRole
 
   PreProcessingReplicationRoleArn:
     Condition: IsConfigAccountNotificationDeployment
-    Description: "ARN of the IAM role created for the cross-account S3 replication of AWS Config files to the transient bucket."
+    Description: "ARN of the IAM role created for the cross-account S3 replication of AWS Config files to the Transient bucket."
     Value: !GetAtt PreProcessingReplicationRole.Arn
 
   # -----------------------------------------------------------------------------------------------------------------------
