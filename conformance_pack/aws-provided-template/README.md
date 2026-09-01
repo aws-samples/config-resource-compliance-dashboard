@@ -22,8 +22,8 @@ The rules are organized using categories from the [Threat Technique Catalog for 
 ## Prerequisites
 
 - **AWS Config** must be enabled in all accounts and Regions where you deploy this conformance pack. This template supports both single-account deployment (`put-conformance-pack`) and organization-wide deployment (`put-organization-conformance-pack`).
-- **AWS Config recorder** must record the resource types evaluated by the rules in this pack. The base template requires: `AWS::S3::Bucket`, `AWS::S3::AccessPoint`, `AWS::EC2::Instance`, `AWS::EC2::SecurityGroup`, `AWS::EC2::LaunchTemplate`, `AWS::AutoScaling::LaunchConfiguration`. The extended template additionally requires `AWS::IAM::User` to be recorded (in at least one Region) for the IAM MFA rules (`IAM_USER_MFA_ENABLED`, `MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS`) to produce per-user compliance results.
-- **Extended version only**: Deploy the prerequisites CloudFormation template (`sire-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Extended Version](#extended-version) below.
+- **AWS Config recorder** must record the resource types evaluated by the rules in this pack. The base template requires: `AWS::S3::Bucket`, `AWS::S3::AccessPoint`, `AWS::EC2::Instance`, `AWS::EC2::SecurityGroup`, `AWS::EC2::LaunchTemplate`, `AWS::AutoScaling::LaunchConfiguration`. The complete template additionally requires `AWS::IAM::User` to be recorded (in at least one Region) for the IAM MFA rules (`IAM_USER_MFA_ENABLED`, `MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS`) to produce per-user compliance results.
+- **Complete version only**: Deploy the prerequisites CloudFormation template (`sire-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Deployment](#deployment) below.
 
 
 ## Rules
@@ -115,8 +115,8 @@ These rules detect overly permissive network configurations that could allow una
 | `sire-ia-ra-vpc-sg-port-restriction-check` | [VPC_SG_PORT_RESTRICTION_CHECK](https://docs.aws.amazon.com/config/latest/developerguide/vpc-sg-port-restriction-check.html) | Checks whether security groups allow unrestricted inbound traffic on specified ports. Open SSH (22) and RDP (3389) ports are commonly exploited for unauthorized access. |
 
 
-### Rules: Extended Version (Initial Access — IAM Protection)
-The extended version includes all rules from the base template and adds IAM protection rules that detect identity-based misconfigurations commonly exploited for initial access.
+### Rules: Complete Version (Initial Access — IAM Protection)
+The complete version includes all rules from the base template and adds IAM protection rules that detect identity-based misconfigurations commonly exploited for initial access.
 
 | Rule Name | AWS Config Managed Rule | Description |
 |-----------|------------------------|-------------|
@@ -125,7 +125,7 @@ The extended version includes all rules from the base template and adds IAM prot
 | `sire-ia-iam-iam-user-mfa-enabled` | [IAM_USER_MFA_ENABLED](https://docs.aws.amazon.com/config/latest/developerguide/iam-user-mfa-enabled.html) | Checks if IAM users have MFA enabled. Users without MFA are vulnerable to credential theft. |
 | `sire-ia-iam-mfa-enabled-for-iam-console-access` | [MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS](https://docs.aws.amazon.com/config/latest/developerguide/mfa-enabled-for-iam-console-access.html) | Checks if MFA is enabled for all IAM users with console passwords. |
 
-### Rules: Extended Version Custom Lambda Rules (Initial Access — IAM Protection)
+### Rules: Complete Version Custom Lambda Rules (Initial Access — IAM Protection)
 
 | Rule Name | Description |
 |-----------|-------------|
@@ -159,9 +159,9 @@ All parameters are optional unless marked otherwise. Default values are provided
 | `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups` | Boolean (`true` / `false`) | `true` | `false` | Whether to exclude external security groups from evaluation. |
 | `VPCSecurityGroupPortRestrictionIpType` | Enum: `IPv4` \| `IPv6` \| `ALL` | `ALL` | `IPv4` | IP version to evaluate. |
 
-### Extended Version Parameters
+### Complete Version Parameters
 
-In addition to the base parameters, the extended version requires:
+In addition to the base parameters, the complete version requires:
 
 | Parameter | Type | Required | Example | Description |
 |-----------|------|----------|---------|-------------|
@@ -179,8 +179,8 @@ Only the rules listed below consume input parameters; all other rules in the pac
 | `sire-ia-s3-s3-access-point-public-access-blocks` | `S3AccessPointPublicAccessBlocksExcludedAccessPoints` |
 | `sire-ia-s3-s3-account-level-public-access-blocks-periodic` | `S3AccountLevelPublicAccessIgnorePublicAcls`, `S3AccountLevelPublicAccessBlockPublicPolicy`, `S3AccountLevelPublicAccessBlockPublicAcls`, `S3AccountLevelPublicAccessRestrictPublicBuckets` |
 | `sire-ia-ra-vpc-sg-port-restriction-check` | `VPCSecurityGroupPortRestrictionRestrictedPorts`, `VPCSecurityGroupPortRestrictionProtocolType`, `VPCSecurityGroupPortRestrictionExcludeExternalSecurityGroups`, `VPCSecurityGroupPortRestrictionIpType` |
-| `sire-ia-iam-iam-root-not-used-regularly` (extended) | `RootNotUsedRegularlyLambdaArn`, `RootUsageThresholdDays` |
-| `sire-ia-iam-iam-user-access-key-check` (extended) | `UserAccessKeyCheckLambdaArn` |
+| `sire-ia-iam-iam-root-not-used-regularly` (complete) | `RootNotUsedRegularlyLambdaArn`, `RootUsageThresholdDays` |
+| `sire-ia-iam-iam-user-access-key-check` (complete) | `UserAccessKeyCheckLambdaArn` |
 
 
 ## Remediation
@@ -219,7 +219,7 @@ The table below lists the manual fix for each rule and, where one exists, the AW
 |------|--------------------|-------------------------|
 | `sire-ia-ra-vpc-sg-port-restriction-check` | Edit the security group to remove or narrow the offending inbound rule so the restricted ports (default `22`, `3389`) are not open to `0.0.0.0/0` or `::/0`. Scope the source to specific CIDRs or security groups. | _None designated for this rule — manual only_ |
 
-### IAM Protection (extended template)
+### IAM Protection (complete template)
 
 | Rule | Manual remediation | AWS remediation runbook |
 |------|--------------------|-------------------------|
@@ -240,13 +240,13 @@ If you deploy this conformance pack in a Region where a rule is not available, t
 
 ## Deployment
 
-This conformance pack is provided as two templates: a base template and an extended template. The recommended deployment strategy for multi-region environments is to deploy the **extended template in a single primary region** and the **base template in all other regions**. This is because IAM resources are global — deploying the custom Lambda rules and IAM managed rules in every region would produce redundant evaluations at unnecessary cost. Regional resources (S3 buckets, EC2 instances, security groups) are checked by the base template in each region where they exist.
+This conformance pack is provided as two templates: a base template and a complete template. The recommended deployment strategy for multi-region environments is to deploy the **complete template in a single primary region** and the **base template in all other regions**. This is because IAM resources are global — deploying the custom Lambda rules and IAM managed rules in every region would produce redundant evaluations at unnecessary cost. Regional resources (S3 buckets, EC2 instances, security groups) are checked by the base template in each region where they exist.
 
 ### Single Account Deployment
 
 #### Step 1: Deploy prerequisites in the primary region
 
-Deploy the prerequisites CloudFormation template to create the Lambda functions and IAM roles needed by the extended template:
+Deploy the prerequisites CloudFormation template to create the Lambda functions and IAM roles needed by the complete template:
 
 ```
 aws cloudformation deploy \
@@ -265,14 +265,14 @@ aws cloudformation describe-stacks \
   --region <PRIMARY_REGION>
 ```
 
-#### Step 2: Deploy the extended template in the primary region
+#### Step 2: Deploy the complete template in the primary region
 
-Deploy the extended conformance pack (all rules including IAM + custom Lambda) in the primary region:
+Deploy the complete conformance pack (all rules including IAM + custom Lambda) in the primary region:
 
 ```
 aws configservice put-conformance-pack \
   --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template-extended.yaml \
+  --template-body file://sire-conformance-pack-template-complete.yaml \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
@@ -308,17 +308,17 @@ The deployment is split into three steps:
   service-managed CloudFormation StackSet.
 - **Step 2 — Delegated administrator account (once):** deploy the **base** conformance
   pack to all non-primary Regions organization-wide.
-- **Step 3 — Each member account (repeat):** deploy the **extended** conformance
+- **Step 3 — Each member account (repeat):** deploy the **complete** conformance
   pack in the primary Region of each account, pointing it at that account's own
   prerequisite Lambda functions.
 
-> **Why the extended pack is deployed per account.** The extended pack's two
+> **Why the complete pack is deployed per account.** The complete pack's two
 > custom rules invoke account-local Lambda functions. Each function's ARN
 > contains its own account ID, and the functions only allow invocation from the
 > account they live in (`SourceAccount: !Ref AWS::AccountId` in the prerequisites
 > template). A single organization-level `put-organization-conformance-pack`
 > call can only pass one Lambda ARN to every account, so it cannot work for the
-> extended pack. The base pack has no Lambda dependency and *is* deployed
+> complete pack. The base pack has no Lambda dependency and *is* deployed
 > organization-wide (in Step 2).
 
 #### Deployment prerequisites
@@ -420,7 +420,7 @@ Remain in the delegated administrator account.
 The base conformance pack has no Lambda dependency, so it is deployed
 organization-wide with `put-organization-conformance-pack`. Deploy it to every
 Region **except** the primary Region (the primary Region is covered by the
-extended pack in Step 3):
+complete pack in Step 3):
 
 ```
 OTHER_REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
@@ -458,10 +458,10 @@ done
 > `CREATE_FAILED`, check its `ErrorMessage` (a common cause is AWS Config not
 > being enabled in that account/Region) and resolve it before continuing.
 
-Repeat this step in every member account that should run the extended pack, including the delegated administrator account. Log into the account and open AWS CloudShell in the primary Region (or use any authenticated AWS CLI session for that account).
+Repeat this step in every member account that should run the complete pack, including the delegated administrator account. Log into the account and open AWS CloudShell in the primary Region (or use any authenticated AWS CLI session for that account).
 
 The snippet below resolves that account's own Lambda ARNs by their fixed
-function names and deploys the extended conformance pack in one shot — no manual
+function names and deploys the complete conformance pack in one shot — no manual
 ARN copying required. Set `PRIMARY_REGION` first, then paste the block:
 
 ```
@@ -479,15 +479,15 @@ KEY_ARN=$(aws lambda get-function \
 
 aws configservice put-conformance-pack \
   --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template-extended.yaml \
+  --template-body file://sire-conformance-pack-template-complete.yaml \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue="$ROOT_ARN" \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue="$KEY_ARN" \
   --region "$PRIMARY_REGION"
 ```
 
-Because each account resolves its own ARNs at deploy time, every account gets an
-extended pack wired to its own local Lambda functions.
+Because each account resolves its own ARNs at deploy time, every account gets a
+complete conformance pack wired to its own local Lambda functions.
 
 
 ### Base-Only Deployment (Fallback)
@@ -506,23 +506,23 @@ The base template can also be deployed from the AWS Config console by selecting 
 
 ## FAQ
 
-**Q: What is the difference between the base and extended versions?**
+**Q: What is the difference between the base and complete versions?**
 
-The base template (`sire-conformance-pack-template.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The extended template (`sire-conformance-pack-template-extended.yaml`) adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
+The base template (`sire-conformance-pack-template.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The complete template (`sire-conformance-pack-template-complete.yaml`) adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
 
 | Version | File | Rules | Prerequisites | Console Dropdown |
 |---------|------|-------|---------------|-----------------|
 | Base | `sire-conformance-pack-template.yaml` | 10 managed rules | None | Yes |
-| Extended | `sire-conformance-pack-template-extended.yaml` | 14 managed + 2 custom rules | Lambda functions via `sire-conformance-pack-prerequisites.yaml` | No (download only) |
+| Complete | `sire-conformance-pack-template-complete.yaml` | 14 managed + 2 custom rules | Lambda functions via `sire-conformance-pack-prerequisites.yaml` | No (download only) |
 
-The recommended multi-region deployment uses both templates together: deploy the extended template in a single primary region (for full IAM coverage including custom Lambda rules), and the base template in all other regions (for regional resource checks). This avoids running IAM evaluations redundantly in every region, since IAM resources are global.
+The recommended multi-region deployment uses both templates together: deploy the complete template in a single primary region (for full IAM coverage including custom Lambda rules), and the base template in all other regions (for regional resource checks). This avoids running IAM evaluations redundantly in every region, since IAM resources are global.
 
 | Region | Template | What it covers |
 |--------|----------|----------------|
-| Primary (e.g., us-east-1) | Extended | S3, EC2, Security Groups + IAM managed rules + custom Lambda rules |
+| Primary (e.g., us-east-1) | Complete | S3, EC2, Security Groups + IAM managed rules + custom Lambda rules |
 | All other regions | Base | S3, EC2, Security Groups |
 
-In a multi-account setup (AWS Organizations), this recommendation applies to every account: deploy the extended template in one primary region per account, and the base template in all other regions of that account.
+In a multi-account setup (AWS Organizations), this recommendation applies to every account: deploy the complete template in one primary region per account, and the base template in all other regions of that account.
 
 **Q: How is this pack different from other published conformance packs?**
 

@@ -1,4 +1,5 @@
 # Security Best Practices for Security Incident Response Engineering Team conformance pack
+# Displayed on AWS Config as Security Best Practices for Incident Response
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
