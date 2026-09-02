@@ -51,6 +51,7 @@ Metadata:
           default: "Technical parameters - do not change"
         Parameters:
           - ConformancePackName
+          - TemplateBucketBaseName
 
     ParameterLabels:
       DeploymentMode:
@@ -62,6 +63,8 @@ Metadata:
         default: "Deployment Regions"
       ConformancePackName:
         default: "Conformance Pack name"
+      TemplateBucketBaseName:
+        default: "Conformance pack template S3 bucket base name"
       ExcludedAccountsIDs:
         default: "Accounts to exclude (used only in deployment mode: AWS Organizations)"
       TargetOrganizationalUnitIds:
@@ -129,6 +132,12 @@ Parameters:
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
+
+  TemplateBucketBaseName:
+    Type: String
+    Default: sire-conformance-pack-templates
+    MinLength: 1
+    Description: Base name for the S3 bucket that holds the conformance pack template. The bucket name is suffixed with the account ID and region (required, do not change).
 
   TargetOrganizationalUnitIds:
     Type: CommaDelimitedList
@@ -256,7 +265,7 @@ Resources:
     DeletionPolicy: "Delete"
     UpdateReplacePolicy: "Delete"
     Properties:
-      BucketName: !Sub 'sire-conformance-pack-templates-${AWS::AccountId}-${AWS::Region}'
+      BucketName: !Sub '${TemplateBucketBaseName}-${AWS::AccountId}-${AWS::Region}'
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -852,8 +861,8 @@ Resources:
                   - s3:GetObject
                   - s3:GetBucketLocation
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:s3:::sire-conformance-pack-templates-*'
-                  - !Sub 'arn:${AWS::Partition}:s3:::sire-conformance-pack-templates-*/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${TemplateBucketBaseName}-*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${TemplateBucketBaseName}-*/*'
               # IAM role management for Lambda execution roles created by the StackSet
               # AttachRolePolicy/PassRole split out and constrained below
               - Effect: Allow
