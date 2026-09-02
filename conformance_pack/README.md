@@ -50,7 +50,6 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 - **AWS Config**: Must be enabled in target accounts and Regions.
 
 ### Organization-Wide Deployment:
-- **AWS Config** enabled organization-wide.
 - **Service-Managed StackSets**: [Enable trusted access](https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-cloudformation.html#integrate-enable-ta-cloudformation) for CloudFormation StackSets in AWS Organizations.
 - Deploy from an account designated as the delegated administrator of both [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-delegated-admin.html) and [AWS Config](https://docs.aws.amazon.com/config/latest/developerguide/aggregated-register-delegated-administrator.html) (recommended), or from the payer account of your organization.
 

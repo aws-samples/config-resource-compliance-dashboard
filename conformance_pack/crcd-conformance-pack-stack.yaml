@@ -65,7 +65,7 @@ Metadata:
       ExcludedAccountsIDs:
         default: "Accounts to exclude (used only in deployment mode: AWS Organizations)"
       TargetOrganizationalUnitIds:
-        default: "Target Organization Root or Organizational Unit IDs"
+        default: "Target Organization Root or Organizational Unit IDs (used only in deployment mode: AWS Organizations)"
 
       VPCSecurityGroupPortRestrictionParamRestrictedPorts:
         default: "VPC Security Group Port Restriction Check rule: restricted ports"
@@ -132,7 +132,7 @@ Parameters:
 
   TargetOrganizationalUnitIds:
     Type: CommaDelimitedList
-    Description: Enter the root OU ID (r-xxxx) to deploy to all accounts of your organization, or specify a comma-separated list of Organizational Unit IDs (ou-xxxx-xxxxxxxx) to deploy to. Leave empty in standalone mode.
+    Description: Enter the root OU ID (r-xxxx) to deploy to all accounts of your organization, or specify a comma-separated list of Organizational Unit IDs (ou-xxxx-xxxxxxxx) to deploy to.
     Default: ''
     # AllowedPatterns allows empty for the standalone mode
     AllowedPattern: ^$|^r-[a-z0-9]{4,32}$|^ou-[a-z0-9]+-[a-z0-9]+(,ou-[a-z0-9]+-[a-z0-9]+)*$
