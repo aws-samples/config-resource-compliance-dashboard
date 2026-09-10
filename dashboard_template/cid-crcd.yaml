@@ -1,6 +1,6 @@
 # Dashboard template to install with CID-CMD tool
 dashboards:
-  CID-CRCD:
+  cid-crcd:
     dependsOn:
       datasets:
       - config_compliance
