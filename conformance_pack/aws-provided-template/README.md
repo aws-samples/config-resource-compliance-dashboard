@@ -279,8 +279,11 @@ aws configservice put-conformance-pack \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
+    ParameterName=RootUsageThresholdDays,ParameterValue=5 \
   --region <PRIMARY_REGION>
 ```
+
+`RootUsageThresholdDays` sets the look-back window (in days) for the `sire-ia-iam-iam-root-not-used-regularly` rule; adjust the value (default `5`) as needed.
 
 #### Step 3: Deploy the base template in all other regions
 
@@ -358,13 +361,10 @@ aws cloudformation create-stack-set \
   --capabilities CAPABILITY_NAMED_IAM \
   --permission-model SERVICE_MANAGED \
   --auto-deployment Enabled=true,RetainStacksOnAccountRemoval=false \
-  --parameters ParameterKey=RootUsageThresholdDays,ParameterValue=5 \
   --call-as DELEGATED_ADMIN \
   --region "$PRIMARY_REGION"
 ```
 
-
-- **Root usage threshold**: to change the default (`5` days) for the `sire-ia-iam-iam-root-not-used-regularly` rule, edit the `--parameters` argument to the command above.
 - `--call-as DELEGATED_ADMIN` - Use it if you run the command run from
  the delegated administrator account. If you run the command from the management
  (payer) account instead, omit the flag (or pass `--call-as SELF`).
@@ -485,10 +485,13 @@ aws configservice put-conformance-pack \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue="$ROOT_ARN" \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue="$KEY_ARN" \
+    ParameterName=RootUsageThresholdDays,ParameterValue=5 \
   --region "$PRIMARY_REGION"
 ```
 
 Because each account resolves its own ARNs at deploy time, every account gets a full conformance pack wired to its own local Lambda functions.
+
+`RootUsageThresholdDays` sets the look-back window (in days) for the `sire-ia-iam-iam-root-not-used-regularly` rule; adjust the value (default `5`) as needed. Set it consistently in every account where you deploy the full pack.
 
 
 ### Base-Only Deployment (Fallback)
