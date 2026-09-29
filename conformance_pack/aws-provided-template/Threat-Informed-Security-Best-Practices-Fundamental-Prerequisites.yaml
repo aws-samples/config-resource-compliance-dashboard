@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Prerequisites for the Operational Best Practices for AWS Security Incident Response
-  conformance pack (extended version). Deploys Lambda functions and IAM roles required
+  Prerequisites for the Threat-Informed Security Best Practices (Fundamental) Extended
+  conformance pack. Deploys Lambda functions and IAM roles required
   by the custom Config rules. Deploy this template first, then use the output Lambda
   ARNs as parameters in the extended conformance pack template.
 
@@ -64,7 +64,7 @@ Resources:
     DependsOn: RootNotUsedRegularlyLogGroup
     Properties:
       FunctionName: 'sire-root-not-used-regularly'
-      Description: "Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - Root account not used regularly"
+      Description: "Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - Root account not used regularly"
       Runtime: python3.12
       Handler: index.lambda_handler
       Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
@@ -77,7 +77,7 @@ Resources:
       Code:
         ZipFile: |
           """
-          Security Best Practices for Security Incident Response Engineering Team
+          Threat-Informed Security Best Practices (Fundamental)
           Custom Config Rule: Root Account Not Used Regularly
 
           Checks whether the root user is not used regularly by examining the
@@ -283,7 +283,7 @@ Resources:
     DependsOn: UserAccessKeyCheckLogGroup
     Properties:
       FunctionName: 'sire-user-access-key-check'
-      Description: "Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - IAM users access key check"
+      Description: "Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - IAM users access key check"
       Runtime: python3.12
       Handler: index.lambda_handler
       Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
@@ -296,7 +296,7 @@ Resources:
       Code:
         ZipFile: |
           """
-          Security Best Practices for Security Incident Response Engineering Team
+          Threat-Informed Security Best Practices (Fundamental)
           Custom Config Rule: IAM User Access Key Check
 
           Checks whether IAM users have active access keys. It is strongly

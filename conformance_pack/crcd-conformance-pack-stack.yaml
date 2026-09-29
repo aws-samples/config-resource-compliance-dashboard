@@ -1,9 +1,9 @@
-# Security Best Practices for Security Incident Response Engineering Team conformance pack
-# Displayed on AWS Config as Security Best Practices for Incident Response
+# Threat-Informed Security Best Practices (Fundamental) conformance pack
+# Displayed on AWS Config as Threat-Informed Security Best Practices (Fundamental)
 # Supports two deployment mode: standalone account and AWS Organizations
 
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CRCD Dashboard Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
+Description: 'CRCD Dashboard Threat-Informed Security Best Practices (Fundamental) Conformance Pack - Deploys IAM rules in current region and all other rules in all regions'
 
 Metadata:
   # W1030 is raised on the empty TargetOrganizationalUnitIds default resolving into the
@@ -127,15 +127,14 @@ Parameters:
 
   ConformancePackName:
     Type: String
-    # Default: Security-Best-Practices-for-Security-Incident-Response-Engineering-Team-Fundamental
-    Default: Security-Best-Practices-for-Incident-Response-Fundamental
+    Default: Threat-Informed-Security-Best-Practices-Fundamental
     Description: Name of the conformance pack (required).
     AllowedPattern: ^[a-zA-Z][-a-zA-Z0-9]{0,127}$ # Conformance pack names have a limit of 256 characters, but AWS Config adds to it, so here we limit to 128 (the field is pre-populated anyway)
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters and hyphens
 
   TemplateBucketBaseName:
     Type: String
-    Default: sire-conformance-pack-templates
+    Default: threat-informed-cpack-templates
     MinLength: 1
     Description: Base name for the S3 bucket that holds the conformance pack template. The bucket name is suffixed with the account ID and region (required, do not change).
 
@@ -340,7 +339,7 @@ Resources:
     UpdateReplacePolicy: "Delete"
     Properties:
       FunctionName: 'sire-conf-pack-support-uploader'
-      Description: "CRCD Dashboard - Security Best Practices for Security Incident Response Engineering Team Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
+      Description: "CRCD Dashboard - Threat-Informed Security Best Practices (Fundamental) Conformance Pack - Supports the deployment of the Conformance Pack (one-time execution)"
       Runtime: python3.14
       Timeout: 120
       MemorySize: 128
@@ -1376,7 +1375,7 @@ Resources:
             UpdateReplacePolicy: Delete
             Properties:
               FunctionName: 'sire-root-not-used-regularly'
-              Description: Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - Root account not used regularly
+              Description: Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - Root account not used regularly
               Runtime: python3.14
               Handler: index.lambda_handler
               Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
@@ -1384,7 +1383,7 @@ Resources:
               Code:
                 ZipFile: |
                   """
-                  Security Best Practices for Security Incident Response Engineering Team
+                  Threat-Informed Security Best Practices (Fundamental)
                   Custom Config Rule: Root Account Not Used Regularly
                   
                   Checks whether the root user is not used regularly by examining the IAM Credential Report
@@ -1786,7 +1785,7 @@ Resources:
             DependsOn: UserAccessKeyCheckLogGroup
             Properties:
               FunctionName: 'sire-user-access-key-check'
-              Description: Security Best Practices for Security Incident Response Engineering Team Conformance Pack custom AWS Config rule - IAM users access key check
+              Description: Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - IAM users access key check
               Runtime: python3.14
               Handler: index.lambda_handler
               Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
@@ -1794,7 +1793,7 @@ Resources:
               Code:
                 ZipFile: |
                   """
-                  Security Best Practices for Security Incident Response Engineering Team
+                  Threat-Informed Security Best Practices (Fundamental)
                   Custom Config Rule: IAM User Access Key Check
                   
                   Checks whether IAM users have access keys. It is strongly recommended to not

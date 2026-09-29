@@ -1,6 +1,6 @@
 # Conformance Pack Specification
 
-This document describes the AWS Config rules included in the Security Best Practices for Security Incident Response Engineering Team conformance pack, built in collaboration with Security Incident Response security engineers. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
+This document describes the AWS Config rules included in the Threat-Informed Security Best Practices (Fundamental) conformance pack, built in collaboration with Security Incident Response security engineers. The rules are based on the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/) (MITRE ATT&CK® framework).
 
 ## Naming Convention
 
@@ -12,6 +12,8 @@ All rules follow the format: `sire-<lv1>-<lv2>-<rule-name>`
 | `lv1` | Level 1 classification (attack tactic) | `ia`, `p`, `pe` |
 | `lv2` | Level 2 classification (protection domain) | `s3`, `iam`, `ec2` |
 | `rule-name` | Descriptive rule name in kebab-case | `root-account-mfa-enabled` |
+
+The `sire-` prefix records that the rules come from the AWS Security Incident Response team.
 
 ### Level 1 Classification (Attack Tactics)
 

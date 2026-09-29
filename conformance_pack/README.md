@@ -7,8 +7,8 @@ This feature of the AWS Config Dashboard was developed in collaboration with AWS
 **Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
 
-## Conformance Pack: Security Best Practices for Security Incident Response Engineering Team 
-The _Security Best Practices for Security Incident Response Engineering Team_ conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
+## Conformance Pack: Threat-Informed Security Best Practices (Fundamental)
+The _Threat-Informed Security Best Practices (Fundamental)_ conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
 
 ![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Threat-Informed Security Compliance tab")
 
@@ -39,8 +39,8 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
 
-- **Security Best Practices for Security Incident Response Engineering Team (Fundamental)** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
-- **Security Best Practices for Security Incident Response Engineering Team (Fundamental) Extended** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
+- **Threat-Informed Security Best Practices (Fundamental)** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
+- **Threat-Informed Security Best Practices (Fundamental) Extended** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
 
 The conformance packs support all parameters exposed by standard AWS Config rules and manages automatically regional availability of rules - i.e. you can deploy the conformance pack in all Regions where AWS Config is enabled, and if a rule is not available in a Region, it will be automatically skipped.
 
@@ -60,7 +60,7 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 1. Select a Region that will be the base Region for your deployment and where you will deploy the extended version of your conformance pack.
 1. Click the Launch Stack button below to open the stack [template](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack) in your CloudFormation console. 
 
-[![Launch Stack button](../images/LaunchStack.svg 'Deploy Security Best Practices for Security Incident Response Engineering Team conformance pack')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack)
+[![Launch Stack button](../images/LaunchStack.svg 'Deploy Threat-Informed Security Best Practices (Fundamental) conformance pack')](https://console.aws.amazon.com/cloudformation/home#/stacks/create/review?&templateURL=https://aws-managed-cost-intelligence-dashboards.s3.amazonaws.com/cfn/crcd-conformance-pack-stack.yaml&stackName=crcd-threat-informed-conformance-pack)
 
 4. Specify the following parameters:
    - `Deployment mode` Choose deployment mode: `AWS Organizations` for organization-wide deployment (all accounts and Regions), or `Standalone` for single-account, multi-region deployment.
@@ -96,7 +96,7 @@ To update the parameters of the AWS Config rules of the template open the CloudF
 
 This solution creates an S3 bucket that stores the conformance pack template, along with Lambda functions and IAM roles. These resources are protected by least-privilege permissions, and the S3 bucket has versioning enabled so any overwrite of the template is recoverable. As defense-in-depth, we recommend enabling the following detective controls in your account to alert on unexpected changes to these resources:
 
-- **CloudTrail S3 data events**: By default, CloudTrail does not log object-level (read/write) access to S3. To capture modifications to the conformance pack template, add the solution's S3 bucket (`sire-conformance-pack-templates-*`) to the data event selectors of an existing [CloudTrail trail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html). Using your existing organization or account trail avoids duplicate logging and cost. Note that after deployment the solution does not modify the template object, so no data events are expected during normal operation and no additional CloudTrail cost is anticipated — any recorded write to this object indicates an out-of-band change worth investigating.
+- **CloudTrail S3 data events**: By default, CloudTrail does not log object-level (read/write) access to S3. To capture modifications to the conformance pack template, add the solution's S3 bucket (`threat-informed-cpack-templates-*`) to the data event selectors of an existing [CloudTrail trail](https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html). Using your existing organization or account trail avoids duplicate logging and cost. Note that after deployment the solution does not modify the template object, so no data events are expected during normal operation and no additional CloudTrail cost is anticipated — any recorded write to this object indicates an out-of-band change worth investigating.
 - **CloudFormation drift detection**: Direct, out-of-band changes to the deployed Lambda code or IAM roles will not go through a stack update and can diverge from this template. Enable the AWS Config managed rule [`cloudformation-stack-drift-detection-check`](https://docs.aws.amazon.com/config/latest/developerguide/cloudformation-stack-drift-detection-check.html), or run [drift detection](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-drift.html) on the stack and StackSets periodically, to detect this drift.
 - **Alerting**: Route the findings from the controls above to your security operations tooling (for example, an [Amazon EventBridge](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html) rule targeting Amazon SNS or your ticketing system) so that detected changes trigger a response rather than a silent log entry.
 

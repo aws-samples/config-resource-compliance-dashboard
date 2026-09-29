@@ -6,7 +6,7 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 
 
 ### External features
-- Security Best Practices for Security Incident Response Engineering Team [conformance pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard.
+- Threat-Informed Security Best Practices (Fundamental) [conformance pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard.
 
 
 ## Changed

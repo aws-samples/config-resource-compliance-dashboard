@@ -1,4 +1,4 @@
-# Security Best Practices for Security Incident Response Engineering Team (Fundamental)
+# Threat-Informed Security Best Practices (Fundamental)
 
 ## Purpose
 
@@ -23,7 +23,7 @@ The rules are organized using categories from the [Threat Technique Catalog for 
 
 - **AWS Config** must be enabled in all accounts and Regions where you deploy this conformance pack. This template supports both single-account deployment (`put-conformance-pack`) and organization-wide deployment (`put-organization-conformance-pack`).
 - **AWS Config recorder** must record the resource types evaluated by the rules in this pack. The base template requires: `AWS::S3::Bucket`, `AWS::S3::AccessPoint`, `AWS::EC2::Instance`, `AWS::EC2::SecurityGroup`, `AWS::EC2::LaunchTemplate`, `AWS::AutoScaling::LaunchConfiguration`. The full template additionally requires `AWS::IAM::User` to be recorded (in at least one Region) for the IAM MFA rules (`IAM_USER_MFA_ENABLED`, `MFA_ENABLED_FOR_IAM_CONSOLE_ACCESS`) to produce per-user compliance results.
-- **Full version only**: Deploy the prerequisites CloudFormation template (`sire-conformance-pack-prerequisites.yaml`) first to create the required Lambda functions. See [Deployment](#deployment) below.
+- **Full version only**: Deploy the prerequisites CloudFormation template (`Threat-Informed-Security-Best-Practices-Fundamental-Prerequisites.yaml`) first to create the required Lambda functions. See [Deployment](#deployment) below.
 
 
 ## Rules
@@ -242,7 +242,7 @@ If you deploy this conformance pack in a Region where a rule is not available, t
 
 This conformance pack ships as two templates: **full** and **base**. The full template is a complete superset — it includes everything in the base template plus the IAM rules.
 
-For multi-region environments, deploy the **full template in a single primary region** and the **base template in all other regions**. IAM resources are global, so evaluating them in every region would produce redundant results at unnecessary cost; the base template covers the regional resources (S3 buckets, EC2 instances, security groups, etc.) where they actually exist. Each region should have exactly one conformance pack named `Security-Best-Practices-for-Incident-Response-Fundamental` — never deploy both templates in the same region.
+For multi-region environments, deploy the **full template in a single primary region** and the **base template in all other regions**. IAM resources are global, so evaluating them in every region would produce redundant results at unnecessary cost; the base template covers the regional resources (S3 buckets, EC2 instances, security groups, etc.) where they actually exist. Each region should have exactly one conformance pack named `Threat-Informed-Security-Best-Practices-Fundamental` — never deploy both templates in the same region.
 
 
 ### Single Account Deployment
@@ -253,7 +253,7 @@ Deploy the prerequisites CloudFormation template to create the Lambda functions 
 
 ```
 aws cloudformation deploy \
-  --template-file sire-conformance-pack-prerequisites.yaml \
+  --template-file Threat-Informed-Security-Best-Practices-Fundamental-Prerequisites.yaml \
   --stack-name sire-conformance-pack-prerequisites \
   --capabilities CAPABILITY_NAMED_IAM \
   --region <PRIMARY_REGION>
@@ -274,8 +274,8 @@ Deploy the complete conformance pack (all rules including IAM + custom Lambda) i
 
 ```
 aws configservice put-conformance-pack \
-  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template-complete.yaml \
+  --conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
+  --template-body file://Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue=<ARN_FROM_STEP_1> \
@@ -292,8 +292,8 @@ REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-
 for REGION in $REGIONS; do
   echo "Deploying base conformance pack in $REGION..."
   aws configservice put-conformance-pack \
-    --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-    --template-body file://sire-conformance-pack-template.yaml \
+    --conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
+    --template-body file://Threat-Informed-Security-Best-Practices-Fundamental.yaml \
     --region $REGION
 done
 ```
@@ -354,7 +354,7 @@ PRIMARY_REGION=<PRIMARY_REGION>
 
 aws cloudformation create-stack-set \
   --stack-set-name sire-conformance-pack-prerequisites \
-  --template-body file://sire-conformance-pack-prerequisites.yaml \
+  --template-body file://Threat-Informed-Security-Best-Practices-Fundamental-Prerequisites.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
   --permission-model SERVICE_MANAGED \
   --auto-deployment Enabled=true,RetainStacksOnAccountRemoval=false \
@@ -431,8 +431,8 @@ OTHER_REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-nort
 for REGION in $OTHER_REGIONS; do
   echo "Deploying base conformance pack in $REGION..."
   aws configservice put-organization-conformance-pack \
-    --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-    --template-body file://sire-conformance-pack-template.yaml \
+    --organization-conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
+    --template-body file://Threat-Informed-Security-Best-Practices-Fundamental.yaml \
     --region $REGION
 done
 ```
@@ -451,7 +451,7 @@ done
 > ```
 > PRIMARY_REGION=<PRIMARY_REGION>
 > aws configservice get-organization-conformance-pack-detailed-status \
->   --organization-conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
+>   --organization-conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
 >   --region "$PRIMARY_REGION"
 > ```
 >
@@ -480,8 +480,8 @@ KEY_ARN=$(aws lambda get-function \
   --region "$PRIMARY_REGION")
 
 aws configservice put-conformance-pack \
-  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template-complete.yaml \
+  --conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
+  --template-body file://Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml \
   --conformance-pack-input-parameters \
     ParameterName=RootNotUsedRegularlyLambdaArn,ParameterValue="$ROOT_ARN" \
     ParameterName=UserAccessKeyCheckLambdaArn,ParameterValue="$KEY_ARN" \
@@ -497,8 +497,8 @@ If you only want the base managed rules without the IAM custom Lambda rules, you
 
 ```
 aws configservice put-conformance-pack \
-  --conformance-pack-name Security-Best-Practices-for-Incident-Response-Fundamental \
-  --template-body file://sire-conformance-pack-template.yaml \
+  --conformance-pack-name Threat-Informed-Security-Best-Practices-Fundamental \
+  --template-body file://Threat-Informed-Security-Best-Practices-Fundamental.yaml \
   --region <REGION>
 ```
 
@@ -509,12 +509,12 @@ The base template can also be deployed from the AWS Config console by selecting 
 
 **Q: What is the difference between the base and full versions?**
 
-The base template (`sire-conformance-pack-template.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The full template (`sire-conformance-pack-template-complete.yaml`) includes all the rules of the base version, and adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
+The base template (`Threat-Informed-Security-Best-Practices-Fundamental.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The full template (`Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml`) includes all the rules of the base version, and adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
 
 | Version | File | Rules | Prerequisites | Console Dropdown |
 |---------|------|-------|---------------|-----------------|
-| Base | `sire-conformance-pack-template.yaml` | 10 managed rules | None | Yes |
-| Full | `sire-conformance-pack-template-complete.yaml` | 14 managed + 2 custom rules | Lambda functions via `sire-conformance-pack-prerequisites.yaml` | No (download only) |
+| Base | `Threat-Informed-Security-Best-Practices-Fundamental.yaml` | 10 managed rules | None | Yes |
+| Full | `Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml` | 14 managed + 2 custom rules | Lambda functions via `Threat-Informed-Security-Best-Practices-Fundamental-Prerequisites.yaml` | No (download only) |
 
 The recommended multi-region deployment uses both templates together: deploy the complete template in a single primary region (for full IAM coverage including custom Lambda rules), and the base template in all other regions (for regional resource checks). This avoids running IAM evaluations redundantly in every region, since IAM resources are global.
 
@@ -536,6 +536,8 @@ If you already have a comprehensive conformance pack (e.g., CIS, NIST), the rule
 **Q: Why do rule names have the `sire-` prefix?**
 
 The rule naming convention (`sire-ia-{category}-{rule}`) encodes a threat-oriented category, which enables grouping and visualization on security dashboards. The prefix `sire` stands for **S**ecurity **I**ncident **R**esponse **E**ngineering. `ia` corresponds to "Initial Access" from MITRE ATT&CK; it indicates the intent behind the grouping rather than a formal mapping to the ATT&CK framework.
+
+The `sire-` prefix indicates that the rules originate from the AWS Security Incident Response team, whose engineers selected the rules based on misconfigurations observed during real security incidents.
 
 **Q: Can I deploy this pack alongside other conformance packs?**
 
