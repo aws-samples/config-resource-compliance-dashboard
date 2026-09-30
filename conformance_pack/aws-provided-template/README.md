@@ -425,6 +425,8 @@ organization-wide with `put-organization-conformance-pack`. Deploy it to every
 Region **except** the primary Region (the primary Region is covered by the
 full conformance pack in Step 3):
 
+> Make sure the list of Regions you specify in `OTHER_REGIONS` **does not** have your primary region.
+
 ```
 OTHER_REGIONS="us-east-2 us-west-2 eu-west-1 eu-central-1 ap-southeast-1 ap-northeast-1"
 
