@@ -57,7 +57,7 @@ Resources:
     Properties:
       FunctionName: 'sire-root-not-used-regularly'
       Description: "Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - Root account not used regularly"
-      Runtime: python3.12
+      Runtime: python3.14
       Handler: index.lambda_handler
       Role: !GetAtt RootNotUsedRegularlyLambdaRole.Arn
       Timeout: 420
@@ -276,7 +276,7 @@ Resources:
     Properties:
       FunctionName: 'sire-user-access-key-check'
       Description: "Threat-Informed Security Best Practices (Fundamental) Conformance Pack custom AWS Config rule - IAM users access key check"
-      Runtime: python3.12
+      Runtime: python3.14
       Handler: index.lambda_handler
       Role: !GetAtt UserAccessKeyCheckLambdaRole.Arn
       Timeout: 60
