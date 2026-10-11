@@ -1,6 +1,6 @@
 # Threat-Informed Security Posture with AWS Security Incident Response
 
-The [AWS Security Incident Response](https://aws.amazon.com/security-incident-response/) team is a specialized 24/7 global team that provides proactive and reactive security support to AWS customers for security responsibilities on the customer side of the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/). When AWS Security Incident Response security engineers support a customer, they will help triage security findings and assist during potential active security events in the customer's AWS environment. They provide security recommendations and best practices to help prevent future security incidents.
+The [AWS Security Incident Response](https://aws.amazon.com/security-incident-response/) team is a specialized 24/7 global team that provides proactive and reactive security support to AWS customers for security responsibilities on the customer side of the [AWS Shared Responsibility Model](https://aws.amazon.com/compliance/shared-responsibility-model/). When AWS Security Incident Response security engineers support a customer, they help triage security findings and assist during potential active security events in the customer's AWS environment. They provide security recommendations and best practices to help prevent future security incidents.
 
 This feature of the AWS Config Dashboard was developed in collaboration with AWS Security Incident Response security experts, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by security engineers to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
 
@@ -41,12 +41,13 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
   1. In the AWS Config console, go to **Conformance packs** and choose **Deploy conformance pack**.
   1. Under **Step 1: Specify template**, for **Conformance pack template** choose **Use sample template**.
   1. Under **Sample template**, open the **Select a sample template** dropdown and choose **Threat-Informed Security Best Practices (Fundamental)**.
-  1. Choose **Next**, specify the conformance pack details, then review and deploy.
+  1. Choose **Next**, specify the conformance pack details, delete the parameters you don't use, then review and deploy.
 - This is the quickest way to deploy the conformance pack and makes a good first step to evaluate the pack before a wider rollout.
 - **Caveats:**
   - Deploys only to the **current account and Region** (the account and Region you are signed in to). It is not organization-wide and does not fan out to other Regions.
   - Deploys the **base** template only — the standard AWS Config managed rules. It does **not** include the IAM custom Lambda-based rules (`sire-ia-iam-iam-root-not-used-regularly`, `sire-ia-iam-iam-user-access-key-check`), which require the prerequisites and the extended version.
   - To get the custom rules, organization-wide coverage, or multi-Region deployment, use one of the deployment modes above.
+- This mode is fully self-contained: deploy it from the console as described above. The rest of this guide (prerequisites, deployment steps, parameters, and updates) covers the AWS Organizations and Standalone modes.
 
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
