@@ -36,6 +36,18 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
 - Uses the same template as above, tailored to deploy the conformance pack in a single account.
 - Deploys in all Regions of the account.
 
+#### AWS Config Console (One-Click Deployment)
+- The conformance pack is provided by the AWS Config service and is [documented in the AWS Config developer guide](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html). You can deploy it directly from the AWS Config console, without opening the CloudFormation console:
+  1. In the AWS Config console, go to **Conformance packs** and choose **Deploy conformance pack**.
+  1. Under **Step 1: Specify template**, for **Conformance pack template** choose **Use sample template**.
+  1. Under **Sample template**, open the **Select a sample template** dropdown and choose **Threat-Informed Security Best Practices (Fundamental)**.
+  1. Choose **Next**, specify the conformance pack details, then review and deploy.
+- This is the quickest way to deploy the conformance pack and makes a good first step to evaluate the pack before a wider rollout.
+- **Caveats:**
+  - Deploys only to the **current account and Region** (the account and Region you are signed in to). It is not organization-wide and does not fan out to other Regions.
+  - Deploys the **base** template only — the standard AWS Config managed rules. It does **not** include the IAM custom Lambda-based rules (`sire-ia-iam-iam-root-not-used-regularly`, `sire-ia-iam-iam-user-access-key-check`), which require the prerequisites and the extended version.
+  - To get the custom rules, organization-wide coverage, or multi-Region deployment, use one of the deployment modes above.
+
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
 
@@ -106,6 +118,7 @@ These controls are account-level and operate outside this template, so they are 
 - [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/).
 - [MITRE ATT&CK® Framework](https://attack.mitre.org/).
 - [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html).
+- [Threat-Informed Security Best Practices (Fundamental)](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html) sample conformance pack in the AWS Config documentation.
 - [AWS Security Incident Response service](https://aws.amazon.com/security-incident-response/).
 - [Specification of all AWS Config and custom rules](./crcd-conformance-pack-specification.md) that will be deployed as part of the conformance pack.
 - [Cloud Formation template](./crcd-conformance-pack-stack.yaml) to deploy the conformance pack and the related AWS resources. 

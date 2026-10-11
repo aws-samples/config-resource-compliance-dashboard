@@ -301,7 +301,7 @@ for REGION in $REGIONS; do
 done
 ```
 
-Alternatively, the base template can be deployed from the AWS Config console by selecting it from the conformance pack dropdown in each region.
+Alternatively, in each region, deploy the base template from the AWS Config console: on the **Deploy conformance pack** page choose **Use sample template**, then select **Threat-Informed Security Best Practices (Fundamental)** from the **Select a sample template** dropdown. This deploys the base template (managed rules only) to the current account and region.
 
 ### Organization-Wide Deployment
 
@@ -507,14 +507,14 @@ aws configservice put-conformance-pack \
   --region <REGION>
 ```
 
-The base template can also be deployed from the AWS Config console by selecting it from the conformance pack dropdown.
+The base template can also be deployed from the AWS Config console: on the **Deploy conformance pack** page choose **Use sample template**, then select **Threat-Informed Security Best Practices (Fundamental)** from the **Select a sample template** dropdown. This is the quickest way to deploy the base template to the current account and region — no CloudFormation console or CLI required — and is documented in the AWS Config developer guide under [Threat-Informed Security Best Practices (Fundamental)](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html).
 
 
 ## FAQ
 
 **Q: What is the difference between the base and full versions?**
 
-The base template (`Threat-Informed-Security-Best-Practices-Fundamental.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console dropdown with no prerequisites. The full template (`Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml`) includes all the rules of the base version, and adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
+The base template (`Threat-Informed-Security-Best-Practices-Fundamental.yaml`) contains only AWS Config managed rules and can be deployed directly from the AWS Config console — on the **Deploy conformance pack** page, choose **Use sample template** and select **Threat-Informed Security Best Practices (Fundamental)** — with no prerequisites. The full template (`Threat-Informed-Security-Best-Practices-Fundamental-Complete.yaml`) includes all the rules of the base version, and adds IAM protection rules — including two custom Lambda-based rules — and requires deploying the prerequisites template first.
 
 | Version | File | Rules | Prerequisites | Console Dropdown |
 |---------|------|-------|---------------|-----------------|
@@ -561,3 +561,4 @@ Both evaluations will appear in AWS Config. The conformance pack rules are immut
 - [AWS Config Managed Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html)
 - [AWS Config Conformance Packs](https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html)
 - [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html)
+- [Threat-Informed Security Best Practices (Fundamental)](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html) — this conformance pack in the AWS Config developer guide
