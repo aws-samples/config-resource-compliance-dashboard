@@ -4,6 +4,14 @@ The [AWS Security Incident Response](https://aws.amazon.com/security-incident-re
 
 This feature of the AWS Config Dashboard was developed in collaboration with AWS Security Incident Response security experts, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by security engineers to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
 
+### Why this pack
+
+- **Curated by incident responders**: Rules are selected based on multi-year experience supporting AWS customers during active security incidents — not from a theoretical compliance checklist.
+- **Low cost, high impact**: Unlike larger conformance packs that may contain 50+ rules mapped to a compliance framework, this pack is intentionally small and focused. A small number of rules keeps AWS Config costs low and avoids the complexity of deploying dozens of rules, while still covering the misconfigurations most frequently exploited in real attacks.
+- **Accessible to beginners**: Customers who are new to AWS security can deploy this pack to immediately gain visibility into their most critical exposures without needing deep security expertise. That said, any customer can deploy it to perform fundamental security posture checks, regardless of their experience level.
+- **Threat-informed**: Rules are organized by threat-oriented category rather than by AWS service, helping customers understand *why* a misconfiguration matters in terms of what an attacker would do with it.
+- **Dashboard integration**: This conformance pack can optionally be visualized in the [AWS Config Resource Compliance Dashboard (CRCD)](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html), which provides a QuickSight-based view of compliance status classified by threat-technique categories.
+
 **Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
 
 
@@ -12,7 +20,7 @@ The _Threat-Informed Security Best Practices (Fundamental)_ conformance pack is 
 
 ![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Threat-Informed Security Compliance tab")
 
-The **Threat-Informed Security Compliance** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
+The **Threat-Informed Security Compliance** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. This classification is intended to help you reason about *why* a misconfiguration matters in terms of attacker behavior — it is not a claim that the pack fully covers, maps to, or conforms to the catalog or MITRE ATT&CK. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
 
 
 ### Features
@@ -36,19 +44,6 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
 - Uses the same template as above, tailored to deploy the conformance pack in a single account.
 - Deploys in all Regions of the account.
 
-#### AWS Config Console (One-Click Deployment)
-- The conformance pack is provided by the AWS Config service and is [documented in the AWS Config developer guide](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html). You can deploy it directly from the AWS Config console, without opening the CloudFormation console:
-  1. In the AWS Config console, go to **Conformance packs** and choose **Deploy conformance pack**.
-  1. Under **Step 1: Specify template**, for **Conformance pack template** choose **Use sample template**.
-  1. Under **Sample template**, open the **Select a sample template** dropdown and choose **Threat-Informed Security Best Practices (Fundamental)**.
-  1. Choose **Next**, specify the conformance pack details, delete the parameters you don't use, then review and deploy.
-- This is the quickest way to deploy the conformance pack and makes a good first step to evaluate the pack before a wider rollout.
-- **Caveats:**
-  - Deploys only to the **current account and Region** (the account and Region you are signed in to). It is not organization-wide and does not fan out to other Regions.
-  - Deploys the **base** template only — the standard AWS Config managed rules. It does **not** include the IAM custom Lambda-based rules (`sire-ia-iam-iam-root-not-used-regularly`, `sire-ia-iam-iam-user-access-key-check`), which require the prerequisites and the extended version.
-  - To get the custom rules, organization-wide coverage, or multi-Region deployment, use one of the deployment modes above.
-- This mode is fully self-contained: deploy it from the console as described above. The rest of this guide (prerequisites, deployment steps, parameters, and updates) covers the AWS Organizations and Standalone modes.
-
 ### Conformance Pack Composition
 The solution deploys two conformance packs:
 
@@ -56,6 +51,10 @@ The solution deploys two conformance packs:
 - **Threat-Informed Security Best Practices (Fundamental) Extended** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
 
 The conformance packs support all parameters exposed by standard AWS Config rules and manages automatically regional availability of rules - i.e. you can deploy the conformance pack in all Regions where AWS Config is enabled, and if a rule is not available in a Region, it will be automatically skipped.
+
+### Other ways to deploy
+- The conformance pack is also provided by the AWS Config service and is [documented in the AWS Config developer guide](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html). You can deploy that same conformance pack from the AWS Config console (selecting it as a sample template) or by handling its YAML templates directly with the AWS CLI or CloudFormation.
+- See the [AWS Config provided templates README](./aws-provided-template/README.md) for those instructions, including the console deployment steps and their caveats (for example, the console path deploys the base template to the current account and Region only).
 
 ## Prerequisites
 
@@ -115,11 +114,32 @@ This solution creates an S3 bucket that stores the conformance pack template, al
 
 These controls are account-level and operate outside this template, so they are not created by the stack. Enabling them is optional but recommended for environments where tamper detection of the deployed resources is required.
 
+
+# FAQ
+
+**Q: How is this pack different from other published conformance packs?**
+
+Other conformance packs are organized by compliance framework (NIST, PCI, CIS) or AWS service (S3, EC2). They are comprehensive — often containing 50 to 100+ rules — and are designed for customers who need to demonstrate compliance with a specific standard. This pack takes a different approach: it is curated by AWS Security Incident Response engineers based on the misconfigurations they see most frequently exploited in real attacks. It is intentionally small, making it cost-effective and accessible to customers who are beginning their security journey on AWS. Rather than covering every possible check, it focuses on the specific vulnerabilities that threat actors target most often to gain initial access.
+
+**Q: I already have other conformance packs deployed. Should I still use this one?**
+
+Yes. This is the only conformance pack that contains the specific set of rules recommended by AWS Security Incident Response engineers, including custom Lambda-based rules that are not part of any other pack. Even if some of the managed rules overlap with a comprehensive pack you already run (e.g., CIS, NIST), the value here is in *how* the pack is built: a focused, incident-responder-curated selection of the misconfigurations most frequently exploited in real attacks, organized by threat-oriented category so you can reason about exposures in terms of attacker behavior. Deploying it alongside your existing packs adds that threat-informed lens — and the custom rules — without conflicting with what you already have.
+
+**Q: Why do rule names have the `sire-` prefix?**
+
+The rule naming convention (`sire-ia-{category}-{rule}`) encodes a threat-oriented category, which enables grouping and visualization on security dashboards. The prefix `sire` stands for **S**ecurity **I**ncident **R**esponse **E**ngineering. `ia` derives from "Initial Access" from MITRE ATT&CK; it indicates the intent behind the grouping rather than a formal mapping to the ATT&CK framework.
+
+The `sire-` prefix indicates that the rules originate from the AWS Security Incident Response team, whose engineers selected the rules based on misconfigurations observed during real security incidents.
+
+
 # References
 - [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/).
 - [MITRE ATT&CK® Framework](https://attack.mitre.org/).
 - [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html).
 - [Threat-Informed Security Best Practices (Fundamental)](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html) sample conformance pack in the AWS Config documentation.
 - [AWS Security Incident Response service](https://aws.amazon.com/security-incident-response/).
+- [AWS Config Conformance Packs](https://docs.aws.amazon.com/config/latest/developerguide/conformance-packs.html)
+- [AWS Config Managed Rules by Region Availability](https://docs.aws.amazon.com/config/latest/developerguide/managing-rules-by-region-availability.html)
 - [Specification of all AWS Config and custom rules](./crcd-conformance-pack-specification.md) that will be deployed as part of the conformance pack.
 - [Cloud Formation template](./crcd-conformance-pack-stack.yaml) to deploy the conformance pack and the related AWS resources. 
+
