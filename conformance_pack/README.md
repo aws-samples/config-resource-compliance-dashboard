@@ -4,6 +4,16 @@ The [AWS Security Incident Response](https://aws.amazon.com/security-incident-re
 
 This feature of the AWS Config Dashboard was developed in collaboration with AWS Security Incident Response security experts, drawing on their multi-year experience supporting AWS customers during active security incidents. It uses AWS Config rules recommended by security engineers to identify preventable, common misconfigurations that are known to create vulnerabilities exploited in attacks against AWS environments. Addressing these misconfigurations helps eliminate the low-hanging fruit that bad actors frequently target when attempting to gain unauthorized access.
 
+**Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
+
+
+## Conformance Pack: Threat-Informed Security Best Practices (Fundamental)
+The **Threat-Informed Security Best Practices (Fundamental)** conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
+
+![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Threat-Informed Security Compliance tab")
+
+The **Threat-Informed Security Compliance** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. This classification is intended to help you reason about *why* a misconfiguration matters in terms of attacker behavior — it is not a claim that the pack fully covers, maps to, or conforms to the catalog or MITRE ATT&CK. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
+
 ### Why this pack
 
 - **Curated by incident responders**: Rules are selected based on multi-year experience supporting AWS customers during active security incidents — not from a theoretical compliance checklist.
@@ -12,23 +22,15 @@ This feature of the AWS Config Dashboard was developed in collaboration with AWS
 - **Threat-informed**: Rules are organized by threat-oriented category rather than by AWS service, helping customers understand *why* a misconfiguration matters in terms of what an attacker would do with it.
 - **Dashboard integration**: This conformance pack can optionally be visualized in the [AWS Config Resource Compliance Dashboard (CRCD)](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/config-resource-compliance-dashboard.html), which provides a QuickSight-based view of compliance status classified by threat-technique categories.
 
-**Please note:** Resolving these misconfigurations significantly reduces your attack surface, but does not guarantee complete protection against security incidents. Additional security controls, monitoring, and practices are recommended as part of a comprehensive security strategy.
-
-
-## Conformance Pack: Threat-Informed Security Best Practices (Fundamental)
-The _Threat-Informed Security Best Practices (Fundamental)_ conformance pack is a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by Security Incident Response Service security engineers.
-
-![CRCD](../images/crcd-known-threat-exposures.png "AWS Config Dashboard, Threat-Informed Security Compliance tab")
-
-The **Threat-Informed Security Compliance** tab will display compliance status of the [standard and custom AWS Config rules](./crcd-conformance-pack-specification.md) in the conformance pack. The dashboard classifies AWS Config rules according to the tactics and techniques presented in the [Threat Technique Catalog for AWS](https://aws-samples.github.io/threat-technique-catalog-for-aws/). The catalog is based on MITRE ATT&CK® and is used to identify and categorize threat actor behaviors observed by AWS. This classification is intended to help you reason about *why* a misconfiguration matters in terms of attacker behavior — it is not a claim that the pack fully covers, maps to, or conforms to the catalog or MITRE ATT&CK. If you do not install the conformance pack, the dashboard will still display compliance of the [recommended standard AWS Config rules](./crcd-conformance-pack-specification.md) that you may have already deployed.
-
-
 ### Features
-- **Recommended Rules**: Includes standard AWS Config managed rules and custom Lambda-based rules recommended by AWS Security Incident Response security engineers.
+- **Recommended Rules**: Includes standard AWS Config managed rules and custom Lambda-based rules.
 - **Threat Technique Catalog Classification**: Each rule is classified according to the Threat Technique Catalog for AWS (based on MITRE ATT&CK®).
 - **Flexible Deployment**: Supports both AWS Organizations (organization-wide deployment) and standalone AWS accounts.
 - **Multi-Region Support**: Deploys across all AWS Regions where AWS Config is enabled.
 - **Automatic Updates**: In case of organization-wide deployment, new accounts joining the AWS Organization automatically receive the conformance pack.
+
+
+> Threat-Informed Security Best Practices (Fundamental) is also available as [Conformance Pack Sample Templates for AWS Config](https://docs.aws.amazon.com/config/latest/developerguide/threat-informed-security-best-practices-fundamental.html).
 
 ## Architecture
 
