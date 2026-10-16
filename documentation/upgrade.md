@@ -19,9 +19,9 @@ The new version contains only QuickSight changes.
 ```
 
 3. The `cid-cmd` tool will ask you to confirm the values of parameters `tag1`, `tag2`, `tag3` and `tag4`. Their current value will be displayed.
-1. The `cid-cmd` tool will then analyze each Athena view and identify an updated version of `config_inventory_lambda`, `config_inventory_s3`, `config_inventory_ec2`.
+1. The `cid-cmd` tool will then analyze each Athena view (and their corresponding dataset) and identify an updated version of `config_inventory_lambda`, `config_inventory_s3`, `config_inventory_ec2`.
      - **If `cid-cmd` does not analyze the views, make sure you used the option `--recursive` in the CLI command**
-1. Select `proceed and override`.
+1. Select `proceed and override` for each view and dataset.
 1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.:` select the time zone for dataset scheduled refresh in your Region (it is already preselected). The tool will not find other updates for the Athena views. 
 1. When prompted `Select taxonomy fields to add as dashboard filters and group by fields` select `Looks good` without adding taxonomy items. Taxonomy is not supported by the dashboard.
 1. The tool will update the dashboard definition and terminate.
