@@ -22,7 +22,7 @@ dashboards:
     dashboardId: cid-crcd
     category: Custom
     theme: MIDNIGHT
-    version: v5.0.0
+    version: v5.0.1
     # CUSTOMIZATION - make sure it references cid-crcd-definition.yaml  
     file: ./cid-crcd-definition.yaml
 
@@ -158,7 +158,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_compliance_actual:
     data:
       DataSetId: bf0043e0-f073-4074-8fce-9115464ee3bc
@@ -267,12 +266,11 @@ datasets:
       views:
       - config_compliance_actual
       - config_inventory_account
-      # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
+    # CUSTOMIZATION - add this to every dataset CID-CMD EXPORT does not do that. Use the module from the export name cid-{module}-ReadAccessPolicyARN
       dataProviders:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_compliance_conformance_pack:
     data:
       DataSetId: d45218d0-83c2-45af-9f5d-ce71be1e4bb2
@@ -379,7 +377,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_compliance_resource:
     data:
       DataSetId: 99505a84-7ab6-41ee-8d4a-f0c1e62f96a6
@@ -474,7 +471,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_event:
     data:
       DataSetId: b6acd8c6-96c9-4073-901a-df399fd9ce68
@@ -514,9 +510,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: account_name
-              Type: STRING
             - Name: organization_unit
+              Type: STRING
+            - Name: account_name
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -647,7 +643,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_event_rule_evaluation:
     data:
       DataSetId: 5c060ba7-4f02-4b10-8f55-a8672eb6eab0
@@ -709,9 +704,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: account_name
-              Type: STRING
             - Name: organization_unit
+              Type: STRING
+            - Name: account_name
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -878,7 +873,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_inventory_ebs:
     data:
       DataSetId: 81881280-5baa-43ed-a029-f477dcbcde03
@@ -1045,7 +1039,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_inventory_ec2:
     data:
       DataSetId: bff53ae6-246a-479a-8d36-3ab03c4ef1f0
@@ -1124,6 +1117,16 @@ datasets:
               Type: STRING
             - Name: ssmarn
               Type: STRING
+            - Name: ssminstancestatus
+              Type: STRING
+            - Name: ssmnestedinstancestatus
+              Type: STRING
+            - Name: ssmagenttype
+              Type: STRING
+            - Name: ssmagentversion
+              Type: STRING
+            - Name: ssmmanagementstatus
+              Type: STRING
         e61a222f-c965-48ea-a0c5-1cd8374b9d29:
           RelationalTable:
             DataSourceArn: ${athena_datasource_arn}
@@ -1135,9 +1138,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: account_name
-              Type: STRING
             - Name: organization_unit
+              Type: STRING
+            - Name: account_name
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -1145,19 +1148,13 @@ datasets:
           Alias: config_inventory_account
           Source:
             PhysicalTableId: e61a222f-c965-48ea-a0c5-1cd8374b9d29
-        5b24ca0e-31fc-4596-8483-6765f22f8835:
+        6af82678-b6e5-4bef-b251-290e2cef2eec:
+          Alias: config_inventory_ec2
+          Source:
+            PhysicalTableId: 1f9edcad-3f4e-4f5d-9907-b33b769d0bd0
+        df8cd29f-5df2-49ed-a766-c848f6bae24d:
           Alias: Intermediate Table
           DataTransforms:
-          - CreateColumnsOperation:
-              Columns:
-              - ColumnName: SSMAssociationStatus
-                ColumnId: f2a21fa4-b7e5-48ce-9560-9e323e2213ec
-                Expression: |-
-                  ifelse(isNull(ssmstatus), 'Not managed',
-                  ssmstatus = 'OK', 'Managed',
-                  ssmstatus = 'ResourceDeleted', 'Deleted',
-                  concat('Other: ', ssmstatus)
-                  )
           - TagColumnOperation:
               ColumnName: region
               Tags:
@@ -1197,20 +1194,20 @@ datasets:
               - ssmconfigitemcapturetime
               - ssmstatus
               - ssmarn
+              - ssminstancestatus
+              - ssmnestedinstancestatus
+              - ssmagenttype
+              - ssmagentversion
+              - ssmmanagementstatus
               - payer_account_id
-              - account_name
-              - SSMAssociationStatus
               - organization_unit
+              - account_name
           Source:
             JoinInstruction:
               LeftOperand: 6af82678-b6e5-4bef-b251-290e2cef2eec
               RightOperand: 18801cc2-6530-401f-8213-5b252a5196a1
               Type: LEFT
               OnClause: '{accountid} = {account_id}'
-        6af82678-b6e5-4bef-b251-290e2cef2eec:
-          Alias: config_inventory_ec2
-          Source:
-            PhysicalTableId: 1f9edcad-3f4e-4f5d-9907-b33b769d0bd0
     dependsOn:
       views:
       - config_inventory_ec2
@@ -1220,7 +1217,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_inventory_lambda:
     data:
       DataSetId: 35bdc507-f89f-4b0d-942b-0ce2a89e28ab
@@ -1285,6 +1281,10 @@ datasets:
               Type: STRING
             - Name: configitemstatus
               Type: STRING
+            - Name: ephemeralstorage
+              Type: STRING
+            - Name: deadletterqueuearn
+              Type: STRING
         d890a9e4-9a3b-47fc-85d4-ce33d0a478cf:
           RelationalTable:
             DataSourceArn: ${athena_datasource_arn}
@@ -1296,9 +1296,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: account_name
-              Type: STRING
             - Name: organization_unit
+              Type: STRING
+            - Name: account_name
               Type: STRING
       ImportMode: SPICE
       LogicalTableMap:
@@ -1306,7 +1306,7 @@ datasets:
           Alias: config_inventory_account
           Source:
             PhysicalTableId: d890a9e4-9a3b-47fc-85d4-ce33d0a478cf
-        24654cd9-b07a-4b1e-a3f9-dd053f0357e7:
+        469f3932-a27e-4163-a4bd-1aef20a9fc28:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -1341,9 +1341,11 @@ datasets:
               - timeout
               - lambdaversion
               - configitemstatus
+              - ephemeralstorage
+              - deadletterqueuearn
               - payer_account_id
-              - account_name
               - organization_unit
+              - account_name
           Source:
             JoinInstruction:
               LeftOperand: ebb7cdc2-97f9-47a4-abd1-7b0e9f4890cf
@@ -1363,7 +1365,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_inventory_rds:
     data:
       DataSetId: e296cb2f-878a-4884-8813-21afeb26db8d
@@ -1542,7 +1543,6 @@ datasets:
       - CRCDConfigDashboard
     schedules:
     - default
-
   config_inventory_s3:
     data:
       DataSetId: 78d5f479-44d4-4763-b901-0de3d48a0098
@@ -1559,9 +1559,9 @@ datasets:
               Type: STRING
             - Name: payer_account_id
               Type: STRING
-            - Name: account_name
-              Type: STRING
             - Name: organization_unit
+              Type: STRING
+            - Name: account_name
               Type: STRING
         f9fe062d-acce-4e23-a6fa-26655a09d2cd:
           RelationalTable:
@@ -1600,13 +1600,47 @@ datasets:
               Type: DATETIME
             - Name: configitemstatus
               Type: STRING
+            - Name: s3ssealgorithm
+              Type: STRING
+            - Name: s3ssekmskeyid
+              Type: STRING
+            - Name: s3bucketkeyenabled
+              Type: STRING
+            - Name: s3blockpublicacls
+              Type: STRING
+            - Name: s3ignorepublicacls
+              Type: STRING
+            - Name: s3blockpublicpolicy
+              Type: STRING
+            - Name: s3restrictpublicbuckets
+              Type: STRING
+            - Name: s3versioningstatus
+              Type: STRING
+            - Name: s3mfadeleteenabled
+              Type: STRING
+            - Name: s3loggingtargetbucket
+              Type: STRING
+            - Name: s3loggingtargetprefix
+              Type: STRING
+            - Name: s3hasbucketpolicy
+              Type: BOOLEAN
+            - Name: s3hasreplication
+              Type: BOOLEAN
+            - Name: s3replicationrolearn
+              Type: STRING
+            - Name: s3haslifecycle
+              Type: BOOLEAN
       ImportMode: SPICE
       LogicalTableMap:
         1decc8a3-7437-4a12-a8ec-348ed436b41e:
           Alias: config_inventory_s3
           Source:
             PhysicalTableId: f9fe062d-acce-4e23-a6fa-26655a09d2cd
-        24a73348-b3c4-48cc-8c68-10333bbe8411:
+        b0c5d842-7551-4d5d-8000-aeaa08ed1d9e:
+          Alias: config_inventory_account
+          Source:
+            PhysicalTableId: bac364c6-0414-41a1-8f01-f640a90f7391
+        bd94bac1-f73c-42d4-b3d2-9956636aaa62:
           Alias: Intermediate Table
           DataTransforms:
           - TagColumnOperation:
@@ -1630,20 +1664,31 @@ datasets:
               - alltags
               - creationdate
               - configitemstatus
+              - s3ssealgorithm
+              - s3ssekmskeyid
+              - s3bucketkeyenabled
+              - s3blockpublicacls
+              - s3ignorepublicacls
+              - s3blockpublicpolicy
+              - s3restrictpublicbuckets
+              - s3versioningstatus
+              - s3mfadeleteenabled
+              - s3loggingtargetbucket
+              - s3loggingtargetprefix
+              - s3hasbucketpolicy
+              - s3hasreplication
+              - s3replicationrolearn
+              - s3haslifecycle
               - account_id
               - payer_account_id
-              - account_name
               - organization_unit
+              - account_name
           Source:
             JoinInstruction:
               LeftOperand: 1decc8a3-7437-4a12-a8ec-348ed436b41e
               RightOperand: b0c5d842-7551-4d5d-8000-aeaa08ed1d9e
               Type: LEFT
               OnClause: '{accountid} = {account_id}'
-        b0c5d842-7551-4d5d-8000-aeaa08ed1d9e:
-          Alias: config_inventory_account
-          Source:
-            PhysicalTableId: bac364c6-0414-41a1-8f01-f640a90f7391
     dependsOn:
       views:
       - config_inventory_account
@@ -1682,7 +1727,6 @@ schedules:
           SizeUnit: DAY
 
 crawlers: {}
-
 views:
   config_compliance:
     dependsOn: {}
@@ -1749,7 +1793,6 @@ views:
       SELECT *
       FROM
         "${athena_database_name}"."config_sys_account_data"
-
   config_compliance_actual:
     dependsOn: {}
     data: |-
@@ -2173,6 +2216,10 @@ views:
          , MAX_BY("configurationItem"."configurationItemStatus", "configurationItem"."configurationitemcapturetime") "SSMStatus"
          , "configurationItem"."resourceId" "SSMEC2InstanceId"
          , ARBITRARY("configurationItem"."arn") "SSMArn"
+         , COALESCE(element_at(MAX_BY("configurationItem"."supplementaryConfiguration", "configurationItem"."configurationitemcapturetime"), 'instanceStatus'), '') "SSMInstanceStatus"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", concat(concat('$["AWS:InstanceInformation"]["Content"]["', "configurationItem"."resourceId"), '"]["InstanceStatus"]')), "configurationItem"."configurationitemcapturetime") "SSMNestedInstanceStatus"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", concat(concat('$["AWS:InstanceInformation"]["Content"]["', "configurationItem"."resourceId"), '"]["AgentType"]')), "configurationItem"."configurationitemcapturetime") "SSMAgentType"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", concat(concat('$["AWS:InstanceInformation"]["Content"]["', "configurationItem"."resourceId"), '"]["AgentVersion"]')), "configurationItem"."configurationitemcapturetime") "SSMAgentVersion"
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -2213,9 +2260,14 @@ views:
       , ssm.SSMConfigItemCaptureTime
       , ssm.SSMStatus
       , ssm.SSMArn
+      , ssm.SSMInstanceStatus
+      , ssm.SSMNestedInstanceStatus
+      , ssm.SSMAgentType
+      , ssm.SSMAgentVersion
+      , (CASE WHEN (ssm.SSMEC2InstanceId IS NULL) THEN 'Not managed' WHEN (ssm.SSMStatus = 'ResourceDeleted') THEN 'Deleted' WHEN (ssm.SSMNestedInstanceStatus = 'ConnectionLost') THEN 'Connection lost' WHEN (ssm.SSMStatus = 'OK') THEN 'Managed' ELSE concat('Other: ', COALESCE(ssm.SSMStatus, '')) END) "SSMManagementStatus"
       FROM
         (resource_info r
-      LEFT JOIN ssm_info ssm ON ((r.Accountid = ssm.SSMAccountId) AND (r.Region = ssm.SSMRegion) AND (r.InstanceId = ssm.SSMEC2InstanceId)))
+      LEFT JOIN ssm_info ssm ON ((r.AccountId = ssm.SSMAccountId) AND (r.Region = ssm.SSMRegion) AND (r.InstanceId = ssm.SSMEC2InstanceId)))
   config_inventory_lambda:
     dependsOn: {}
     data: |-
@@ -2249,6 +2301,8 @@ views:
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.revisionId'), "configurationItem"."configurationitemcapturetime") "RevisionId"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.timeout'), "configurationItem"."configurationitemcapturetime") "Timeout"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.version'), "configurationItem"."configurationitemcapturetime") "LambdaVersion"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.ephemeralStorage.size'), "configurationItem"."configurationitemcapturetime") "EphemeralStorage"
+         , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.deadLetterConfig.targetArn'), "configurationItem"."configurationitemcapturetime") "DeadLetterQueueArn"
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -2282,6 +2336,8 @@ views:
       , r.Timeout
       , r.LambdaVersion
       , r.ConfigItemStatus
+      , r.EphemeralStorage
+      , r.DeadLetterQueueArn
       FROM
         resource_info r
   config_inventory_rds:
@@ -2398,6 +2454,21 @@ views:
          , MAX_BY("configurationItem"."tags", "configurationItem"."configurationitemcapturetime") "AllTags"
          , MAX_BY("json_extract_scalar"("configurationItem"."configuration", '$.name'), "configurationItem"."configurationitemcapturetime") "BucketName"
          , MAX_BY(CAST(parse_datetime("json_extract_scalar"("configurationItem"."configuration", '$.creationDate'), 'yyyy-MM-dd''T''HH:mm:ss.SSSZ') AS timestamp), "configurationItem"."configurationitemcapturetime") "CreationDate"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['ServerSideEncryptionConfiguration'], '$.rules[0].applyServerSideEncryptionByDefault.sseAlgorithm'), "configurationItem"."configurationitemcapturetime") "S3SSEAlgorithm"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['ServerSideEncryptionConfiguration'], '$.rules[0].applyServerSideEncryptionByDefault.kmsMasterKeyID'), "configurationItem"."configurationitemcapturetime") "S3SSEKmsKeyId"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['ServerSideEncryptionConfiguration'], '$.rules[0].bucketKeyEnabled'), "configurationItem"."configurationitemcapturetime") "S3BucketKeyEnabled"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['PublicAccessBlockConfiguration'], '$.blockPublicAcls'), "configurationItem"."configurationitemcapturetime") "S3BlockPublicAcls"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['PublicAccessBlockConfiguration'], '$.ignorePublicAcls'), "configurationItem"."configurationitemcapturetime") "S3IgnorePublicAcls"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['PublicAccessBlockConfiguration'], '$.blockPublicPolicy'), "configurationItem"."configurationitemcapturetime") "S3BlockPublicPolicy"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['PublicAccessBlockConfiguration'], '$.restrictPublicBuckets'), "configurationItem"."configurationitemcapturetime") "S3RestrictPublicBuckets"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketVersioningConfiguration'], '$.status'), "configurationItem"."configurationitemcapturetime") "S3VersioningStatus"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketVersioningConfiguration'], '$.isMfaDeleteEnabled'), "configurationItem"."configurationitemcapturetime") "S3MfaDeleteEnabled"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketLoggingConfiguration'], '$.destinationBucketName'), "configurationItem"."configurationitemcapturetime") "S3LoggingTargetBucket"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketLoggingConfiguration'], '$.logFilePrefix'), "configurationItem"."configurationitemcapturetime") "S3LoggingTargetPrefix"
+         , MAX_BY((CASE WHEN ("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketPolicy'], '$.policyText') IS NOT NULL) THEN true ELSE false END), "configurationItem"."configurationitemcapturetime") "S3HasBucketPolicy"
+         , MAX_BY((CASE WHEN ("configurationItem"."supplementaryConfiguration"['BucketReplicationConfiguration'] IS NOT NULL) THEN true ELSE false END), "configurationItem"."configurationitemcapturetime") "S3HasReplication"
+         , MAX_BY("json_extract_scalar"("configurationItem"."supplementaryConfiguration"['BucketReplicationConfiguration'], '$.roleARN'), "configurationItem"."configurationitemcapturetime") "S3ReplicationRoleArn"
+         , MAX_BY((CASE WHEN ("configurationItem"."supplementaryConfiguration"['BucketLifecycleConfiguration'] IS NOT NULL) THEN true ELSE false END), "configurationItem"."configurationitemcapturetime") "S3HasLifecycle"
          FROM
            (cid_crcd_config
          CROSS JOIN UNNEST("configurationitems") t (configurationItem))
@@ -2420,5 +2491,20 @@ views:
       , r.AllTags
       , r.CreationDate
       , r.ConfigItemStatus
+      , r.S3SSEAlgorithm
+      , r.S3SSEKmsKeyId
+      , r.S3BucketKeyEnabled
+      , r.S3BlockPublicAcls
+      , r.S3IgnorePublicAcls
+      , r.S3BlockPublicPolicy
+      , r.S3RestrictPublicBuckets
+      , r.S3VersioningStatus
+      , r.S3MfaDeleteEnabled
+      , r.S3LoggingTargetBucket
+      , r.S3LoggingTargetPrefix
+      , r.S3HasBucketPolicy
+      , r.S3HasReplication
+      , r.S3ReplicationRoleArn
+      , r.S3HasLifecycle
       FROM
         resource_info r
