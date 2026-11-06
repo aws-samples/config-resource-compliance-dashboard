@@ -72,19 +72,19 @@ CalculatedFields:
         OR contains(rulename, 's3-bucket-public-write-prohibited')
         OR contains(rulename, 's3-bucket-public-read-prohibited')
         OR contains(rulename, 'vpc-sg-port-restriction-check') , 'Initial Access'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND (contains(rulename, 'encrypt', CASE_INSENSITIVE) OR contains(rulename, 'kms', CASE_INSENSITIVE) OR contains(rulename, 'expiry', CASE_INSENSITIVE)), 'AI Data Protection'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND (contains(rulename, 'network', CASE_INSENSITIVE) OR contains(rulename, 'vpc', CASE_INSENSITIVE) OR contains(rulename, 'internet', CASE_INSENSITIVE) OR contains(rulename, 'isolation', CASE_INSENSITIVE) OR contains(rulename, 'public', CASE_INSENSITIVE)), 'AI Network Protection'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND (contains(rulename, 'authorizer', CASE_INSENSITIVE) OR contains(rulename, 'iam', CASE_INSENSITIVE) OR contains(rulename, 'root-access', CASE_INSENSITIVE)), 'AI Identity and Access'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND (contains(rulename, 'recording', CASE_INSENSITIVE) OR contains(rulename, 'logging', CASE_INSENSITIVE) OR contains(rulename, 'monitoring', CASE_INSENSITIVE) OR contains(rulename, 'capture', CASE_INSENSITIVE)), 'AI Logging and Monitoring'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND contains(rulename, 'registry', CASE_INSENSITIVE), 'AI Supply Chain'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE))
-         AND contains(rulename, 'guardrail', CASE_INSENSITIVE), 'AI Guardrails'
-     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)), 'AI Configuration'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND (contains(rulename, 'encrypt', CASE_INSENSITIVE) OR contains(rulename, 'kms', CASE_INSENSITIVE) OR contains(rulename, 'expiry', CASE_INSENSITIVE)), 'Data Protection'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND (contains(rulename, 'network', CASE_INSENSITIVE) OR contains(rulename, 'vpc', CASE_INSENSITIVE) OR contains(rulename, 'internet', CASE_INSENSITIVE) OR contains(rulename, 'isolation', CASE_INSENSITIVE) OR contains(rulename, 'public', CASE_INSENSITIVE)), 'Network'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND (contains(rulename, 'authorizer', CASE_INSENSITIVE) OR contains(rulename, 'iam', CASE_INSENSITIVE) OR contains(rulename, 'root-access', CASE_INSENSITIVE)), 'Identity'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND (contains(rulename, 'recording', CASE_INSENSITIVE) OR contains(rulename, 'logging', CASE_INSENSITIVE) OR contains(rulename, 'monitoring', CASE_INSENSITIVE) OR contains(rulename, 'capture', CASE_INSENSITIVE)), 'Logging'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND contains(rulename, 'registry', CASE_INSENSITIVE), 'Supply Chain'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE))
+         AND contains(rulename, 'guardrail', CASE_INSENSITIVE), 'Guardrails'
+     , (contains(rulename, 'bedrock', CASE_INSENSITIVE) OR contains(rulename, 'agentcore', CASE_INSENSITIVE) OR contains(rulename, 'sagemaker', CASE_INSENSITIVE)) AND NOT (startsWith(rulename, 'securityhub', CASE_INSENSITIVE) OR startsWith(rulename, 'crcd-', CASE_INSENSITIVE) OR contains(rulename, 'required-tag', CASE_INSENSITIVE) OR contains(rulename, 'requiredtag', CASE_INSENSITIVE) OR contains(rulename, 'tagged', CASE_INSENSITIVE)), 'Configuration'
      , 'Undefined')
   Name: crcd-classification-lv2
 - DataSetIdentifier: config_compliance
@@ -152,6 +152,16 @@ CalculatedFields:
   Name: account-name-id
 - DataSetIdentifier: config_compliance_remediation
   Expression: |-
+    ifelse(resourcetype = 'AWS::BedrockAgentCore::CodeInterpreterCustom', 'Code Interpreter',
+           resourcetype = 'AWS::BedrockAgentCore::BrowserCustom', 'Browser',
+           resourcetype = 'AWS::Bedrock::ApplicationInferenceProfile', 'Inference Profile',
+           resourcetype = 'AWS::Bedrock::KnowledgeBase', 'Knowledge Base',
+           resourcetype = 'AWS::SageMaker::EndpointConfig', 'Endpoint Config',
+           resourcetype = 'AWS::SageMaker::Model', 'SageMaker Model',
+           split(resourcetype, '::', 3))
+  Name: ai-resource-type
+- DataSetIdentifier: config_compliance_remediation
+  Expression: |-
     ifelse(startsWith(resourcetype, 'AWS::BedrockAgentCore::'), 'Amazon Bedrock AgentCore',
            startsWith(resourcetype, 'AWS::Bedrock::'), 'Amazon Bedrock',
            startsWith(resourcetype, 'AWS::SageMaker::'), 'Amazon SageMaker AI',
@@ -161,8 +171,7 @@ CalculatedFields:
   Expression: |-
     ifelse({daysnoncompliant} < 30, '1. 0-29 days',
            {daysnoncompliant} < 90, '2. 30-89 days',
-           {daysnoncompliant} < 180, '3. 90-179 days',
-           '4. 180+ days')
+           '3. 90+ days')
   Name: finding-age-band
 - DataSetIdentifier: config_compliance_resource
   Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
@@ -237,6 +246,16 @@ CalculatedFields:
   Expression: ifelse(isNull({account_name}), accountid, concat({account_name}, ' ',
     accountid))
   Name: account-name-id
+- DataSetIdentifier: config_inventory_ai
+  Expression: |-
+    ifelse(resourcetype = 'AWS::BedrockAgentCore::CodeInterpreterCustom', 'Code Interpreter',
+           resourcetype = 'AWS::BedrockAgentCore::BrowserCustom', 'Browser',
+           resourcetype = 'AWS::Bedrock::ApplicationInferenceProfile', 'Inference Profile',
+           resourcetype = 'AWS::Bedrock::KnowledgeBase', 'Knowledge Base',
+           resourcetype = 'AWS::SageMaker::EndpointConfig', 'Endpoint Config',
+           resourcetype = 'AWS::SageMaker::Model', 'SageMaker Model',
+           split(resourcetype, '::', 3))
+  Name: ai-resource-type
 - DataSetIdentifier: config_inventory_ai
   Expression: |-
     ifelse(startsWith(resourcetype, 'AWS::BedrockAgentCore::'), 'Amazon Bedrock AgentCore',
@@ -17968,7 +17987,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: HORIZONTAL
+        Orientation: VERTICAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
@@ -18801,9 +18820,9 @@ Sheets:
             Category:
             - CategoricalDimensionField:
                 Column:
-                  ColumnName: resourcetype
+                  ColumnName: ai-resource-type
                   DataSetIdentifier: config_inventory_ai
-                FieldId: f7d38856-8415-5de5-bf4d-d9fcab066bca.resourcetype.43
+                FieldId: e8b2bc65-47f2-5b17-af4a-3885b94d79eb.ai-resource-type.43
             Colors:
             - CategoricalDimensionField:
                 Column:
@@ -18838,7 +18857,7 @@ Sheets:
             AggregationVisibility: HIDDEN
             TooltipFields:
             - FieldTooltipItem:
-                FieldId: f7d38856-8415-5de5-bf4d-d9fcab066bca.resourcetype.43
+                FieldId: e8b2bc65-47f2-5b17-af4a-3885b94d79eb.ai-resource-type.43
                 Label: Resource type
                 Visibility: VISIBLE
             - FieldTooltipItem:
@@ -18919,7 +18938,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: HORIZONTAL
+        Orientation: VERTICAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
@@ -19095,9 +19114,9 @@ Sheets:
             Category:
             - CategoricalDimensionField:
                 Column:
-                  ColumnName: resourcetype
+                  ColumnName: ai-resource-type
                   DataSetIdentifier: config_inventory_ai
-                FieldId: e7236f5d-0bd7-5ced-892c-493e9d6a97cd.resourcetype.52
+                FieldId: 26f80eec-3cf8-51d6-8c4a-b680db234c88.ai-resource-type.52
             Colors:
             - CategoricalDimensionField:
                 Column:
@@ -19132,7 +19151,7 @@ Sheets:
             AggregationVisibility: HIDDEN
             TooltipFields:
             - FieldTooltipItem:
-                FieldId: e7236f5d-0bd7-5ced-892c-493e9d6a97cd.resourcetype.52
+                FieldId: 26f80eec-3cf8-51d6-8c4a-b680db234c88.ai-resource-type.52
                 Label: Resource type
                 Visibility: VISIBLE
             - FieldTooltipItem:
@@ -19208,9 +19227,9 @@ Sheets:
             Category:
             - CategoricalDimensionField:
                 Column:
-                  ColumnName: resourcetype
+                  ColumnName: ai-resource-type
                   DataSetIdentifier: config_inventory_ai
-                FieldId: a60ab2dd-e184-5d13-8027-68c20d03b239.resourcetype.55
+                FieldId: 1c9ac077-9003-512b-b9c3-998f6ecc75b0.ai-resource-type.55
             Colors:
             - CategoricalDimensionField:
                 Column:
@@ -19245,7 +19264,7 @@ Sheets:
             AggregationVisibility: HIDDEN
             TooltipFields:
             - FieldTooltipItem:
-                FieldId: a60ab2dd-e184-5d13-8027-68c20d03b239.resourcetype.55
+                FieldId: 1c9ac077-9003-512b-b9c3-998f6ecc75b0.ai-resource-type.55
                 Label: Resource type
                 Visibility: VISIBLE
             - FieldTooltipItem:
@@ -19440,46 +19459,46 @@ Sheets:
           RowIndex: 4
           RowSpan: 4
         - ColumnIndex: 0
-          ColumnSpan: 18
+          ColumnSpan: 36
           ElementId: 3bb97200-6a31-5f2c-8a44-eccfae1d3606
           ElementType: VISUAL
           RowIndex: 8
-          RowSpan: 12
-        - ColumnIndex: 18
+          RowSpan: 14
+        - ColumnIndex: 0
           ColumnSpan: 18
           ElementId: 0551d471-08aa-520d-9c2c-af6121ddcc1e
           ElementType: VISUAL
-          RowIndex: 8
-          RowSpan: 12
-        - ColumnIndex: 0
-          ColumnSpan: 18
-          ElementId: 7423cfaa-9b2f-5053-87c5-8d597b69ab8b
-          ElementType: VISUAL
-          RowIndex: 20
+          RowIndex: 22
           RowSpan: 12
         - ColumnIndex: 18
           ColumnSpan: 18
+          ElementId: 7423cfaa-9b2f-5053-87c5-8d597b69ab8b
+          ElementType: VISUAL
+          RowIndex: 22
+          RowSpan: 12
+        - ColumnIndex: 0
+          ColumnSpan: 36
           ElementId: d8edfee1-5f31-5e47-81df-41c76a0f6a9d
           ElementType: VISUAL
-          RowIndex: 20
+          RowIndex: 34
           RowSpan: 12
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: ad041bf0-ee79-5b2b-8707-4fc1aa1b00f1
           ElementType: TEXT_BOX
-          RowIndex: 32
+          RowIndex: 46
           RowSpan: 2
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 8be9938d-19bf-57d9-8328-72eb22c06ba3
           ElementType: VISUAL
-          RowIndex: 34
+          RowIndex: 48
           RowSpan: 10
         - ColumnIndex: 0
           ColumnSpan: 36
           ElementId: 14e4276e-65a4-573f-9c4f-a696989a8b12
           ElementType: VISUAL
-          RowIndex: 44
+          RowIndex: 58
           RowSpan: 10
   Name: AI Remediation Activity
   ParameterControls:
@@ -19780,9 +19799,9 @@ Sheets:
             Colors:
             - CategoricalDimensionField:
                 Column:
-                  ColumnName: resourcetype
+                  ColumnName: ai-resource-type
                   DataSetIdentifier: config_compliance_remediation
-                FieldId: bb3b6ad2-7f61-53d6-9ff4-d2c2e2767571.resourcetype.67
+                FieldId: 4cb37900-4353-5fe0-a9ba-237dd47cbbd5.ai-resource-type.67
             Values:
             - CategoricalMeasureField:
                 AggregationFunction: DISTINCT_COUNT
@@ -19815,7 +19834,7 @@ Sheets:
                 Label: AWS Config rule
                 Visibility: VISIBLE
             - FieldTooltipItem:
-                FieldId: bb3b6ad2-7f61-53d6-9ff4-d2c2e2767571.resourcetype.67
+                FieldId: 4cb37900-4353-5fe0-a9ba-237dd47cbbd5.ai-resource-type.67
                 Label: Resource type
                 Visibility: VISIBLE
             - FieldTooltipItem:
@@ -19892,7 +19911,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: HORIZONTAL
+        Orientation: VERTICAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
@@ -19938,7 +19957,7 @@ Sheets:
         FormatText:
           RichText: |-
             <visual-subtitle>
-              <inline color="#bdbdbd">Days between the first and the latest NON_COMPLIANT sample.</inline>
+              <inline color="#bdbdbd">Days between the first and the latest NON_COMPLIANT sample. The compliance samples cover about five months, so ages are capped by that window.</inline>
             </visual-subtitle>
         Visibility: VISIBLE
       Title:
@@ -19995,7 +20014,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: HORIZONTAL
+        Orientation: VERTICAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
@@ -20107,7 +20126,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: HORIZONTAL
+        Orientation: VERTICAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
