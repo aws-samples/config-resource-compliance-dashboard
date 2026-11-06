@@ -1,7 +1,10 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
-# [5.1.0] - 2026-07-31
+# [5.X.X] - TBC
 ## Added
+- Support high-frequency data refresh of AWS Config records.
+
+Accessing resource configuration data from AWS Config in near-real-time is inherently limited by two factors: first, Config must detect and record the change, which happens asynchronously with no guaranteed timing — there will always be a delay between the actual change and Config capturing it. Second, even once changes are recorded, Config snapshot delivery can only be triggered at most once per hour, meaning there's an additional ceiling on how quickly the full configuration state can be exported.
 
 ### Dashboard features
 - **AI Governance**: new dashboard tab showing the compliance posture of AI workloads on Amazon Bedrock, Amazon Bedrock AgentCore and Amazon SageMaker. Overall AI compliance rate, resources under governance, compliance gaps, breakdown by AI service, a non-compliance heat map by account and Region, a governance coverage flow from AI service to AWS Config rule, and compliance trend over time.
