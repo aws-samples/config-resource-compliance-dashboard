@@ -70,17 +70,17 @@ Another cost pattern worth monitoring involves conformance pack rules with a com
 The **Config Usage Insights** tab provides the visibility needed to address these patterns systematically. By tracking CI recording volumes and rule evaluation counts over time, the dashboard helps you identify where spending is concentrated, surface redundant or inactive rules, and make informed decisions about where to streamline your AWS Config configuration — without compromising your compliance posture.
 
 #### AI Governance
-Three dedicated tabs provide a unified view of your AI governance posture across Amazon Bedrock, Amazon Bedrock AgentCore, and Amazon SageMaker — powered by the same AWS Config data pipeline as the rest of the dashboard.
+Three tabs show the compliance and inventory of AI workloads on Amazon Bedrock, Amazon Bedrock AgentCore and Amazon SageMaker AI, from the same AWS Config data as the rest of the dashboard.
 
-- **AI Governance** — overall AI compliance rate, resources under governance, compliance gaps, compliance breakdown by AI service, governance coverage flow (AI service → AWS Config rule), and compliance trends over time.
-- **AI Agent Inventory** — Bedrock AgentCore Runtime fleet: guardrail coverage, IAM role assignment, network security mode, tracing, foundation model distribution, an estate inventory of every AI resource, and a resource relationship map linking agents to the guardrails, IAM roles, models and KMS keys they use.
-- **AI Remediation Activity** — open finding backlog, finding aging, time-to-resolve, and prioritized non-compliant AI resources by AWS Config rule and resource type.
+- **AI Compliance**: the compliance of AWS Config rules for AI services, with the same experience as Tag Compliance. Includes compliance by AI service and by control domain (network, data protection, identity, logging).
+- **AI Inventory**: AgentCore Runtime inventory and the inventory of every AI resource with its network mode, encryption, AgentCore Gateway authorization, policy engine and AWS WAF settings.
+- **AI Remediation Activity**: open and closed findings on AI resources across the compliance samples of the dashboard, their age, and where they are.
 
-![CRCD](images/ai-governance.png "AWS Config Dashboard, AI Governance")
-![CRCD](images/ai-agent-inventory.png "AWS Config Dashboard, AI Agent Inventory")
+![CRCD](images/ai-compliance.png "AWS Config Dashboard, AI Compliance")
+![CRCD](images/ai-inventory.png "AWS Config Dashboard, AI Inventory")
 ![CRCD](images/ai-remediation-activity.png "AWS Config Dashboard, AI Remediation Activity")
 
-All three tabs carry the same Account ID, Account Name and Region filters as the rest of the dashboard. The AI tabs visualize evaluations from the AWS Config managed rules for AI workloads (for example [`BEDROCKAGENTCORE_RUNTIME_PRIVATE_NETWORK_REQUIRED`](https://docs.aws.amazon.com/config/latest/developerguide/bedrockagentcore-runtime-private-network-required.html), [`BEDROCK_DATA_SOURCE_ENCRYPTION_ENABLED`](https://docs.aws.amazon.com/config/latest/developerguide/bedrock-data-source-encryption-enabled.html), [`SAGEMAKER_MODEL_PRIVATE_REGISTRY_REQUIRED`](https://docs.aws.amazon.com/config/latest/developerguide/sagemaker-model-private-registry-required.html), [`SAGEMAKER_ENDPOINT_CONFIG_KMS_KEY_REQUIRED`](https://docs.aws.amazon.com/config/latest/developerguide/sagemaker-endpoint-config-kms-key-required.html)) as well as any custom AWS Config rules you deploy for AI controls. Managed rule availability varies by AWS Region — check the linked documentation for each rule. See [AI Governance module documentation](./documentation/ai-governance.md) for prerequisites and details.
+See [AI Governance](./documentation/ai-governance.md) for prerequisites and details.
 
 ### Additional features
 These features work alongside the AWS Config Resource Compliance Dashboard (CRCD) solution.

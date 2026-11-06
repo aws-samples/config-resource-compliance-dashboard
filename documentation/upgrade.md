@@ -2,12 +2,12 @@
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
 
-## Upgrade to v5.1.0
+## Upgrade to 5.X.X (AI Governance)
 
-### Upgrade to v5.1.0 from v5.0.0
-This version only adds dashboard content: 3 new tabs, 5 new Athena views and 5 new datasets. There are no changes to the data pipeline, to CloudFormation resources, or to any existing view or dataset, so you do not need to destroy and redeploy.
+### Upgrade to 5.X.X from v5.0.0
+This version adds 3 tabs, 3 Athena views and 3 datasets, and updates the existing compliance and inventory views to support high-frequency refresh of AWS Config records. There are no changes to CloudFormation resources, so you do not need to destroy and redeploy.
 
-1. Open AWS CloudShell on the account and Region where you deployed the dashboard.
+1. Open AWS CloudShell on the account and Region where you deployed the Quick Sight resources of your dashboard.
 1. Execute the following command:
 
 ```
@@ -19,13 +19,33 @@ This version only adds dashboard content: 3 new tabs, 5 new Athena views and 5 n
    --athena-workgroup 'crcd-dashboard'
 ```
 
-3. The `cid-cmd` tool will detect the update from `v5.0.0` to `v5.1.0` and create the 5 new Athena views and the 5 new datasets. Existing views are unchanged, so no view override prompts are expected.
-1. When prompted for the timezone for scheduled dataset refresh, select the time zone for your Region (it is already preselected).
+3. The `cid-cmd` tool will ask you to confirm the values of parameters `tag1`, `tag2`, `tag3` and `tag4`. Their current value will be displayed.
+1. The `cid-cmd` tool will then analyze each Athena view (and their corresponding dataset) and identify updated versions of the `config_compliance*` and `config_inventory*` views.
+     - **If `cid-cmd` does not analyze the views, make sure you used the option `--recursive` in the CLI command**
+1. Select `proceed and override` for each view and dataset.
+1. The tool creates the views and datasets `config_inventory_ai`, `config_inventory_agents` and `config_compliance_remediation`.
+1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.:` select the time zone for dataset scheduled refresh in your Region (it is already preselected).
+1. When prompted `Select taxonomy fields to add as dashboard filters and group by fields` select `Looks good` without adding taxonomy items.
 1. The tool will update the dashboard definition and terminate.
 
-The 3 AI tabs will be empty until AWS Config records AI resources in your accounts and the next dataset refresh completes. The tabs rely on AWS Config managed rules for AI workloads, whose availability varies by AWS Region.
+The AI tabs are empty until AWS Config records AI resources and the next dataset refresh completes. See [AI Governance](./ai-governance.md) for the prerequisites.
 
-### Upgrade to v5.1.0 from earlier versions
+### Upgrade to 5.X.X from the AI Governance preview (`dev-ai` branch)
+The preview used 5 views (`v_ai_governance_*`) and 5 datasets (`ai_governance_*`) that this version replaces.
+
+1. Follow the steps for the upgrade from v5.0.0 above.
+1. Delete the preview datasets in Quick Sight, unless another analysis or dashboard uses them: `ai_governance_compliance`, `ai_governance_agents`, `ai_governance_remediation`, `ai_governance_inventory`, `ai_governance_relationships`.
+1. Delete the preview views in Athena:
+
+```
+DROP VIEW IF EXISTS v_ai_governance_relationships;
+DROP VIEW IF EXISTS v_ai_governance_compliance;
+DROP VIEW IF EXISTS v_ai_governance_agents;
+DROP VIEW IF EXISTS v_ai_governance_remediation;
+DROP VIEW IF EXISTS v_ai_governance_inventory;
+```
+
+### Upgrade to 5.X.X from earlier versions
 Follow the instructions to upgrade to v5.0.0 first.
 
 ## Upgrade to v5.0.0
