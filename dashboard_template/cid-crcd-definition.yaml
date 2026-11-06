@@ -18938,7 +18938,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: VERTICAL
+        Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
@@ -20126,7 +20126,7 @@ Sheets:
           Position: BOTTOM
           Title:
             Visibility: HIDDEN
-        Orientation: VERTICAL
+        Orientation: HORIZONTAL
         SortConfiguration:
           CategoryItemsLimit:
             OtherCategories: EXCLUDE
