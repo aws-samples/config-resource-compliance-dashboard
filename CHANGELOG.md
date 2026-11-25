@@ -1,5 +1,29 @@
 _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD) changelog_
 
+
+# [5.0.1] - 2026-11-10
+
+## Added
+- Resource Inventory tab, **EC2 Inventory**: added column **Architecture**.
+- Resource Inventory tab, **Lambda Inventory**: added columns **Ephemeral Storage (MB)**, **Dead Letter Queue Arn**
+- Resource Inventory tab, **S3 Inventory**: added columns **SSE Encryption**, **Versioning**, **Has Bucket Policy**, **Has Lifecycle Configuration**, **Has Replication**, **Server Access Logs Target Bucket**. Added filters **Server Side encryption algorithm**, **Versioning**
+- Resource Inventory tab, **AWS Systems Manager (SSM) Inventory**: 
+  - Added column **SSM Agent Version**.
+  - **SSM Managed Status** supports a new status **Lost connection** to indicate that Systems Manager used to manage the EC2 instance, but the connection has since dropped.
+  - Added visuals: **AWS Systems Manager summary**, **SSM Agent versions**.
+
+### External features
+- Threat-Informed Security Best Practices (Fundamental) [conformance pack](./conformance_pack/README.md), a comprehensive compliance monitoring solution that deploys the AWS Config rules recommended by AWS Security Incident Response Service security engineers. This conformance pack supports the **Threat-Informed Security Compliance** tab of the dashboard. It includes two custom Lambda-based AWS Config rules (`sire-ia-iam-iam-root-not-used-regularly` and `sire-ia-iam-iam-user-access-key-check`) that detect vulnerabilities not yet covered by any standard AWS Config managed rule.
+
+## Changed
+- Resource Inventory tab, **AWS Systems Manager (SSM) Inventory**: 
+  - Reordered columns in these groups: account/Region, EC2 info, SSM Info, custom tags. 
+
+## Fixed
+- Threat-Informed Security Compliance tab: **Evolution of Initial Access compliance** graph now groups by compliance status.
+
+
+
 # [5.0.0] - 2026-06-30
 ## Added
 
@@ -18,9 +42,9 @@ _Cloud Intelligence Dashboards - AWS Config Resource Compliance Dashboard (CRCD)
 
 
 ## Changed
-- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and Cloud Trail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
+- [AWS Control Tower v4.0](https://docs.aws.amazon.com/controltower/latest/userguide/config-updates-v4.html) deploys Config logs and CloudTrail logs into different AWS accounts. The term "Log Archive account" that on previous versions uniquely indicated the AWS account receiving all logs, is not valid anymore for customers using the most recent version of Control Tower. The documentation will utilize "AWS Config account" or "Config account" instead. For the same reason, the "Log Archive bucket" will be called "AWS Config Logs bucket" or "Config Logs bucket".
 
-- **Tag Compliance**: added support for the several AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
+- **Tag Compliance**: added support for the AWS Config [rules](https://docs.aws.amazon.com/config/latest/developerguide/managed-rules-by-aws-config.html) ending with `-tagged`.
 - **Resource Inventory**: click on an EC2 instance on the EC2 inventory table to see its attached EBS volumes on the EBS volume inventory table.
 
 ## Fixed

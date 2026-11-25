@@ -1,10 +1,34 @@
 # Upgrade Instructions
 With the exception of the cases reported here, you should remove the dashboard completely and re-deploy the new version.
 
+## Upgrade to v5.0.1
+
+### Upgrade to v5.0.1 from v5.0.0
+The new version contains only QuickSight changes.
+
+1. Open AWS CloudShell on the account and Region where you deployed the QuickSight resources of your dashboard.
+1. Execute the following command:
+
+```
+ cid-cmd update \
+   --recursive \
+   --resources 'https://raw.githubusercontent.com/aws-samples/config-resource-compliance-dashboard/refs/heads/main/dashboard_template/cid-crcd.yaml' \
+   --dashboard-id 'cid-crcd' \
+   --athena-database 'cid_crcd_database' \
+   --athena-workgroup 'crcd-dashboard'
+```
+
+3. The `cid-cmd` tool will ask you to confirm the values of parameters `tag1`, `tag2`, `tag3` and `tag4`. Their current value will be displayed.
+1. The `cid-cmd` tool will then analyze each Athena view (and their corresponding dataset) and identify an updated version of `config_inventory_lambda`, `config_inventory_s3`, `config_inventory_ec2`.
+     - **If `cid-cmd` does not analyze the views, make sure you used the option `--recursive` in the CLI command**
+1. Select `proceed and override` for each view and dataset.
+1. When prompted `[timezone] Please select timezone for datasets scheduled refresh.:` select the time zone for dataset scheduled refresh in your Region (it is already preselected). The tool will not find other updates for the Athena views. 
+1. When prompted `Select taxonomy fields to add as dashboard filters and group by fields` select `Looks good` without adding taxonomy items. Taxonomy is not supported by the dashboard.
+1. The tool will update the dashboard definition and terminate.
 
 ## Upgrade to v5.0.0
 You have to destroy the resources of the current versions and redeploy.
-This version supports organizational taxonomy, it is highly recommended to deploy [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) before reinstalling. You will be able to add your organizational taxonomy to the dashboard during deployment. Even without this change, this version has updates on an IAM Role used by Quick Sight that cannot be updated by a CloudFormation change set.
+This version supports organizational taxonomy, it is highly recommended to deploy [CID Data Collection](https://docs.aws.amazon.com/guidance/latest/cloud-intelligence-dashboards/data-collection.html) before reinstalling. You will be able to add your organizational taxonomy to the dashboard during deployment. Even without this change, this version has updates on an IAM Role used by QuickSight that cannot be updated by a CloudFormation change set.
 
 ## Upgrade to v4.0.2
 
