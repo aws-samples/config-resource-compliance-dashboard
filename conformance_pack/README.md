@@ -39,7 +39,7 @@ The **Threat-Informed Security Compliance** tab will display compliance status o
 #### Organization-Wide Deployment
 - Deploy from Management account or delegated administrator.
 - Uses CloudFormation StackSets with automatic deployment enabled.
-- Deploys to all accounts and Regions automatically.
+- Deploys to all accounts and Regions automatically, except that the **Extended** conformance pack is not deployed to the management account (see [Conformance Pack Composition](#conformance-pack-composition)).
 - New accounts receive the conformance pack automatically via StackSet configuration.
 
 #### Standalone Account Deployment
@@ -52,6 +52,15 @@ The solution deploys two conformance packs:
 - **Threat-Informed Security Best Practices (Fundamental)** containing all standard AWS Config rules deployed in all Regions and all accounts of your organization.
 - **Threat-Informed Security Best Practices (Fundamental) Extended** containing all rules that apply to AWS Identity and Access Management (IAM) resources, including the custom rules. Since IAM resources are global, these rules can be deployed on one Region to avoid redundancy and optimize cost.
 
+> [!NOTE]
+> In organization-wide deployments, the **Extended** conformance pack is not deployed to the management account of your organization. It is deployed with a CloudFormation StackSet that uses service-managed permissions, and [CloudFormation doesn't deploy these StackSets to the management account](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stacksets-orgs-associate-stackset-with-org.html#stacksets-orgs-considerations), even if it belongs to a target organizational unit. As a result, the IAM rules of the Extended pack (including the root user checks) do not evaluate the management account.
+>
+> **To deploy both conformance packs in the management account** (requires AWS Config enabled in the management account), deploy the organization-wide stack from a delegated administrator account, then:
+> 1. In the organization-wide stack, add the management account ID to `Accounts to exclude`, so that the management account does not receive the standard conformance pack twice.
+> 2. In the management account, deploy this same CloudFormation template with `Deployment mode` set to `Standalone`, and set `Deployment Regions` to the Regions where AWS Config is enabled in the management account.
+>
+> Deploying the Extended conformance pack in the management account is not supported when the organization-wide stack is deployed from the management account itself: a second, standalone stack in the same account would conflict with the IAM roles and AWS Lambda function that the organization-wide stack already created there.
+
 The conformance packs support all parameters exposed by standard AWS Config rules and manages automatically regional availability of rules - i.e. you can deploy the conformance pack in all Regions where AWS Config is enabled, and if a rule is not available in a Region, it will be automatically skipped.
 
 ### Other ways to deploy
@@ -62,6 +71,7 @@ The conformance packs support all parameters exposed by standard AWS Config rule
 
 ### Any deployment mode:
 - **AWS Config**: Must be enabled in target accounts and Regions.
+- **AWS partition**: The template has been tested only in commercial AWS Regions (the `aws` partition). It does not hardcode the partition, but deployments in AWS GovCloud (US) or China Regions have not been tested.
 
 ### Organization-Wide Deployment:
 - **Service-Managed StackSets**: [Enable trusted access](https://docs.aws.amazon.com/organizations/latest/userguide/services-that-can-integrate-cloudformation.html#integrate-enable-ta-cloudformation) for CloudFormation StackSets in AWS Organizations.
